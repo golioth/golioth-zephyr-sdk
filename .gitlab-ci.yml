@@ -1,0 +1,102 @@
+image: zephyrprojectrtos/ci:v0.11.15
+
+variables:
+  GIT_STRATEGY: none
+  ZEPHYR_TOOLCHAIN_VARIANT: zephyr
+  ZEPHYR_SDK_INSTALL_DIR: /opt/sdk/zephyr-sdk-0.12.3
+
+.west-init-and-update: &west-init-and-update
+  - rm -rf .west modules/lib/golioth
+  - west init -m $CI_REPOSITORY_URL --mr $CI_COMMIT_SHA
+  - west update
+
+.cache-deps: &cache-deps
+  key: west-modules
+  paths:
+    - bootloader
+    - modules
+    - tools
+    - zephyr
+
+stages:
+  - cache
+  - check
+  - build
+  - test
+
+.check:
+  stage: check
+  needs: []
+  allow_failure: true
+  before_script:
+    - git clone $CI_REPOSITORY_URL modules/lib/golioth
+    - cd modules/lib/golioth
+    - git checkout $CI_COMMIT_SHA
+  except:
+    - main
+    - tags
+
+.west-prepare:
+  needs: []
+  cache:
+    <<: *cache-deps
+    policy: pull
+  before_script:
+    - *west-init-and-update
+
+.west-build:
+  extends: .west-prepare
+  stage: build
+
+cache-deps:
+  extends: .west-build
+  stage: cache
+  cache:
+    <<: *cache-deps
+    policy: pull-push
+  script:
+    - west forall -c 'git clean -ffdx && git reset --hard'
+    - rm -rf modules/lib/golioth
+  only:
+    refs:
+      - master
+
+checkpatch:
+  extends: [.check, .west-prepare]
+  script:
+    - cd modules/lib/golioth
+    - CHECKPATCH="../../../zephyr/scripts/checkpatch.pl --color=always --quiet"
+    - EXITCODE=0
+    - $CHECKPATCH --git origin/main.. || EXITCODE=$?
+    - exit $EXITCODE
+
+gitlint:
+  extends: .check
+  script:
+    - pip3 install gitlint
+    - gitlint --commits origin/main..
+
+pre-commit:
+  extends: .check
+  script:
+    - pip3 install pre-commit
+    - |
+      CODE=0 # run pre-commit
+      for CID in `git rev-list --reverse origin/main..`; do
+          git show $CID -s --format='    pre-commit %h ("%s")'
+          git checkout -f -q $CID
+          pre-commit run --color always --show-diff-on-failure --from-ref $CID^ --to-ref $CID || CODE=$?
+      done
+      exit $CODE
+
+.board:
+  extends: .west-build
+  variables:
+    BOARD: ${CI_JOB_NAME}
+  script:
+    - west build -d build_${BOARD} -b ${BOARD} zephyr/samples/hello_world
+  artifacts:
+    paths:
+      - build_${BOARD}/zephyr/zephyr.*
+
+qemu_x86: { extends: .board }
