@@ -1,0 +1,10 @@
+manifest:
+  projects:
+    - name: zephyr
+      revision: 72191f37a788f3d83cb137bde68a6f4b33da446e
+      url: https://github.com/zephyrproject-rtos/zephyr
+      west-commands: scripts/west-commands.yml
+      import: true
+
+  self:
+    path: modules/lib/golioth
