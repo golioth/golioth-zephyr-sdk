@@ -1,0 +1,40 @@
+name: Build test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: zephyrprojectrtos/ci:v0.11.13
+
+    env:
+      ZEPHYR_TOOLCHAIN_VARIANT: zephyr
+      ZEPHYR_SDK_INSTALL_DIR: /opt/sdk/zephyr-sdk-0.12.2
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: modules/lib/golioth
+
+      - name: Init and update west
+        run: |
+          mkdir -p .west
+          cat <<EOF > .west/config
+          [manifest]
+          path = modules/lib/golioth
+          file = west.yml
+          EOF
+
+          west update
+
+      - name: Run twister
+        run: |
+          zephyr/scripts/twister -p qemu_x86 -T modules/lib/golioth
