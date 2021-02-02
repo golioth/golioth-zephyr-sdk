@@ -34,6 +34,16 @@ jobs:
         with:
           path: golioth
 
+      # Caches dependencies, so west update is much faster
+      - uses: actions/cache@v2
+        with:
+          path: |
+            bootloader
+            modules
+            tools
+            zephyr
+          key: ${{ runner.os }}-modules
+
       # Runs a single command using the runners shell
       - name: Run a one-line script
         run: echo Hello, world!
