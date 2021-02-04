@@ -1,0 +1,8 @@
+sample:
+  description: Say Hello to Golioth server
+  name: hello
+tests:
+  sample.golioth.hello:
+    harness: net
+    tags: golioth net socket
+    platform_allow: qemu_x86
