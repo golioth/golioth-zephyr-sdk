@@ -11,9 +11,20 @@ LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 #include <errno.h>
 #include <net/socket.h>
 #include <net/coap.h>
+#include <net/tls_credentials.h>
 
+#if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+#define PEER_PORT		5684
+#else
 #define PEER_PORT		5683
+#endif
 #define MAX_COAP_MSG_LEN	256
+
+#define TLS_PSK_ID		"mark-one-id"
+#define TLS_PSK			"1r0nm@n"
+#define NOTLS_ID		"mark-one"
+
+#define PSK_TAG			1
 
 /* CoAP socket fd */
 static int sock;
@@ -148,8 +159,10 @@ static void prepare_fds(void)
 
 static int start_coap_client(void)
 {
-	int ret = 0;
 	struct sockaddr_in addr4;
+	int proto = IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS) ?
+		IPPROTO_DTLS_1_2 : IPPROTO_UDP;
+	int ret;
 
 	addr4.sin_family = AF_INET;
 	addr4.sin_port = htons(PEER_PORT);
@@ -157,11 +170,24 @@ static int start_coap_client(void)
 	inet_pton(addr4.sin_family, CONFIG_NET_CONFIG_PEER_IPV4_ADDR,
 		  &addr4.sin_addr);
 
-	sock = socket(addr4.sin_family, SOCK_DGRAM, IPPROTO_UDP);
+	sock = socket(addr4.sin_family, SOCK_DGRAM, proto);
 	if (sock < 0) {
 		LOG_ERR("Failed to create UDP socket %d", errno);
 		return -errno;
 	}
+
+#if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+	sec_tag_t sec_tag_list[] = {
+		PSK_TAG,
+	};
+
+	ret = setsockopt(sock, SOL_TLS, TLS_SEC_TAG_LIST,
+			 sec_tag_list, sizeof(sec_tag_list));
+	if (ret < 0) {
+		LOG_ERR("Failed to set TLS_SEC_TAG_LIST option: %d", errno);
+		return -errno;
+	}
+#endif /* defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS) */
 
 	ret = connect(sock, (struct sockaddr *)&addr4, sizeof(addr4));
 	if (ret < 0) {
@@ -201,11 +227,14 @@ static int send_hello(void)
 		goto end;
 	}
 
-	r = coap_packet_append_option(&request, COAP_OPTION_URI_QUERY,
-				      "id=mark-one", strlen("id=mark-one"));
-	if (r < 0) {
-		LOG_ERR("Unable add option to request");
-		goto end;
+	if (!IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
+		r = coap_packet_append_option(&request, COAP_OPTION_URI_QUERY,
+					      "id="NOTLS_ID,
+					      sizeof("id="NOTLS_ID) - 1);
+		if (r < 0) {
+			LOG_ERR("Unable add option to request");
+			goto end;
+		}
 	}
 
 	coap_send(&request);
@@ -216,9 +245,38 @@ end:
 	return 0;
 }
 
+static int init_tls(void)
+{
+	int err;
+
+	err = tls_credential_add(PSK_TAG,
+				TLS_CREDENTIAL_PSK,
+				TLS_PSK,
+				sizeof(TLS_PSK) - 1);
+	if (err < 0) {
+		LOG_ERR("Failed to register PSK: %d", err);
+		return err;
+	}
+
+	err = tls_credential_add(PSK_TAG,
+				TLS_CREDENTIAL_PSK_ID,
+				TLS_PSK_ID,
+				sizeof(TLS_PSK_ID) - 1);
+	if (err < 0) {
+		LOG_ERR("Failed to register PSK ID: %d", err);
+		return err;
+	}
+
+	return 0;
+}
+
 void main(void)
 {
 	int r;
+
+	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
+		init_tls();
+	}
 
 	LOG_DBG("Start CoAP-client sample");
 

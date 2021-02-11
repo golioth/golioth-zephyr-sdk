@@ -1,8 +1,11 @@
 sample:
   description: Say Hello to Golioth server
   name: hello
+common:
+  harness: net
+  platform_allow: qemu_x86
+  tags: golioth net socket
 tests:
-  sample.golioth.hello:
-    harness: net
-    tags: golioth net socket
-    platform_allow: qemu_x86
+  sample.golioth.hello.unsecure: {}
+  sample.golioth.hello.tls:
+    extra_args: OVERLAY_FILE=overlay-tls.conf
