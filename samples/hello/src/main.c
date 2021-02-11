@@ -21,13 +21,54 @@ static int sock;
 struct pollfd fds[1];
 static int nfds;
 
-static int wait_for_reply(void)
+static int coap_send(struct coap_packet *p)
+{
+	int ret;
+
+	LOG_HEXDUMP_DBG(p->data, p->offset, "TX");
+
+	ret = send(sock, p->data, p->offset, 0);
+	if (ret < 0) {
+		LOG_ERR("Failed to send: %d", -errno);
+		return -errno;
+	}
+
+	return 0;
+}
+
+static int send_ack(struct coap_packet *request)
 {
 	struct coap_packet reply;
+	uint8_t *data;
+	int err;
+
+	data = (uint8_t *)k_malloc(MAX_COAP_MSG_LEN);
+	if (!data) {
+		return -ENOMEM;
+	}
+
+	err = coap_ack_init(&reply, request, data, MAX_COAP_MSG_LEN,
+			    COAP_CODE_EMPTY);
+	if (err) {
+		goto free_data;
+	}
+
+	err = coap_send(&reply);
+
+free_data:
+	k_free(data);
+
+	return err;
+}
+
+static int wait_for_rx(void)
+{
+	struct coap_packet rx;
 	uint16_t payload_len;
 	const uint8_t *payload;
 	uint8_t *data;
 	int rcvd;
+	uint8_t type;
 	int ret = 0;
 
 	if (poll(fds, nfds, 5000) < 0) {
@@ -55,19 +96,27 @@ static int wait_for_reply(void)
 		goto end;
 	}
 
-	LOG_HEXDUMP_DBG(data, rcvd, "Response");
+	LOG_HEXDUMP_DBG(data, rcvd, "RX");
 
-	ret = coap_packet_parse(&reply, data, rcvd, NULL, 0);
+	ret = coap_packet_parse(&rx, data, rcvd, NULL, 0);
 	if (ret < 0) {
 		LOG_ERR("Invalid data received");
 	}
 
-	payload = coap_packet_get_payload(&reply, &payload_len);
-	if (!payload) {
-		goto end;
+	type = coap_header_get_type(&rx);
+	payload = coap_packet_get_payload(&rx, &payload_len);
+
+	if (type == COAP_TYPE_CON) {
+		if (payload_len == 0) {
+			LOG_INF("PING received");
+		}
+
+		send_ack(&rx);
 	}
 
-	LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
+	if (payload) {
+		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
+	}
 
 end:
 	k_free(data);
@@ -80,7 +129,7 @@ static void coap_receive(void *arg1, void *arg2, void *arg3)
 	int err;
 
 	while (true) {
-		err = wait_for_reply();
+		err = wait_for_rx();
 		if (err < 0) {
 			LOG_ERR("Failed to receive: %d", err);
 		}
@@ -159,9 +208,7 @@ static int send_hello(void)
 		goto end;
 	}
 
-	LOG_HEXDUMP_DBG(request.data, request.offset, "Request");
-
-	r = send(sock, request.data, request.offset, 0);
+	coap_send(&request);
 
 end:
 	k_free(data);
