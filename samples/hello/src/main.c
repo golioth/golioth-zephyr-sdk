@@ -20,8 +20,8 @@ LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 #endif
 #define MAX_COAP_MSG_LEN	256
 
-#define TLS_PSK_ID		"mark-one-id"
-#define TLS_PSK			"1r0nm@n"
+#define TLS_PSK_ID		"qemu-id"
+#define TLS_PSK			"qemu-psk"
 #define NOTLS_ID		"mark-one"
 
 #define PSK_TAG			1
