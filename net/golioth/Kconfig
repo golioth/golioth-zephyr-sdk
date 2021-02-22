@@ -1,0 +1,20 @@
+#
+# Copyright (C) 2021 Golioth
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config NET_GOLIOTH
+	bool "Golioth"
+	help
+	  Enable library for communication with Golioth cloud.
+
+if NET_GOLIOTH
+
+config NET_GOLIOTH_COAP_MAX_OPTIONS
+	int "Maximum CoAP options supported"
+	default 16
+	help
+	  Maximum CoAP options supported by Golioth client.
+
+endif # NET_GOLIOTH
