@@ -7,6 +7,7 @@
 #ifndef ZEPHYR_INCLUDE_NET_GOLIOTH_H_
 #define ZEPHYR_INCLUDE_NET_GOLIOTH_H_
 
+#include <kernel.h>
 #include <net/coap.h>
 #include <net/tls_credentials.h>
 #include <stdint.h>
@@ -39,11 +40,22 @@ struct golioth_client {
 	struct coap_packet rx_packet;
 	struct coap_option rx_options[CONFIG_NET_GOLIOTH_COAP_MAX_OPTIONS];
 
+	struct k_mutex lock;
 	int sock;
 
 	void (*on_message)(struct golioth_client *client,
 			   struct coap_packet *rx);
 };
+
+static inline void golioth_lock(struct golioth_client *client)
+{
+	k_mutex_lock(&client->lock, K_FOREVER);
+}
+
+static inline void golioth_unlock(struct golioth_client *client)
+{
+	k_mutex_unlock(&client->lock);
+}
 
 void golioth_init(struct golioth_client *client);
 int golioth_connect(struct golioth_client *client);

@@ -19,6 +19,9 @@ LOG_MODULE_REGISTER(golioth, CONFIG_NET_GOLIOTH_LOG_LEVEL);
 void golioth_init(struct golioth_client *client)
 {
 	memset(client, 0, sizeof(*client));
+
+	k_mutex_init(&client->lock);
+	client->sock = -1;
 }
 
 static int golioth_setsockopt_dtls(struct golioth_client *client)
@@ -55,7 +58,21 @@ static int golioth_connect_sock(struct golioth_client *client)
 	return 0;
 }
 
-int golioth_connect(struct golioth_client *client)
+static int __golioth_close(struct golioth_client *client)
+{
+	int ret;
+
+	ret = zsock_close(client->sock);
+	client->sock = -1;
+
+	if (ret < 0) {
+		return -errno;
+	}
+
+	return 0;
+}
+
+static int __golioth_connect(struct golioth_client *client)
 {
 	int err;
 
@@ -80,21 +97,36 @@ int golioth_connect(struct golioth_client *client)
 	return 0;
 
 close_sock:
-	(void)zsock_close(client->sock);
+	__golioth_close(client);
 
 	return err;
 }
 
-int golioth_disconnect(struct golioth_client *client)
+int golioth_connect(struct golioth_client *client)
+{
+	int err;
+
+	golioth_lock(client);
+	err = __golioth_connect(client);
+	golioth_unlock(client);
+
+	return err;
+}
+
+static int golioth_close(struct golioth_client *client)
 {
 	int ret;
 
-	ret = zsock_close(client->sock);
-	if (ret < 0) {
-		return -errno;
-	}
+	golioth_lock(client);
+	ret = __golioth_close(client);
+	golioth_unlock(client);
 
-	return 0;
+	return ret;
+}
+
+int golioth_disconnect(struct golioth_client *client)
+{
+	return golioth_close(client);
 }
 
 int golioth_set_proto_coap_udp(struct golioth_client *client,
@@ -129,8 +161,36 @@ int golioth_set_proto_coap_dtls(struct golioth_client *client,
 #define QUERY_PREFIX		"id="
 #define QUERY_PREFIX_LEN	(sizeof(QUERY_PREFIX) - 1)
 
-static int golioth_send_coap(struct golioth_client *client,
-			     struct coap_packet *packet)
+static int __golioth_send(struct golioth_client *client, uint8_t *data,
+			  size_t len, int flags)
+{
+	ssize_t sent;
+
+	if (client->sock < 0) {
+		return -ENOTCONN;
+	}
+
+	sent = zsock_send(client->sock, data, len, flags);
+	if (sent < 0) {
+		return -errno;
+	}
+
+	return 0;
+}
+
+static int golioth_send(struct golioth_client *client, uint8_t *data,
+			size_t len, int flags)
+{
+	int ret;
+
+	golioth_lock(client);
+	ret = __golioth_send(client, data, len, flags);
+	golioth_unlock(client);
+
+	return ret;
+}
+
+static int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 {
 	int ret;
 	int err;
@@ -153,7 +213,7 @@ static int golioth_send_coap(struct golioth_client *client,
 
 	LOG_HEXDUMP_DBG(packet->data, packet->offset, "TX CoAP");
 
-	ret = zsock_send(client->sock, packet->data, packet->offset, 0);
+	ret = golioth_send(client, packet->data, packet->offset, 0);
 	if (ret < 0) {
 		LOG_ERR("Failed to send CoAP: %d", -errno);
 		return -errno;
@@ -291,31 +351,58 @@ static int golioth_process_rx_ping(struct golioth_client *client,
 	return golioth_ack_packet(client, &client->rx_packet);
 }
 
-int golioth_process_rx(struct golioth_client *client)
+static int __golioth_recv(struct golioth_client *client, uint8_t *data,
+			  size_t len, int flags)
 {
 	ssize_t rcvd;
-	int err;
 
-	rcvd = zsock_recv(client->sock, client->rx_buffer,
-			  client->rx_buffer_len, MSG_DONTWAIT);
-	if (rcvd == 0) {
-		return -EIO;
-	} else if (rcvd < 0) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			/* no pending data */
-			return 0;
-		} else {
-			return -errno;
-		}
+	if (client->sock < 0) {
+		return -ENOTCONN;
 	}
 
-	err = coap_data_check_rx_packet_type(client->rx_buffer, rcvd);
+	rcvd = zsock_recv(client->sock, data, len, flags);
+	if (rcvd < 0) {
+		return -errno;
+	} else if (rcvd == 0) {
+		return -ENOTCONN;
+	}
+
+	return rcvd;
+}
+
+static int golioth_recv(struct golioth_client *client, uint8_t *data,
+			size_t len, int flags)
+{
+	int ret;
+
+	golioth_lock(client);
+	ret = __golioth_recv(client, data, len, flags);
+	golioth_unlock(client);
+
+	return ret;
+}
+
+int golioth_process_rx(struct golioth_client *client)
+{
+	int ret;
+	int err;
+
+	ret = golioth_recv(client, client->rx_buffer, client->rx_buffer_len,
+			   MSG_DONTWAIT);
+	if (ret == -EAGAIN || ret == -EWOULDBLOCK) {
+		/* no pending data */
+		return 0;
+	} else if (ret < 0) {
+		return ret;
+	}
+
+	err = coap_data_check_rx_packet_type(client->rx_buffer, ret);
 	if (err == -ENOMSG) {
 		/* ping */
-		return golioth_process_rx_ping(client, client->rx_buffer, rcvd);
+		return golioth_process_rx_ping(client, client->rx_buffer, ret);
 	} else if (err) {
 		return err;
 	}
 
-	return golioth_process_rx_data(client, client->rx_buffer, rcvd);
+	return golioth_process_rx_data(client, client->rx_buffer, ret);
 }
