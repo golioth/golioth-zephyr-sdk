@@ -5,6 +5,7 @@
 
 menu "Golioth options"
 
+rsource "logging/Kconfig"
 rsource "net/Kconfig"
 
 endmenu

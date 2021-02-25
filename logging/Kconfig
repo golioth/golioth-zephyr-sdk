@@ -1,0 +1,25 @@
+#
+# Copyright (C) 2021 Golioth
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config LOG_BACKEND_GOLIOTH
+	bool "Golioth logging backend"
+	depends on LOG
+	depends on !LOG_IMMEDIATE
+	depends on NET_GOLIOTH
+	select TINYCBOR
+	help
+	  Enable sending logs to Golioth cloud.
+
+if LOG_BACKEND_GOLIOTH
+
+config LOG_BACKEND_GOLIOTH_MAX_PACKET_SIZE
+	int "Maximum packet size"
+	default 512
+	help
+	  Specified maximum buffer size used for sending log entry to Golioth
+	  cloud.
+
+endif # LOG_BACKEND_GOLIOTH
