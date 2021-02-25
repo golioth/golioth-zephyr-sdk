@@ -67,6 +67,8 @@ int golioth_set_proto_coap_dtls(struct golioth_client *client,
 				sec_tag_t *sec_tag_list,
 				size_t sec_tag_count);
 
+int golioth_send_coap(struct golioth_client *client,
+		      struct coap_packet *packet);
 int golioth_send_hello(struct golioth_client *client);
 
 int golioth_process_rx(struct golioth_client *client);

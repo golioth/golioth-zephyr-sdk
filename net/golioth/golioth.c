@@ -190,7 +190,7 @@ static int golioth_send(struct golioth_client *client, uint8_t *data,
 	return ret;
 }
 
-static int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
+int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 {
 	int ret;
 	int err;
