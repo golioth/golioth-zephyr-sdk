@@ -8,4 +8,4 @@ common:
 tests:
   sample.golioth.hello.unsecure: {}
   sample.golioth.hello.tls:
-    extra_args: OVERLAY_FILE=overlay-tls.conf
+    extra_args: OVERLAY_CONFIG=overlay-tls.conf
