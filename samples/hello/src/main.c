@@ -9,6 +9,7 @@
 LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 #include <errno.h>
+#include <logging/golioth.h>
 #include <net/socket.h>
 #include <net/coap.h>
 #include <net/golioth.h>
@@ -77,7 +78,7 @@ static void golioth_on_message(struct golioth_client *client,
 	type = coap_header_get_type(rx);
 	payload = coap_packet_get_payload(rx, &payload_len);
 
-	if (payload) {
+	if (!IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH) && payload) {
 		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
 	}
 }
@@ -127,6 +128,10 @@ static int start_coap_client(void)
 
 	prepare_fds();
 
+	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
+		log_backend_golioth_init(client);
+	}
+
 	return 0;
 }
 
@@ -155,9 +160,20 @@ static int init_tls(void)
 	return 0;
 }
 
+static void func_1(int counter)
+{
+	LOG_DBG("Log 1: %d", counter);
+}
+
+static void func_2(int counter)
+{
+	LOG_DBG("Log 2: %d", counter);
+}
+
 void main(void)
 {
 	int r;
+	int counter = 0;
 
 	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
 		init_tls();
@@ -173,6 +189,13 @@ void main(void)
 	k_thread_start(coap_rx);
 
 	while (true) {
+		LOG_INF("Sending hello! %d", counter++);
+		LOG_DBG("Debug info! %d", counter);
+		func_1(counter);
+		func_2(counter);
+		LOG_WRN("Warn: %d", counter);
+		LOG_ERR("Err: %d", counter);
+
 		r = golioth_send_hello(client);
 		if (r < 0) {
 			goto disconnect;
