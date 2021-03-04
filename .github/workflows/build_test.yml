@@ -34,6 +34,7 @@ jobs:
           EOF
 
           west update
+          west patch --apply
 
       - name: Run twister
         run: |

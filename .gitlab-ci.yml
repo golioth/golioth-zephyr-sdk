@@ -8,7 +8,9 @@ variables:
 .west-init-and-update: &west-init-and-update
   - rm -rf .west modules/lib/golioth
   - west init -m $CI_REPOSITORY_URL --mr $CI_COMMIT_SHA
+  - west forall -c 'git clean -ffdx && git reset --hard'
   - west update
+  - west patch --apply
 
 .cache-deps: &cache-deps
   key: west-modules
