@@ -11,6 +11,10 @@ config NET_GOLIOTH
 
 if NET_GOLIOTH
 
+module = NET_GOLIOTH
+module-str = net_golioth
+source "subsys/logging/Kconfig.template.log_config"
+
 config NET_GOLIOTH_COAP_MAX_OPTIONS
 	int "Maximum CoAP options supported"
 	default 16

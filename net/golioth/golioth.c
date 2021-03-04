@@ -10,7 +10,7 @@
 #include <string.h>
 
 #include <logging/log.h>
-LOG_MODULE_REGISTER(golioth, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(golioth, CONFIG_NET_GOLIOTH_LOG_LEVEL);
 
 #define COAP_BASIC_HEADER_SIZE	4
 
