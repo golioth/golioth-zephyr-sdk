@@ -1,0 +1,57 @@
+From b54543636d2b8ab84c0a0c95b8404bd81af141b9 Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@grinn-global.com>
+Date: Thu, 4 Mar 2021 21:10:43 +0100
+Subject: [PATCH] logging: add log_output_timestamp_to_us() helper function
+
+So far we only have log_msg_timestamp_get() function, which returns
+internal timestamp representation. This is either clock cycles or uptime
+in ms, depending on main clock precision.
+
+Introduce log_output_timestamp_to_us() helper function, which allows to
+convert internal logging timestamp to us.
+
+PR: https://github.com/zephyrproject-rtos/zephyr/pull/32893
+
+Signed-off-by: Marcin Niestroj <m.niestroj@grinn-global.com>
+---
+ include/logging/log_output.h | 8 ++++++++
+ subsys/logging/log_output.c  | 7 +++++++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/include/logging/log_output.h b/include/logging/log_output.h
+index 96ee14d601..61ce2d55c8 100644
+--- a/include/logging/log_output.h
++++ b/include/logging/log_output.h
+@@ -188,6 +188,14 @@ static inline void log_output_hostname_set(const struct log_output *log_output,
+  */
+ void log_output_timestamp_freq_set(uint32_t freq);
+ 
++/** @brief Convert timestamp of the message to us.
++ *
++ * @param timestamp Message timestamp
++ *
++ * @return Timestamp value in us.
++ */
++uint64_t log_output_timestamp_to_us(uint32_t timestamp);
++
+ /**
+  * @}
+  */
+diff --git a/subsys/logging/log_output.c b/subsys/logging/log_output.c
+index 0050041fd5..ab598bef80 100644
+--- a/subsys/logging/log_output.c
++++ b/subsys/logging/log_output.c
+@@ -668,3 +668,10 @@ void log_output_timestamp_freq_set(uint32_t frequency)
+ 
+ 	freq = frequency;
+ }
++
++uint64_t log_output_timestamp_to_us(uint32_t timestamp)
++{
++	timestamp /= timestamp_div;
++
++	return ((uint64_t) timestamp * 1000000U) / freq;
++}
+-- 
+2.30.1
+

@@ -137,7 +137,7 @@ static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
 
 	cbor_encode_text_stringz(&cbor->map, "uptime");
 	cbor_encode_uint(&cbor->map,
-			 log_msg_timestamp_to_us(msg->hdr.timestamp));
+			 log_output_timestamp_to_us(msg->hdr.timestamp));
 
 	cbor_encode_text_stringz(&cbor->map, "module");
 	cbor_encode_text_stringz(&cbor->map,
@@ -547,7 +547,7 @@ static void send_output(const struct log_backend *const backend,
 
 static const struct log_backend log_backend_golioth;
 
-static void init_golioth(void)
+static void init_golioth(const struct log_backend *const backend)
 {
 	log_backend_deactivate(&log_backend_golioth);
 }
