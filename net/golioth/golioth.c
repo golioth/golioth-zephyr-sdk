@@ -215,7 +215,6 @@ int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 
 	ret = golioth_send(client, packet->data, packet->offset, 0);
 	if (ret < 0) {
-		LOG_ERR("Failed to send CoAP: %d", -errno);
 		return -errno;
 	}
 
