@@ -137,7 +137,7 @@ static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
 
 	cbor_encode_text_stringz(&cbor->map, "uptime");
 	cbor_encode_uint(&cbor->map,
-			 log_msg_timestamp_to_us(msg->hdr.timestamp));
+			 log_output_timestamp_to_us(msg->hdr.timestamp));
 
 	cbor_encode_text_stringz(&cbor->map, "module");
 	cbor_encode_text_stringz(&cbor->map,
