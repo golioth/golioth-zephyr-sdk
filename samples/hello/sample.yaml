@@ -6,8 +6,8 @@ common:
   platform_allow: qemu_x86
   tags: golioth net socket
 tests:
-  sample.golioth.hello.unsecure: {}
-  sample.golioth.hello.tls:
-    extra_args: OVERLAY_CONFIG=overlay-tls.conf
+  sample.golioth.hello.unsecure:
+    extra_args: OVERLAY_CONFIG=overlay-unsecure.conf
+  sample.golioth.hello.tls: {}
   sample.golioth.hello.logging:
-    extra_args: OVERLAY_CONFIG="overlay-tls.conf;overlay-logging.conf"
+    extra_args: OVERLAY_CONFIG=overlay-logging.conf
