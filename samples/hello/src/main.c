@@ -18,16 +18,10 @@ LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 #define RX_TIMEOUT		K_SECONDS(30)
 
-#if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
-#define PEER_PORT		5684
-#else
-#define PEER_PORT		5683
-#endif
 #define MAX_COAP_MSG_LEN	256
 
-#define TLS_PSK_ID		"mark-one-id"
-#define TLS_PSK			"1r0nm@n"
-#define NOTLS_ID		"mark-one"
+#define TLS_PSK_ID		CONFIG_GOLIOTH_HELLO_DTLS_PSK_ID
+#define TLS_PSK			CONFIG_GOLIOTH_HELLO_DTLS_PSK
 
 #define PSK_TAG			1
 
@@ -131,8 +125,8 @@ static int initialize_client(void)
 		err = golioth_set_proto_coap_dtls(client, sec_tag_list,
 						  ARRAY_SIZE(sec_tag_list));
 	} else {
-		err = golioth_set_proto_coap_udp(client, NOTLS_ID,
-						 sizeof(NOTLS_ID) - 1);
+		err = golioth_set_proto_coap_udp(client, TLS_PSK_ID,
+						 sizeof(TLS_PSK_ID) - 1);
 	}
 	if (err) {
 		LOG_ERR("Failed to set protocol: %d", err);
@@ -140,9 +134,9 @@ static int initialize_client(void)
 	}
 
 	addr4.sin_family = AF_INET;
-	addr4.sin_port = htons(PEER_PORT);
+	addr4.sin_port = htons(CONFIG_GOLIOTH_HELLO_PORT);
 
-	inet_pton(addr4.sin_family, CONFIG_NET_CONFIG_PEER_IPV4_ADDR,
+	inet_pton(addr4.sin_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
 		  &addr4.sin_addr);
 
 	client->server = (struct sockaddr *)&addr4;
