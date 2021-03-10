@@ -24,12 +24,12 @@ void golioth_init(struct golioth_client *client)
 	client->sock = -1;
 }
 
-static int golioth_setsockopt_dtls(struct golioth_client *client)
+static int golioth_setsockopt_dtls(struct golioth_client *client, int sock)
 {
 	int ret;
 
 	if (client->tls.sec_tag_list && client->tls.sec_tag_count) {
-		ret = zsock_setsockopt(client->sock, SOL_TLS, TLS_SEC_TAG_LIST,
+		ret = zsock_setsockopt(sock, SOL_TLS, TLS_SEC_TAG_LIST,
 				client->tls.sec_tag_list,
 				client->tls.sec_tag_count *
 					sizeof(*client->tls.sec_tag_list));
@@ -41,7 +41,7 @@ static int golioth_setsockopt_dtls(struct golioth_client *client)
 	return 0;
 }
 
-static int golioth_connect_sock(struct golioth_client *client)
+static int golioth_connect_sock(struct golioth_client *client, int sock)
 {
 	size_t addr_size = sizeof(struct sockaddr_in6);
 	int ret;
@@ -50,7 +50,7 @@ static int golioth_connect_sock(struct golioth_client *client)
 		addr_size = sizeof(struct sockaddr_in);
 	}
 
-	ret = zsock_connect(client->sock, client->server, addr_size);
+	ret = zsock_connect(sock, client->server, addr_size);
 	if (ret < 0) {
 		return -errno;
 	}
@@ -58,12 +58,15 @@ static int golioth_connect_sock(struct golioth_client *client)
 	return 0;
 }
 
-static int __golioth_close(struct golioth_client *client)
+static int __golioth_close(int sock)
 {
 	int ret;
 
-	ret = zsock_close(client->sock);
-	client->sock = -1;
+	if (sock < 0) {
+		return -ENOTCONN;
+	}
+
+	ret = zsock_close(sock);
 
 	if (ret < 0) {
 		return -errno;
@@ -72,24 +75,24 @@ static int __golioth_close(struct golioth_client *client)
 	return 0;
 }
 
-static int __golioth_connect(struct golioth_client *client)
+static int __golioth_connect(struct golioth_client *client, int *sock)
 {
 	int err;
 
-	client->sock = zsock_socket(client->server->sa_family, SOCK_DGRAM,
-				    client->proto);
-	if (client->sock < 0) {
+	*sock = zsock_socket(client->server->sa_family, SOCK_DGRAM,
+			     client->proto);
+	if (*sock < 0) {
 		return -errno;
 	}
 
 	if (client->proto == IPPROTO_DTLS_1_2) {
-		err = golioth_setsockopt_dtls(client);
+		err = golioth_setsockopt_dtls(client, *sock);
 		if (err) {
 			goto close_sock;
 		}
 	}
 
-	err = golioth_connect_sock(client);
+	err = golioth_connect_sock(client, *sock);
 	if (err) {
 		goto close_sock;
 	}
@@ -97,18 +100,30 @@ static int __golioth_connect(struct golioth_client *client)
 	return 0;
 
 close_sock:
-	__golioth_close(client);
+	__golioth_close(*sock);
 
 	return err;
 }
 
 int golioth_connect(struct golioth_client *client)
 {
-	int err;
+	int sock;
+	int err = 0;
 
-	golioth_lock(client);
-	err = __golioth_connect(client);
-	golioth_unlock(client);
+	if (client->sock >= 0) {
+		err = -EALREADY;
+	}
+
+	if (err) {
+		return err;
+	}
+
+	err = __golioth_connect(client, &sock);
+	if (!err) {
+		golioth_lock(client);
+		client->sock = sock;
+		golioth_unlock(client);
+	}
 
 	return err;
 }
@@ -118,7 +133,8 @@ static int golioth_close(struct golioth_client *client)
 	int ret;
 
 	golioth_lock(client);
-	ret = __golioth_close(client);
+	ret = __golioth_close(client->sock);
+	client->sock = -1;
 	golioth_unlock(client);
 
 	return ret;
