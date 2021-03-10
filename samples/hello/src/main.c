@@ -14,6 +14,9 @@ LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 #include <net/coap.h>
 #include <net/golioth.h>
 #include <net/tls_credentials.h>
+#include <posix/sys/eventfd.h>
+
+#define RX_TIMEOUT		K_SECONDS(30)
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 #define PEER_PORT		5684
@@ -34,39 +37,35 @@ static struct golioth_client *client = &g_client;
 
 static uint8_t rx_buffer[MAX_COAP_MSG_LEN];
 
-struct pollfd fds[1];
-static int nfds;
+static struct sockaddr_in addr4;
 
-static int wait_for_rx(void)
+#define POLLFD_EVENT_RECONNECT	0
+#define POLLFD_SOCKET		1
+
+struct pollfd fds[2];
+
+static K_SEM_DEFINE(golioth_client_ready, 0, 1);
+
+static void client_request_reconnect(void)
 {
-	if (poll(fds, nfds, 5000) < 0) {
-		LOG_ERR("Error in poll:%d", errno);
-	}
-
-	return golioth_process_rx(client);
+	eventfd_write(fds[POLLFD_EVENT_RECONNECT].fd, 1);
 }
 
-static void coap_receive(void *arg1, void *arg2, void *arg3)
+static void client_rx_timeout_work(struct k_work *work)
 {
-	int err;
+	LOG_ERR("RX client timeout!");
 
-	while (true) {
-		err = wait_for_rx();
-		if (err < 0) {
-			LOG_ERR("Failed to receive: %d", err);
-		}
-	}
+	client_request_reconnect();
 }
 
-K_THREAD_DEFINE(coap_rx, 1024, coap_receive, NULL, NULL, NULL,
-		K_LOWEST_APPLICATION_THREAD_PRIO, 0, -1);
+static K_WORK_DEFINE(rx_timeout_work, client_rx_timeout_work);
 
-static void prepare_fds(void)
+static void client_rx_timeout(struct k_timer *timer)
 {
-	fds[nfds].fd = client->sock;
-	fds[nfds].events = POLLIN;
-	nfds++;
+	k_work_submit(&rx_timeout_work);
 }
+
+static K_TIMER_DEFINE(rx_timeout, client_rx_timeout, NULL);
 
 static void golioth_on_message(struct golioth_client *client,
 			       struct coap_packet *rx)
@@ -83,15 +82,43 @@ static void golioth_on_message(struct golioth_client *client,
 	}
 }
 
-static int start_coap_client(void)
+static int init_tls(void)
 {
-	struct sockaddr_in addr4;
+	int err;
+
+	err = tls_credential_add(PSK_TAG,
+				TLS_CREDENTIAL_PSK,
+				TLS_PSK,
+				sizeof(TLS_PSK) - 1);
+	if (err < 0) {
+		LOG_ERR("Failed to register PSK: %d", err);
+		return err;
+	}
+
+	err = tls_credential_add(PSK_TAG,
+				TLS_CREDENTIAL_PSK_ID,
+				TLS_PSK_ID,
+				sizeof(TLS_PSK_ID) - 1);
+	if (err < 0) {
+		LOG_ERR("Failed to register PSK ID: %d", err);
+		return err;
+	}
+
+	return 0;
+}
+
+static int initialize_client(void)
+{
 	sec_tag_t sec_tag_list[] = {
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 		PSK_TAG,
 #endif /* defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS) */
 	};
 	int err;
+
+	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
+		init_tls();
+	}
 
 	golioth_init(client);
 
@@ -120,13 +147,8 @@ static int start_coap_client(void)
 
 	client->server = (struct sockaddr *)&addr4;
 
-	err = golioth_connect(client);
-	if (err) {
-		LOG_ERR("Failed to connect: %d", err);
-		return err;
-	}
-
-	prepare_fds();
+	fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
+	fds[POLLFD_EVENT_RECONNECT].events = POLLIN;
 
 	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
 		log_backend_golioth_init(client);
@@ -135,30 +157,88 @@ static int start_coap_client(void)
 	return 0;
 }
 
-static int init_tls(void)
+static int connect_client(void)
 {
 	int err;
 
-	err = tls_credential_add(PSK_TAG,
-				TLS_CREDENTIAL_PSK,
-				TLS_PSK,
-				sizeof(TLS_PSK) - 1);
-	if (err < 0) {
-		LOG_ERR("Failed to register PSK: %d", err);
+	err = golioth_connect(client);
+	if (err) {
+		LOG_ERR("Failed to connect: %d", err);
 		return err;
 	}
 
-	err = tls_credential_add(PSK_TAG,
-				TLS_CREDENTIAL_PSK_ID,
-				TLS_PSK_ID,
-				sizeof(TLS_PSK_ID) - 1);
-	if (err < 0) {
-		LOG_ERR("Failed to register PSK ID: %d", err);
-		return err;
-	}
+	fds[POLLFD_SOCKET].fd = client->sock;
+	fds[POLLFD_SOCKET].events = POLLIN;
 
 	return 0;
 }
+
+static void golioth_main(void *arg1, void *arg2, void *arg3)
+{
+	eventfd_t eventfd_value;
+	int err;
+
+	LOG_INF("Initializing golioth client");
+
+	err = initialize_client();
+	if (err) {
+		LOG_ERR("Failed to initialize client: %d", err);
+		return;
+	}
+
+	LOG_INF("Golioth client initialized");
+
+	k_sem_give(&golioth_client_ready);
+
+	while (true) {
+		if (client->sock < 0) {
+			LOG_INF("Starting connect");
+			err = connect_client();
+			if (err) {
+				LOG_WRN("Failed to connect: %d", err);
+				k_sleep(RX_TIMEOUT);
+				continue;
+			}
+
+			/* Flush reconnect requests */
+			(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
+					   &eventfd_value);
+
+			/* Add RX timeout */
+			k_timer_start(&rx_timeout, RX_TIMEOUT, K_NO_WAIT);
+
+			LOG_INF("Client connected!");
+		}
+
+		if (zsock_poll(fds, ARRAY_SIZE(fds), -1) < 0) {
+			LOG_ERR("Error in poll:%d", errno);
+			/* TODO: reconnect */
+			break;
+		}
+
+		if (fds[POLLFD_EVENT_RECONNECT].revents) {
+			(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
+					   &eventfd_value);
+			LOG_INF("Reconnect request");
+			golioth_disconnect(client);
+			continue;
+		}
+
+		if (fds[POLLFD_SOCKET].revents) {
+			/* Restart timer */
+			k_timer_start(&rx_timeout, K_SECONDS(30), K_NO_WAIT);
+
+			err = golioth_process_rx(client);
+			if (err) {
+				LOG_ERR("Failed to receive: %d", err);
+				golioth_disconnect(client);
+			}
+		}
+	}
+}
+
+K_THREAD_DEFINE(golioth_main_thread, 2048, golioth_main, NULL, NULL, NULL,
+		K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
 
 static void func_1(int counter)
 {
@@ -175,18 +255,9 @@ void main(void)
 	int r;
 	int counter = 0;
 
-	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
-		init_tls();
-	}
-
 	LOG_DBG("Start CoAP-client sample");
 
-	r = start_coap_client();
-	if (r < 0) {
-		goto quit;
-	}
-
-	k_thread_start(coap_rx);
+	k_sem_take(&golioth_client_ready, K_FOREVER);
 
 	while (true) {
 		LOG_INF("Sending hello! %d", counter++);
@@ -198,17 +269,11 @@ void main(void)
 
 		r = golioth_send_hello(client);
 		if (r < 0) {
-			goto disconnect;
+			LOG_WRN("Failed to send hello!");
 		}
 
 		k_sleep(K_SECONDS(5));
 	}
 
-	LOG_DBG("Done");
-
-disconnect:
-	golioth_disconnect(client);
-
-quit:
 	LOG_DBG("Quit");
 }
