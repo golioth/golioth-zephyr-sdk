@@ -11,3 +11,5 @@ tests:
   sample.golioth.hello.tls: {}
   sample.golioth.hello.logging:
     extra_args: OVERLAY_CONFIG=overlay-logging.conf
+  sample.golioth.hello.ppp:
+    extra_args: OVERLAY_CONFIG=overlay-qemu-ppp.conf
