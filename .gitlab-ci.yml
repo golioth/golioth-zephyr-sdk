@@ -61,7 +61,7 @@ cache-deps:
     - rm -rf modules/lib/golioth
   only:
     refs:
-      - master
+      - main
 
 checkpatch:
   extends: [.check, .west-prepare]
