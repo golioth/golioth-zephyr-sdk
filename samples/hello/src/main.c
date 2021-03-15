@@ -36,7 +36,7 @@ static struct sockaddr_in addr4;
 #define POLLFD_EVENT_RECONNECT	0
 #define POLLFD_SOCKET		1
 
-struct pollfd fds[2];
+struct zsock_pollfd fds[2];
 
 static K_SEM_DEFINE(golioth_client_ready, 0, 1);
 
@@ -136,13 +136,13 @@ static int initialize_client(void)
 	addr4.sin_family = AF_INET;
 	addr4.sin_port = htons(CONFIG_GOLIOTH_HELLO_PORT);
 
-	inet_pton(addr4.sin_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
-		  &addr4.sin_addr);
+	zsock_inet_pton(addr4.sin_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
+			&addr4.sin_addr);
 
 	client->server = (struct sockaddr *)&addr4;
 
 	fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
-	fds[POLLFD_EVENT_RECONNECT].events = POLLIN;
+	fds[POLLFD_EVENT_RECONNECT].events = ZSOCK_POLLIN;
 
 	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
 		log_backend_golioth_init(client);
@@ -162,7 +162,7 @@ static int connect_client(void)
 	}
 
 	fds[POLLFD_SOCKET].fd = client->sock;
-	fds[POLLFD_SOCKET].events = POLLIN;
+	fds[POLLFD_SOCKET].events = ZSOCK_POLLIN;
 
 	return 0;
 }
