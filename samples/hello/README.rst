@@ -17,8 +17,6 @@ Requirements
 Building and Running
 ********************
 
-This application has been built and tested with QEMU x86 and QEMU ARM Cortex-M3.
-
 Configure the following Kconfig options based on your Golioth credentials and
 server in your own overlay config file:
 
@@ -26,6 +24,15 @@ server in your own overlay config file:
 - GOLIOTH_HELLO_PORT         - Server port number.
 - GOLIOTH_HELLO_DTLS_PSK_ID  - PSK ID of registered device
 - GOLIOTH_HELLO_DTLS_PSK     - PSK of registered device
+
+Platform specific configuration
+===============================
+
+QEMU
+----
+
+This application has been built and tested with QEMU x86 (qemu_x86) and QEMU ARM
+Cortex-M3 (qemu_cortex_m3).
 
 On your Linux host computer, open a terminal window, locate the source code
 of this sample application (i.e., `samples/hello`) and type:
@@ -45,6 +52,38 @@ or
 See `Networking with QEMU`_ on how to setup networking on host and configure
 NAT/masquerading to access Internet.
 
+ESP32
+-----
+
+Configure the following Kconfig options based on your WiFi AP credentials:
+
+- ESP32_WIFI_SSID     - WiFi SSID
+- ESP32_WIFI_PASSWORD - WiFi PSK
+
+On your host computer open a terminal window, locate the source code of this
+sample application (i.e., `samples/hello`) and type:
+
+.. code-block:: console
+
+   $ west build -b esp32 samples/hello
+   $ west flash
+
+or
+
+.. code-block:: console
+
+   $ west build -b esp32 samples/hello -- -DOVERLAY_FILE="<overlay1.conf>;<overlay2.conf>"
+   $ west flash
+
+This is the overlay template for WiFi credentials:
+
+.. code-block:: console
+
+   CONFIG_ESP32_WIFI_SSID="my-wifi"
+   CONFIG_ESP32_WIFI_PASSWORD="my-psk"
+
+See `ESP32`_ for details on how to use ESP32 board.
+
 Sample overlay file
 ===================
 
@@ -60,11 +99,10 @@ This is the overlay template for Golioth credentials and server:
 Sample output
 =============
 
-This is the output from the QEMU console:
+This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:00.000,000] <wrn> net_sock_tls: No entropy device on the system, TLS communication may be insecure!
    [00:00:00.000,000] <dbg> golioth_hello.main: Start CoAP-client sample
    [00:00:00.000,000] <inf> golioth_hello: Initializing golioth client
    [00:00:00.000,000] <inf> golioth_hello: Golioth client initialized
@@ -78,3 +116,4 @@ This is the output from the QEMU console:
    [00:00:00.000,000] <inf> golioth_hello: Client connected!
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
+.. _ESP32: https://docs.zephyrproject.org/latest/boards/xtensa/esp32/doc/index.html
