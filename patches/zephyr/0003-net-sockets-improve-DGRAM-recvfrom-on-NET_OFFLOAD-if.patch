@@ -1,0 +1,67 @@
+From a3d0ed83ef9d61851c0360913b92a2f547d721c3 Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@emb.dev>
+Date: Tue, 16 Mar 2021 22:25:33 +0100
+Subject: [PATCH] net: sockets: improve DGRAM recvfrom() on NET_OFFLOAD iface
+
+When recvfrom() was called with src_addr != NULL, then source address
+was fetched from beginning of net_pkt. This works with native IP stack
+obviously. However with offloaded IP stack there is no IP header, so
+trying to parse missing IP header results in undefined behavior.
+
+Check if network interface has offloaded IP stack. If positive, then
+figure out if there is assigned remote address to network context on
+which packet was received. Return this remote address, which SHOULD be
+the source address of received packet. Otherwise, return an error.
+
+PR: https://github.com/zephyrproject-rtos/zephyr/pull/33399
+
+Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
+---
+ subsys/net/lib/sockets/sockets.c | 31 ++++++++++++++++++++++++-------
+ 1 file changed, 24 insertions(+), 7 deletions(-)
+
+diff --git a/subsys/net/lib/sockets/sockets.c b/subsys/net/lib/sockets/sockets.c
+index 154922f5b1..638b5a8d9f 100644
+--- a/subsys/net/lib/sockets/sockets.c
++++ b/subsys/net/lib/sockets/sockets.c
+@@ -966,13 +966,30 @@ static inline ssize_t zsock_recv_dgram(struct net_context *ctx,
+ 	net_pkt_cursor_backup(pkt, &backup);
+ 
+ 	if (src_addr && addrlen) {
+-		int rv;
+-
+-		rv = sock_get_pkt_src_addr(pkt, net_context_get_ip_proto(ctx),
+-					   src_addr, *addrlen);
+-		if (rv < 0) {
+-			errno = -rv;
+-			goto fail;
++		if (IS_ENABLED(CONFIG_NET_OFFLOAD) &&
++		    net_if_is_ip_offloaded(net_context_get_iface(ctx))) {
++			/*
++			 * Packets from offloaded IP stack do not have IP
++			 * headers, so src address cannot be figured out at this
++			 * point. The best we can do is returning remote address
++			 * if that was set using connect() call.
++			 */
++			if (ctx->flags & NET_CONTEXT_REMOTE_ADDR_SET) {
++				*src_addr = ctx->remote;
++			} else {
++				errno = -ENOTSUP;
++				goto fail;
++			}
++		} else {
++			int rv;
++
++			rv = sock_get_pkt_src_addr(pkt, net_context_get_ip_proto(ctx),
++						   src_addr, *addrlen);
++			if (rv < 0) {
++				errno = -rv;
++				LOG_ERR("sock_get_pkt_src_addr %d", rv);
++				goto fail;
++			}
+ 		}
+ 
+ 		/* addrlen is a value-result argument, set to actual
+-- 
+2.30.1
+
