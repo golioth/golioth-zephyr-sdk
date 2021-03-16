@@ -1,0 +1,74 @@
+From a9eec4b5a44d30c5fc32e729606e179d149ac763 Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@emb.dev>
+Date: Mon, 15 Mar 2021 23:16:42 +0100
+Subject: [PATCH] libc: minimal: implement time() API
+
+Implement time() API by using clock_gettime(CLOCK_REALTIME, ...).
+
+PR: https://github.com/zephyrproject-rtos/zephyr/pull/33397
+
+Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
+---
+ lib/libc/minimal/CMakeLists.txt     |  2 ++
+ lib/libc/minimal/include/time.h     |  2 ++
+ lib/libc/minimal/source/time/time.c | 25 +++++++++++++++++++++++++
+ 3 files changed, 29 insertions(+)
+ create mode 100644 lib/libc/minimal/source/time/time.c
+
+diff --git a/lib/libc/minimal/CMakeLists.txt b/lib/libc/minimal/CMakeLists.txt
+index 2c7afb115b..b8f9475ef9 100644
+--- a/lib/libc/minimal/CMakeLists.txt
++++ b/lib/libc/minimal/CMakeLists.txt
+@@ -20,3 +20,5 @@ zephyr_library_sources(
+   source/stdout/fprintf.c
+   source/time/gmtime.c
+ )
++
++zephyr_library_sources_ifdef(CONFIG_POSIX_CLOCK source/time/time.c)
+diff --git a/lib/libc/minimal/include/time.h b/lib/libc/minimal/include/time.h
+index 2de85621d1..946f1a83a5 100644
+--- a/lib/libc/minimal/include/time.h
++++ b/lib/libc/minimal/include/time.h
+@@ -52,6 +52,8 @@ struct tm *gmtime(const time_t *timep);
+ struct tm *gmtime_r(const time_t *_MLIBC_RESTRICT timep,
+ 		    struct tm *_MLIBC_RESTRICT result);
+ 
++time_t time(time_t *tloc);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/lib/libc/minimal/source/time/time.c b/lib/libc/minimal/source/time/time.c
+new file mode 100644
+index 0000000000..1fb4b5f18d
+--- /dev/null
++++ b/lib/libc/minimal/source/time/time.c
+@@ -0,0 +1,25 @@
++/*
++ * Copyright (c) 2021 Golioth, Inc.
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <posix/time.h>
++#include <time.h>
++
++time_t time(time_t *tloc)
++{
++	struct timespec ts;
++	int ret;
++
++	ret = clock_gettime(CLOCK_REALTIME, &ts);
++	if (ret < 0) {
++		ts.tv_sec = 0;
++	}
++
++	if (tloc) {
++		*tloc = ts.tv_sec;
++	}
++
++	return ts.tv_sec;
++}
+-- 
+2.30.1
+
