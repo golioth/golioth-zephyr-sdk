@@ -1,7 +1,7 @@
 # Copyright (c) 2021 Golioth
 # SPDX-License-Identifier: Apache-2.0
 
-mainmenu "Golioth lightdb application options"
+mainmenu "Golioth Light DB application options"
 
 config GOLIOTH_SERVER_IP_ADDR
 	string "Server IP Address"

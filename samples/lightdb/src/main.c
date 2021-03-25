@@ -414,7 +414,7 @@ void main(void)
 	int counter = 0;
 	int err;
 
-	LOG_DBG("Start lightdb sample");
+	LOG_DBG("Start Light DB sample");
 
 	golioth_led_initialize();
 

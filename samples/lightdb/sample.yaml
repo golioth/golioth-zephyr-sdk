@@ -1,5 +1,5 @@
 sample:
-  description: Access Golioth lightdb
+  description: Access Golioth Light DB
   name: lightdb
 common:
   harness: net
