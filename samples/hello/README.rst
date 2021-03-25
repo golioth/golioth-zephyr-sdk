@@ -35,7 +35,7 @@ This application has been built and tested with QEMU x86 (qemu_x86) and QEMU ARM
 Cortex-M3 (qemu_cortex_m3).
 
 On your Linux host computer, open a terminal window, locate the source code
-of this sample application (i.e., `samples/hello`) and type:
+of this sample application (i.e., ``samples/hello``) and type:
 
 .. code-block:: console
 
@@ -61,7 +61,7 @@ Configure the following Kconfig options based on your WiFi AP credentials:
 - ESP32_WIFI_PASSWORD - WiFi PSK
 
 On your host computer open a terminal window, locate the source code of this
-sample application (i.e., `samples/hello`) and type:
+sample application (i.e., ``samples/hello``) and type:
 
 .. code-block:: console
 
