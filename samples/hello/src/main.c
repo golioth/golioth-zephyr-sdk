@@ -36,7 +36,7 @@ static struct sockaddr_in addr4;
 #define POLLFD_EVENT_RECONNECT	0
 #define POLLFD_SOCKET		1
 
-struct zsock_pollfd fds[2];
+static struct zsock_pollfd fds[2];
 
 static K_SEM_DEFINE(golioth_client_ready, 0, 1);
 
