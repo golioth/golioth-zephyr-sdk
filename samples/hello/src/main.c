@@ -20,8 +20,8 @@ LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 #define MAX_COAP_MSG_LEN	256
 
-#define TLS_PSK_ID		CONFIG_GOLIOTH_HELLO_DTLS_PSK_ID
-#define TLS_PSK			CONFIG_GOLIOTH_HELLO_DTLS_PSK
+#define TLS_PSK_ID		CONFIG_GOLIOTH_SERVER_DTLS_PSK_ID
+#define TLS_PSK			CONFIG_GOLIOTH_SERVER_DTLS_PSK
 
 #define PSK_TAG			1
 
@@ -137,9 +137,9 @@ static int initialize_client(void)
 		struct sockaddr_in *addr4 = (struct sockaddr_in *) &addr;
 
 		addr4->sin_family = AF_INET;
-		addr4->sin_port = htons(CONFIG_GOLIOTH_HELLO_PORT);
+		addr4->sin_port = htons(CONFIG_GOLIOTH_SERVER_PORT);
 
-		zsock_inet_pton(addr4->sin_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
+		zsock_inet_pton(addr4->sin_family, CONFIG_GOLIOTH_SERVER_IP_ADDR,
 				&addr4->sin_addr);
 
 		client->server = (struct sockaddr *)addr4;
@@ -147,9 +147,9 @@ static int initialize_client(void)
 		struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &addr;
 
 		addr6->sin6_family = AF_INET6;
-		addr6->sin6_port = htons(CONFIG_GOLIOTH_HELLO_PORT);
+		addr6->sin6_port = htons(CONFIG_GOLIOTH_SERVER_PORT);
 
-		zsock_inet_pton(addr6->sin6_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
+		zsock_inet_pton(addr6->sin6_family, CONFIG_GOLIOTH_SERVER_IP_ADDR,
 				&addr6->sin6_addr);
 
 		client->server = (struct sockaddr *)addr6;

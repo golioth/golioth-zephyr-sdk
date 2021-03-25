@@ -3,26 +3,26 @@
 
 mainmenu "Golioth lightdb application options"
 
-config GOLIOTH_LIGHTDB_IP_ADDR
+config GOLIOTH_SERVER_IP_ADDR
 	string "Server IP Address"
 	default NET_CONFIG_PEER_IPV4_ADDR if (NET_CONFIG_SETTINGS && NET_IPV4)
 	default NET_CONFIG_PEER_IPV6_ADDR if (NET_CONFIG_SETTINGS && NET_IPV6)
 	help
 	  Defines IPv4 address of Golioth server.
 
-config GOLIOTH_LIGHTDB_PORT
+config GOLIOTH_SERVER_PORT
 	int "Server Port"
 	default 5684 if NET_SOCKETS_SOCKOPT_TLS
 	default 5683
 	help
 	  Defines port number of Golioth server.
 
-config GOLIOTH_LIGHTDB_DTLS_PSK_ID
+config GOLIOTH_SERVER_DTLS_PSK_ID
 	string "PSK ID"
 	help
 	  Defines PSK ID used during DTLS handshake.
 
-config GOLIOTH_LIGHTDB_DTLS_PSK
+config GOLIOTH_SERVER_DTLS_PSK
 	string "PSK"
 	help
 	  Defines PSK ID used during DTLS handshake.

@@ -20,10 +20,10 @@ Building and Running
 Configure the following Kconfig options based on your Golioth credentials and
 server in your own overlay config file:
 
-- GOLIOTH_HELLO_IP_ADDR      - Server IPv4 address.
-- GOLIOTH_HELLO_PORT         - Server port number.
-- GOLIOTH_HELLO_DTLS_PSK_ID  - PSK ID of registered device
-- GOLIOTH_HELLO_DTLS_PSK     - PSK of registered device
+- GOLIOTH_SERVER_IP_ADDR      - Server IPv4 address.
+- GOLIOTH_SERVER_PORT         - Server port number.
+- GOLIOTH_SERVER_DTLS_PSK_ID  - PSK ID of registered device
+- GOLIOTH_SERVER_DTLS_PSK     - PSK of registered device
 
 Platform specific configuration
 ===============================
@@ -91,10 +91,10 @@ This is the overlay template for Golioth credentials and server:
 
 .. code-block:: console
 
-   CONFIG_GOLIOTH_HELLO_DTLS_PSK_ID="my-psk-id"
-   CONFIG_GOLIOTH_HELLO_DTLS_PSK="my-psk"
-   CONFIG_GOLIOTH_HELLO_IP_ADDR="192.168.1.10"
-   CONFIG_GOLIOTH_HELLO_PORT=5684
+   CONFIG_GOLIOTH_SERVER_DTLS_PSK_ID="my-psk-id"
+   CONFIG_GOLIOTH_SERVER_DTLS_PSK="my-psk"
+   CONFIG_GOLIOTH_SERVER_IP_ADDR="192.168.1.10"
+   CONFIG_GOLIOTH_SERVER_PORT=5684
 
 Sample output
 =============
