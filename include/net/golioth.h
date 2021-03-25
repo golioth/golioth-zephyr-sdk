@@ -12,8 +12,12 @@
 #include <net/tls_credentials.h>
 #include <stdint.h>
 
+#define GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN	128
+
 #define GOLIOTH_MAX_IDENTITY_LEN	32
 #define GOLIOTH_EMPTY_PACKET_LEN	(16 + GOLIOTH_MAX_IDENTITY_LEN)
+
+#define GOLIOTH_LIGHTDB_PATH(x)		".d/" x
 
 struct golioth_unsecure {
 	const uint8_t *identity;
@@ -73,6 +77,14 @@ int golioth_send_coap_payload(struct golioth_client *client,
 			      struct coap_packet *packet,
 			      uint8_t *data, uint16_t data_len);
 int golioth_send_hello(struct golioth_client *client);
+
+int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
+			enum coap_content_format format, uint8_t *token);
+int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
+			enum coap_content_format format,
+			uint8_t *data, uint16_t data_len);
+int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
+			    enum coap_content_format format, uint8_t *token);
 
 int golioth_process_rx(struct golioth_client *client);
 
