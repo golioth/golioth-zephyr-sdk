@@ -5,7 +5,8 @@ mainmenu "Golioth Hello application options"
 
 config GOLIOTH_HELLO_IP_ADDR
 	string "Server IP Address"
-	default NET_CONFIG_PEER_IPV4_ADDR if NET_CONFIG_SETTINGS
+	default NET_CONFIG_PEER_IPV4_ADDR if (NET_CONFIG_SETTINGS && NET_IPV4)
+	default NET_CONFIG_PEER_IPV6_ADDR if (NET_CONFIG_SETTINGS && NET_IPV6)
 	help
 	  Defines IPv4 address of Golioth server.
 

@@ -31,7 +31,7 @@ static struct golioth_client *client = &g_client;
 
 static uint8_t rx_buffer[MAX_COAP_MSG_LEN];
 
-static struct sockaddr_in addr4;
+static struct sockaddr addr;
 
 #define POLLFD_EVENT_RECONNECT	0
 #define POLLFD_SOCKET		1
@@ -133,13 +133,27 @@ static int initialize_client(void)
 		return err;
 	}
 
-	addr4.sin_family = AF_INET;
-	addr4.sin_port = htons(CONFIG_GOLIOTH_HELLO_PORT);
+	if (IS_ENABLED(CONFIG_NET_IPV4)) {
+		struct sockaddr_in *addr4 = (struct sockaddr_in *) &addr;
 
-	zsock_inet_pton(addr4.sin_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
-			&addr4.sin_addr);
+		addr4->sin_family = AF_INET;
+		addr4->sin_port = htons(CONFIG_GOLIOTH_HELLO_PORT);
 
-	client->server = (struct sockaddr *)&addr4;
+		zsock_inet_pton(addr4->sin_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
+				&addr4->sin_addr);
+
+		client->server = (struct sockaddr *)addr4;
+	} else if (IS_ENABLED(CONFIG_NET_IPV6)) {
+		struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &addr;
+
+		addr6->sin6_family = AF_INET6;
+		addr6->sin6_port = htons(CONFIG_GOLIOTH_HELLO_PORT);
+
+		zsock_inet_pton(addr6->sin6_family, CONFIG_GOLIOTH_HELLO_IP_ADDR,
+				&addr6->sin6_addr);
+
+		client->server = (struct sockaddr *)addr6;
+	}
 
 	fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
 	fds[POLLFD_EVENT_RECONNECT].events = ZSOCK_POLLIN;
