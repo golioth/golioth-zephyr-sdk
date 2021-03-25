@@ -48,6 +48,8 @@ static int golioth_connect_sock(struct golioth_client *client, int sock)
 
 	if (client->server->sa_family == AF_INET) {
 		addr_size = sizeof(struct sockaddr_in);
+	} else if (client->server->sa_family == AF_INET6) {
+		addr_size = sizeof(struct sockaddr_in6);
 	}
 
 	ret = zsock_connect(sock, client->server, addr_size);
