@@ -11,5 +11,7 @@ Sample applications
 *******************
 
 - `Golioth Hello sample`_
+- `Golioth lightdb sample`_
 
 .. _Golioth Hello sample: samples/hello/README.rst
+.. _Golioth lightdb sample: samples/lightdb/README.rst
