@@ -208,6 +208,55 @@ static int golioth_send(struct golioth_client *client, uint8_t *data,
 	return ret;
 }
 
+static void *msg_linearize(const struct msghdr *msg, size_t *total_len)
+{
+	struct iovec *iovec_begin = msg->msg_iov;
+	struct iovec *iovec_end = iovec_begin + msg->msg_iovlen;
+	struct iovec *iovec;
+	uint8_t *buffer, *p;
+	size_t len = 0;
+
+	for (iovec = iovec_begin; iovec < iovec_end; iovec++) {
+		len += iovec->iov_len;
+	}
+
+	buffer = malloc(len);
+	if (!buffer) {
+		return NULL;
+	}
+
+	p = buffer;
+	for (iovec = iovec_begin; iovec < iovec_end; iovec++) {
+		memcpy(p, iovec->iov_base, iovec->iov_len);
+		p += iovec->iov_len;
+	}
+
+	*total_len = len;
+
+	return buffer;
+}
+
+static int golioth_sendmsg(struct golioth_client *client,
+			   const struct msghdr *msg, int flags)
+{
+	uint8_t *data;
+	size_t len;
+	int ret;
+
+	data = msg_linearize(msg, &len);
+	if (!data) {
+		return -ENOMEM;
+	}
+
+	golioth_lock(client);
+	ret = __golioth_send(client, data, len, flags);
+	golioth_unlock(client);
+
+	free(data);
+
+	return ret;
+}
+
 int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 {
 	int ret;
@@ -234,6 +283,53 @@ int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 	ret = golioth_send(client, packet->data, packet->offset, 0);
 	if (ret < 0) {
 		return -errno;
+	}
+
+	return 0;
+}
+
+int golioth_send_coap_payload(struct golioth_client *client,
+			      struct coap_packet *packet,
+			      uint8_t *payload, uint16_t payload_len)
+{
+	struct iovec msg_iov[2] = {};
+	struct msghdr msg = {
+		.msg_iov = msg_iov,
+		.msg_iovlen = ARRAY_SIZE(msg_iov),
+	};
+	int ret;
+	int err;
+
+	if (client->proto == IPPROTO_UDP) {
+		uint8_t query[QUERY_PREFIX_LEN +
+			      GOLIOTH_MAX_IDENTITY_LEN] = QUERY_PREFIX;
+
+		memcpy(query + QUERY_PREFIX_LEN, client->unsecure.identity,
+		       client->unsecure.identity_len);
+
+		err = coap_packet_append_option(packet, COAP_OPTION_URI_QUERY,
+					query, QUERY_PREFIX_LEN +
+						client->unsecure.identity_len);
+		if (err) {
+			LOG_ERR("Unable add option to packet");
+			return err;
+		}
+	}
+
+	err = coap_packet_append_payload_marker(packet);
+	if (err) {
+		return err;
+	}
+
+	msg_iov[0].iov_base = packet->data;
+	msg_iov[0].iov_len = packet->offset;
+
+	msg_iov[1].iov_base = payload;
+	msg_iov[1].iov_len = payload_len;
+
+	ret = golioth_sendmsg(client, &msg, 0);
+	if (err) {
+		return err;
 	}
 
 	return 0;
