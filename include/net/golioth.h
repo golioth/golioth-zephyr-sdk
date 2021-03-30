@@ -79,12 +79,14 @@ int golioth_send_coap_payload(struct golioth_client *client,
 int golioth_send_hello(struct golioth_client *client);
 
 int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
-			enum coap_content_format format, uint8_t *token);
+			enum coap_content_format format,
+			struct coap_reply *reply, coap_reply_t reply_cb);
 int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 			enum coap_content_format format,
 			uint8_t *data, uint16_t data_len);
 int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
-			    enum coap_content_format format, uint8_t *token);
+			    enum coap_content_format format,
+			    struct coap_reply *reply, coap_reply_t reply_cb);
 
 int golioth_process_rx(struct golioth_client *client);
 

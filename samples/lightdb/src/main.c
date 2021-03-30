@@ -41,8 +41,7 @@ static struct sockaddr addr;
 #define POLLFD_SOCKET		1
 
 static struct zsock_pollfd fds[2];
-static uint8_t observe_token[COAP_TOKEN_MAX_LEN];
-static uint8_t get_token[COAP_TOKEN_MAX_LEN];
+static struct coap_reply coap_replies[2];
 
 #define LED_GPIO_SPEC(i, _)						\
 	COND_CODE_1(DT_NODE_HAS_STATUS(DT_ALIAS(led##i), okay),		\
@@ -110,7 +109,9 @@ static void golioth_led_set_by_name(const char *name, bool value)
 	golioth_led_set(id, value);
 }
 
-static void golioth_led_handle(struct coap_packet *pkt)
+static int golioth_led_handle(const struct coap_packet *response,
+			      struct coap_reply *reply,
+			      const struct sockaddr *from)
 {
 	const uint8_t *payload;
 	uint16_t payload_len;
@@ -119,14 +120,14 @@ static void golioth_led_handle(struct coap_packet *pkt)
 	CborValue value;
 	CborError err;
 
-	payload = coap_packet_get_payload(pkt, &payload_len);
+	payload = coap_packet_get_payload(response, &payload_len);
 
 	cbor_buf_reader_init(&reader, payload, payload_len);
 	err = cbor_parser_init(&reader.r, 0, &parser, &value);
 
 	if (err != CborNoError) {
 		LOG_ERR("Failed to init CBOR parser: %d", err);
-		return;
+		return -EINVAL;
 	}
 
 	if (cbor_value_is_boolean(&value)) {
@@ -146,7 +147,7 @@ static void golioth_led_handle(struct coap_packet *pkt)
 		err = cbor_value_enter_container(&value, &map);
 		if (err != CborNoError) {
 			LOG_WRN("Failed to enter map: %d", err);
-			return;
+			return -EINVAL;
 		}
 
 		while (!cbor_value_at_end(&map)) {
@@ -196,6 +197,8 @@ static void golioth_led_handle(struct coap_packet *pkt)
 			LOG_WRN("Failed to enter map: %d", err);
 		}
 	}
+
+	return 0;
 }
 
 static void golioth_on_message(struct golioth_client *client,
@@ -204,8 +207,6 @@ static void golioth_on_message(struct golioth_client *client,
 	uint16_t payload_len;
 	const uint8_t *payload;
 	uint8_t type;
-	uint8_t token[COAP_TOKEN_MAX_LEN];
-	uint8_t tkl;
 
 	type = coap_header_get_type(rx);
 	payload = coap_packet_get_payload(rx, &payload_len);
@@ -214,14 +215,8 @@ static void golioth_on_message(struct golioth_client *client,
 		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
 	}
 
-	tkl = coap_header_get_token(rx, token);
-	if (tkl > 0) {
-		if (!memcmp(token, observe_token, tkl)) {
-			golioth_led_handle(rx);
-		} else if (!memcmp(token, get_token, tkl)) {
-			golioth_led_handle(rx);
-		}
-	}
+	(void)coap_response_received(rx, NULL, coap_replies,
+				     ARRAY_SIZE(coap_replies));
 }
 
 static int init_tls(void)
@@ -313,15 +308,27 @@ static int initialize_client(void)
 	return 0;
 }
 
-static int golioth_leds_get(struct golioth_client *client, uint8_t *token)
+static int golioth_leds_get(struct golioth_client *client,
+			    coap_reply_t reply_cb)
 {
+	struct coap_reply *reply =
+		coap_reply_next_unused(coap_replies, ARRAY_SIZE(coap_replies));
+
+	if (!reply) {
+		LOG_ERR("No more reply handlers");
+		return -ENOMEM;
+	}
+
 	return golioth_lightdb_get(client, GOLIOTH_LIGHTDB_PATH("led"),
-				   COAP_CONTENT_FORMAT_APP_CBOR, token);
+				   COAP_CONTENT_FORMAT_APP_CBOR, reply,
+				   reply_cb);
 }
 
 static int connect_client(void)
 {
+	struct coap_reply *observe_reply;
 	int err;
+	int i;
 
 	err = golioth_connect(client);
 	if (err) {
@@ -332,11 +339,22 @@ static int connect_client(void)
 	fds[POLLFD_SOCKET].fd = client->sock;
 	fds[POLLFD_SOCKET].events = ZSOCK_POLLIN;
 
+	for (i = 0; i < ARRAY_SIZE(coap_replies); i++) {
+		coap_reply_clear(&coap_replies[i]);
+	}
+
+	observe_reply = coap_reply_next_unused(coap_replies,
+					       ARRAY_SIZE(coap_replies));
+	if (!observe_reply) {
+		LOG_ERR("No more reply handlers");
+		return -ENOMEM;
+	}
+
 	err = golioth_lightdb_observe(client, GOLIOTH_LIGHTDB_PATH("led"),
 				      COAP_CONTENT_FORMAT_APP_CBOR,
-				      observe_token);
+				      observe_reply, golioth_led_handle);
 
-	err = golioth_leds_get(client, get_token);
+	err = golioth_leds_get(client, golioth_led_handle);
 
 	return 0;
 }

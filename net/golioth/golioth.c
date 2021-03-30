@@ -362,17 +362,20 @@ int golioth_send_hello(struct golioth_client *client)
 }
 
 int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
-			enum coap_content_format format, uint8_t *token)
+			enum coap_content_format format,
+			struct coap_reply *reply, coap_reply_t reply_cb)
 {
 	struct coap_packet packet;
 	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
 	int err;
 
-	memcpy(token, coap_next_token(), COAP_TOKEN_MAX_LEN);
+	if (!reply || !reply_cb) {
+		return -EINVAL;
+	}
 
 	err = coap_packet_init(&packet, buffer, sizeof(buffer),
 			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, token,
+			       COAP_TOKEN_MAX_LEN, coap_next_token(),
 			       COAP_METHOD_GET, coap_next_id());
 	if (err) {
 		return err;
@@ -391,6 +394,10 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 		LOG_ERR("Unable add content format to packet");
 		return err;
 	}
+
+	coap_reply_clear(reply);
+	coap_reply_init(reply, &packet);
+	reply->reply = reply_cb;
 
 	return golioth_send_coap(client, &packet);
 }
@@ -429,17 +436,20 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 }
 
 int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
-			    enum coap_content_format format, uint8_t *token)
+			    enum coap_content_format format,
+			    struct coap_reply *reply, coap_reply_t reply_cb)
 {
 	struct coap_packet packet;
 	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
 	int err;
 
-	memcpy(token, coap_next_token(), COAP_TOKEN_MAX_LEN);
+	if (!reply || !reply_cb) {
+		return -EINVAL;
+	}
 
 	err = coap_packet_init(&packet, buffer, sizeof(buffer),
 			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, token,
+			       COAP_TOKEN_MAX_LEN, coap_next_token(),
 			       COAP_METHOD_GET, coap_next_id());
 	if (err) {
 		return err;
@@ -463,6 +473,10 @@ int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
 		LOG_ERR("Unable add content format to packet");
 		return err;
 	}
+
+	coap_reply_clear(reply);
+	coap_reply_init(reply, &packet);
+	reply->reply = reply_cb;
 
 	return golioth_send_coap(client, &packet);
 }
