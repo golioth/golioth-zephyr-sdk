@@ -234,7 +234,7 @@ static void golioth_main(void *arg1, void *arg2, void *arg3)
 
 		if (fds[POLLFD_SOCKET].revents) {
 			/* Restart timer */
-			k_timer_start(&rx_timeout, K_SECONDS(30), K_NO_WAIT);
+			k_timer_start(&rx_timeout, RX_TIMEOUT, K_NO_WAIT);
 
 			err = golioth_process_rx(client);
 			if (err) {
