@@ -1,0 +1,9 @@
+sample:
+  description: Golioth DFU
+  name: dfu
+common:
+  harness: net
+  platform_allow: nrf52840dk_nrf52840
+  tags: golioth net socket
+tests:
+  sample.golioth.dfu: {}
