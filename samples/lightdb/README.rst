@@ -45,7 +45,7 @@ or
 
 .. code-block:: console
 
-   $ west build -b qemu_x86 samples/lightdb -- -DOVERLAY_FILE="<overlay1.conf>;<overlay2.conf>"
+   $ west build -b qemu_x86 samples/lightdb -- -DOVERLAY_CONFIG="<overlay1.conf>;<overlay2.conf>"
    $ west build -t run
 
 See `Networking with QEMU`_ on how to setup networking on host and configure
@@ -71,7 +71,7 @@ or
 
 .. code-block:: console
 
-   $ west build -b esp32 samples/lightdb -- -DOVERLAY_FILE="<overlay1.conf>;<overlay2.conf>"
+   $ west build -b esp32 samples/lightdb -- -DOVERLAY_CONFIG="<overlay1.conf>;<overlay2.conf>"
    $ west flash
 
 This is the overlay template for WiFi credentials:
