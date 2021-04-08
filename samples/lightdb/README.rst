@@ -83,6 +83,54 @@ This is the overlay template for WiFi credentials:
 
 See `ESP32`_ for details on how to use ESP32 board.
 
+nRF52840 DK
+-----------
+
+Networking over SLIP
+~~~~~~~~~~~~~~~~~~~~
+
+This assumes that second UART interface, which is accessible on pins P1.01 (RX)
+and P1.02 (TX), is connected to Linux host (e.g. using USB-UART converter).
+
+Initial steps are the same as with `SLIP Networking with QEMU`_. Create helper
+Unix socket:
+
+.. code-block:: console
+
+   $ ./loop-socat.sh
+
+Start TAP device routing daemon:
+
+.. code-block:: console
+
+   $ sudo ./loop-slip-tap.sh
+
+Connect nRF52840 DK UART to Unix socket:
+
+.. code-block:: console
+
+   $ socat -d -x UNIX-CONNECT:/tmp/slip.sock /dev/ttyACM1,B115200,raw
+
+Build example and flash nRF52840 DK:
+
+.. code-block:: console
+
+   $ west build -b nrf52840dk_nrf52840 samples/lightdb -- -DOVERLAY_CONFIG="boards/nrf52840dk_nrf52840_slip.conf"
+   $ west flash
+
+Networking over IPSP
+~~~~~~~~~~~~~~~~~~~~
+
+Build example and flash nRF52840 DK:
+
+.. code-block:: console
+
+   $ west build -b nrf52840dk_nrf52840 samples/lightdb -- -DOVERLAY_CONFIG="boards/nrf52840dk_nrf52840_ipsp.conf"
+   $ west flash
+
+Follow `Testing IPSP with a Linux host`_ in `IPSP sample`_ to setup IPSP
+networking from Linux host to nRF52840 DK.
+
 Sample overlay file
 ===================
 
@@ -161,3 +209,6 @@ as:
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
 .. _ESP32: https://docs.zephyrproject.org/latest/boards/xtensa/esp32/doc/index.html
+.. _SLIP Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#basic-setup
+.. _IPSP sample: https://docs.zephyrproject.org/latest/samples/bluetooth/ipsp/README.html
+.. _Testing IPSP with a Linux host: https://docs.zephyrproject.org/latest/samples/bluetooth/ipsp/README.html#testing-with-a-linux-host
