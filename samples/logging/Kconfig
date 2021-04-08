@@ -5,6 +5,7 @@ mainmenu "Golioth Hello application options"
 
 config GOLIOTH_SERVER_IP_ADDR
 	string "Server IP Address"
+	default "104.197.107.212"
 	default NET_CONFIG_PEER_IPV4_ADDR if (NET_CONFIG_SETTINGS && NET_IPV4)
 	default NET_CONFIG_PEER_IPV6_ADDR if (NET_CONFIG_SETTINGS && NET_IPV6)
 	help
