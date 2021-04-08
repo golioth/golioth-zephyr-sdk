@@ -262,7 +262,7 @@ void main(void)
 	int r;
 	int counter = 0;
 
-	LOG_DBG("Start CoAP-client sample");
+	LOG_DBG("Start Hello sample");
 
 	k_sem_take(&golioth_client_ready, K_FOREVER);
 

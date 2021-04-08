@@ -103,7 +103,7 @@ This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:00.000,000] <dbg> golioth_hello.main: Start CoAP-client sample
+   [00:00:00.000,000] <dbg> golioth_hello.main: Start Hello sample
    [00:00:00.000,000] <inf> golioth_hello: Initializing golioth client
    [00:00:00.000,000] <inf> golioth_hello: Golioth client initialized
    [00:00:00.000,000] <inf> golioth_hello: Sending hello! 0
