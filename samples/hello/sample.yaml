@@ -3,9 +3,7 @@ sample:
   name: hello
 common:
   harness: net
-  platform_allow: qemu_x86
+  platform_allow: esp32 qemu_cortex_m3 qemu_x86
   tags: golioth net socket
 tests:
-  sample.golioth.hello.tls: {}
-  sample.golioth.hello.logging:
-    extra_args: OVERLAY_CONFIG=overlay-logging.conf
+  sample.golioth.hello: {}

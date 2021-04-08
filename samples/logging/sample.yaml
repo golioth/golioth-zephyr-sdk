@@ -1,0 +1,9 @@
+sample:
+  description: System logging to Golioth server
+  name: logging
+common:
+  harness: net
+  platform_allow: esp32 qemu_cortex_m3 qemu_x86
+  tags: golioth logger net socket
+tests:
+  sample.golioth.logging: {}

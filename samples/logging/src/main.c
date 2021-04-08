@@ -5,7 +5,7 @@
  */
 
 #include <logging/log.h>
-LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 
 #include <errno.h>
 #include <logging/golioth.h>
@@ -247,25 +247,34 @@ static void golioth_main(void *arg1, void *arg2, void *arg3)
 K_THREAD_DEFINE(golioth_main_thread, 2048, golioth_main, NULL, NULL, NULL,
 		K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
 
+static void func_1(int counter)
+{
+	LOG_DBG("Log 1: %d", counter);
+}
+
+static void func_2(int counter)
+{
+	LOG_DBG("Log 2: %d", counter);
+}
+
 void main(void)
 {
-	int r;
 	int counter = 0;
 
-	LOG_DBG("Start Hello sample");
+	LOG_DBG("Start Logging sample");
 
 	k_sem_take(&golioth_client_ready, K_FOREVER);
 
 	while (true) {
-		LOG_INF("Sending hello! %d", counter++);
+		LOG_DBG("Debug info! %d", counter);
+		func_1(counter);
+		func_2(counter);
+		LOG_WRN("Warn: %d", counter);
+		LOG_ERR("Err: %d", counter);
+		LOG_HEXDUMP_INF(&counter, sizeof(counter), "Counter hexdump");
 
-		r = golioth_send_hello(client);
-		if (r < 0) {
-			LOG_WRN("Failed to send hello!");
-		}
+		counter++;
 
 		k_sleep(K_SECONDS(5));
 	}
-
-	LOG_DBG("Quit");
 }

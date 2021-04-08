@@ -5,8 +5,7 @@ Overview
 ********
 
 This sample application demonstrates how to connect with Golioth and publish
-simple Hello messages. Additionally it allows to configure logging backend to
-send system logs to Golioth.
+simple Hello messages.
 
 Requirements
 ************
@@ -42,13 +41,6 @@ of this sample application (i.e., ``samples/hello``) and type:
    $ west build -b qemu_x86 samples/hello
    $ west build -t run
 
-or
-
-.. code-block:: console
-
-   $ west build -b qemu_x86 samples/hello -- -DOVERLAY_CONFIG="<overlay1.conf>;<overlay2.conf>"
-   $ west build -t run
-
 See `Networking with QEMU`_ on how to setup networking on host and configure
 NAT/masquerading to access Internet.
 
@@ -66,13 +58,6 @@ sample application (i.e., ``samples/hello``) and type:
 .. code-block:: console
 
    $ west build -b esp32 samples/hello
-   $ west flash
-
-or
-
-.. code-block:: console
-
-   $ west build -b esp32 samples/hello -- -DOVERLAY_CONFIG="<overlay1.conf>;<overlay2.conf>"
    $ west flash
 
 This is the overlay template for WiFi credentials:
@@ -103,17 +88,21 @@ This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:00.000,000] <dbg> golioth_hello.main: Start Hello sample
    [00:00:00.000,000] <inf> golioth_hello: Initializing golioth client
    [00:00:00.000,000] <inf> golioth_hello: Golioth client initialized
    [00:00:00.000,000] <inf> golioth_hello: Sending hello! 0
-   [00:00:00.000,000] <dbg> golioth_hello.main: Debug info! 1
-   [00:00:00.000,000] <dbg> golioth_hello.func_1: Log 1: 1
-   [00:00:00.000,000] <dbg> golioth_hello.func_2: Log 2: 1
-   [00:00:00.000,000] <wrn> golioth_hello: Warn: 1
-   [00:00:00.000,000] <err> golioth_hello: Err: 1
+   [00:00:00.000,000] <wrn> golioth_hello: Failed to send hello!
    [00:00:00.000,000] <inf> golioth_hello: Starting connect
    [00:00:00.000,000] <inf> golioth_hello: Client connected!
+   [00:00:05.010,000] <inf> golioth_hello: Sending hello! 1
+   [00:00:05.020,000] <dbg> golioth_hello: Payload
+                                           48 65 6c 6c 6f 20 6d 61  72 6b                   |Hello ma rk
+   [00:00:10.030,000] <inf> golioth_hello: Sending hello! 2
+   [00:00:10.030,000] <dbg> golioth_hello: Payload
+                                           48 65 6c 6c 6f 20 6d 61  72 6b                   |Hello ma rk
+
+Responses to Hello messages are printed above as a hexdump of "Hello mark". This
+means that communication with Golioth is working.
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
 .. _ESP32: https://docs.zephyrproject.org/latest/boards/xtensa/esp32/doc/index.html

@@ -15,3 +15,4 @@ Sample applications
 
 .. _Golioth Hello sample: samples/hello/README.rst
 .. _Golioth Light DB sample: samples/lightdb/README.rst
+.. _Golioth Logging sample: samples/logging/README.rst
