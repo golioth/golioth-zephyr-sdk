@@ -113,6 +113,7 @@ qemu_x86: { extends: .board }
       -o reports
       -T modules/lib/golioth
   artifacts:
+    when: always
     paths:
       - reports/*
     reports:
