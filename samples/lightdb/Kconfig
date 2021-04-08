@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Golioth
+# Copyright (c) 2021 Golioth, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 mainmenu "Golioth Light DB application options"

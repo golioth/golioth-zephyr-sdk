@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Golioth
+ * Copyright (c) 2021 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
