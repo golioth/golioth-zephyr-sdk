@@ -9,5 +9,3 @@ tests:
   sample.golioth.lightdb: {}
   sample.golioth.lightdb.logging:
     extra_args: OVERLAY_CONFIG=overlay-logging.conf
-  sample.golioth.lightdb.ppp:
-    extra_args: OVERLAY_CONFIG=overlay-qemu-ppp.conf
