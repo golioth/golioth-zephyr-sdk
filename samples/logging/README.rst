@@ -60,7 +60,7 @@ sample application (i.e., ``samples/logging``) and type:
 
 This is the overlay template for WiFi credentials:
 
-.. code-block:: console
+.. code-block:: cfg
 
    CONFIG_ESP32_WIFI_SSID="my-wifi"
    CONFIG_ESP32_WIFI_PASSWORD="my-psk"
@@ -72,7 +72,7 @@ Sample overlay file
 
 This is the overlay template for Golioth credentials:
 
-.. code-block:: console
+.. code-block:: cfg
 
    CONFIG_GOLIOTH_SERVER_DTLS_PSK_ID="my-psk-id"
    CONFIG_GOLIOTH_SERVER_DTLS_PSK="my-psk"
