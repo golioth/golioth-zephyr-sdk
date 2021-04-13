@@ -49,6 +49,7 @@ struct golioth_client {
 
 	uint8_t *rx_buffer;
 	size_t rx_buffer_len;
+	size_t rx_received;
 
 	struct coap_packet rx_packet;
 	struct coap_option rx_options[CONFIG_NET_GOLIOTH_COAP_MAX_OPTIONS];

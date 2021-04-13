@@ -623,12 +623,20 @@ int golioth_process_rx(struct golioth_client *client)
 	int err;
 
 	ret = golioth_recv(client, client->rx_buffer, client->rx_buffer_len,
-			   ZSOCK_MSG_DONTWAIT);
+			   ZSOCK_MSG_DONTWAIT | ZSOCK_MSG_TRUNC);
 	if (ret == -EAGAIN || ret == -EWOULDBLOCK) {
 		/* no pending data */
 		return 0;
 	} else if (ret < 0) {
 		return ret;
+	}
+
+	client->rx_received = ret;
+
+	if (ret > client->rx_buffer_len) {
+		LOG_WRN("Truncated packet (%zu -> %zu)", (size_t) ret,
+			client->rx_buffer_len);
+		ret = client->rx_buffer_len;
 	}
 
 	err = coap_data_check_rx_packet_type(client->rx_buffer, ret);
