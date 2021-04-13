@@ -16,11 +16,27 @@ Requirements
 Building and Running
 ********************
 
-Configure the following Kconfig options based on your Golioth credentials in
-your own overlay config file:
+Configure the following Kconfig options based on your Golioth credentials:
 
 - GOLIOTH_SERVER_DTLS_PSK_ID  - PSK ID of registered device
 - GOLIOTH_SERVER_DTLS_PSK     - PSK of registered device
+
+This can be achieved by running following command:
+
+.. code-block:: console
+
+   $ west build -t menuconfig
+
+or
+
+.. code-block:: console
+
+   $ west build -t guiconfig
+
+and changing values of options named ``PSK ID`` and ``PSK``. Note that this
+method changes configuration only temporarily in build directory. See
+`Interactive Kconfig interfaces`_ for details. To change those options
+persistently, please follow `Sample overlay file`_.
 
 Platform specific configuration
 ===============================
@@ -58,7 +74,8 @@ sample application (i.e., ``samples/hello``) and type:
    $ west build -b esp32 samples/hello
    $ west flash
 
-This is the overlay template for WiFi credentials:
+This is the overlay template for WiFi credentials (see `Sample overlay file`_
+for details):
 
 .. code-block:: cfg
 
@@ -76,6 +93,13 @@ This is the overlay template for Golioth credentials:
 
    CONFIG_GOLIOTH_SERVER_DTLS_PSK_ID="my-psk-id"
    CONFIG_GOLIOTH_SERVER_DTLS_PSK="my-psk"
+
+Put this content into ``samples/hello/overlay-cred.conf`` file and run build
+with ``-DOVERLAY_CONFIG=overlay-cred.conf`` option, e.g.:
+
+.. code-block:: console
+
+   $ west build -b <platform> -- -DOVERLAY_CONFIG=overlay-cred.conf
 
 Sample output
 =============
@@ -102,3 +126,4 @@ means that communication with Golioth is working.
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
 .. _ESP32: https://docs.zephyrproject.org/latest/boards/xtensa/esp32/doc/index.html
+.. _Interactive Kconfig interfaces: https://docs.zephyrproject.org/latest/guides/kconfig/menuconfig.html
