@@ -259,7 +259,6 @@ static int golioth_sendmsg(struct golioth_client *client,
 
 int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 {
-	int ret;
 	int err;
 
 	if (client->proto == IPPROTO_UDP) {
@@ -280,9 +279,9 @@ int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 
 	LOG_HEXDUMP_DBG(packet->data, packet->offset, "TX CoAP");
 
-	ret = golioth_send(client, packet->data, packet->offset, 0);
-	if (ret < 0) {
-		return -errno;
+	err = golioth_send(client, packet->data, packet->offset, 0);
+	if (err) {
+		return err;
 	}
 
 	return 0;
