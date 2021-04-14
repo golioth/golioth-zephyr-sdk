@@ -16,11 +16,17 @@ Requirements
 Building and Running
 ********************
 
-Configure the following Kconfig options based on your Golioth credentials in
-your own overlay config file:
+Configure the following Kconfig options based on your Golioth credentials:
 
 - GOLIOTH_SERVER_DTLS_PSK_ID  - PSK ID of registered device
 - GOLIOTH_SERVER_DTLS_PSK     - PSK of registered device
+
+by adding these lines to configuration file (e.g. ``prj.conf``):
+
+.. code-block:: cfg
+
+   CONFIG_GOLIOTH_SERVER_DTLS_PSK_ID="my-psk-id"
+   CONFIG_GOLIOTH_SERVER_DTLS_PSK="my-psk"
 
 Platform specific configuration
 ===============================
@@ -50,6 +56,14 @@ Configure the following Kconfig options based on your WiFi AP credentials:
 - ESP32_WIFI_SSID     - WiFi SSID
 - ESP32_WIFI_PASSWORD - WiFi PSK
 
+by adding these lines to configuration file (e.g. ``prj.conf`` or
+``board/esp32.conf``):
+
+.. code-block:: cfg
+
+   CONFIG_ESP32_WIFI_SSID="my-wifi"
+   CONFIG_ESP32_WIFI_PASSWORD="my-psk"
+
 On your host computer open a terminal window, locate the source code of this
 sample application (i.e., ``samples/lightdb``) and type:
 
@@ -58,24 +72,7 @@ sample application (i.e., ``samples/lightdb``) and type:
    $ west build -b esp32 samples/lightdb
    $ west flash
 
-This is the overlay template for WiFi credentials:
-
-.. code-block:: cfg
-
-   CONFIG_ESP32_WIFI_SSID="my-wifi"
-   CONFIG_ESP32_WIFI_PASSWORD="my-psk"
-
 See `ESP32`_ for details on how to use ESP32 board.
-
-Sample overlay file
-===================
-
-This is the overlay template for Golioth credentials:
-
-.. code-block:: cfg
-
-   CONFIG_GOLIOTH_SERVER_DTLS_PSK_ID="my-psk-id"
-   CONFIG_GOLIOTH_SERVER_DTLS_PSK="my-psk"
 
 Sample output
 =============
