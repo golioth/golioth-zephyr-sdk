@@ -1,0 +1,87 @@
+From d0c2d69a8ccf4686f5fdf7ae836dfa9e752f4fa4 Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@emb.dev>
+Date: Wed, 14 Apr 2021 19:18:32 +0200
+Subject: [PATCH] drivers: wifi: esp: do not wait at the end of ESP chip reset
+
+esp_reset() is called from net_if init function, which holds net_if lock
+after commit 24b49f439970 ("net: if: Add locking"). At the end of
+esp_reset() there is a blocking wait on `sem_if_up` semaphore. This
+semaphore can be release only by esp_init_work(). esp_init_work()
+however blocks on net_if operations, because net_if init function (which
+invokes esp_reset() underneath) is still holding net_if lock. As a
+result there is a deadlock, because esp_reset() and esp_init_work() are
+both waiting on each other.
+
+Remove waiting for `sem_if_up`, so that net_if init can exit and release
+net_if lock.
+
+Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
+---
+ drivers/wifi/esp/esp.c | 13 +------------
+ drivers/wifi/esp/esp.h |  1 -
+ 2 files changed, 1 insertion(+), 13 deletions(-)
+
+diff --git a/drivers/wifi/esp/esp.c b/drivers/wifi/esp/esp.c
+index f08dddf2c9..c083da1822 100644
+--- a/drivers/wifi/esp/esp.c
++++ b/drivers/wifi/esp/esp.c
+@@ -1010,14 +1010,10 @@ static void esp_init_work(struct k_work *work)
+ 	LOG_INF("ESP Wi-Fi ready");
+ 
+ 	net_if_up(dev->net_iface);
+-
+-	k_sem_give(&dev->sem_if_up);
+ }
+ 
+ static void esp_reset(struct esp_data *dev)
+ {
+-	int ret;
+-
+ 	if (net_if_is_up(dev->net_iface)) {
+ 		net_if_down(dev->net_iface);
+ 	}
+@@ -1031,6 +1027,7 @@ static void esp_reset(struct esp_data *dev)
+ 	k_sleep(K_MSEC(100));
+ 	modem_pin_write(&dev->mctx, ESP_RESET, 0);
+ #else
++	int ret;
+ 	int retries = 3;
+ 
+ 	while (retries--) {
+@@ -1047,13 +1044,6 @@ static void esp_reset(struct esp_data *dev)
+ 		return;
+ 	}
+ #endif
+-
+-	LOG_INF("Waiting for interface to come up");
+-
+-	ret = k_sem_take(&dev->sem_if_up, ESP_INIT_TIMEOUT);
+-	if (ret == -EAGAIN) {
+-		LOG_ERR("Timeout waiting for interface");
+-	}
+ }
+ 
+ static void esp_iface_init(struct net_if *iface)
+@@ -1084,7 +1074,6 @@ static int esp_init(const struct device *dev)
+ 	k_sem_init(&data->sem_tx_ready, 0, 1);
+ 	k_sem_init(&data->sem_response, 0, 1);
+ 	k_sem_init(&data->sem_if_ready, 0, 1);
+-	k_sem_init(&data->sem_if_up, 0, 1);
+ 
+ 	k_work_init(&data->init_work, esp_init_work);
+ 	k_work_init_delayable(&data->ip_addr_work, esp_ip_addr_work);
+diff --git a/drivers/wifi/esp/esp.h b/drivers/wifi/esp/esp.h
+index 493c219338..25c6a61c9c 100644
+--- a/drivers/wifi/esp/esp.h
++++ b/drivers/wifi/esp/esp.h
+@@ -230,7 +230,6 @@ struct esp_data {
+ 	struct k_sem sem_tx_ready;
+ 	struct k_sem sem_response;
+ 	struct k_sem sem_if_ready;
+-	struct k_sem sem_if_up;
+ };
+ 
+ int esp_offload_init(struct net_if *iface);
+-- 
+2.31.1
+
