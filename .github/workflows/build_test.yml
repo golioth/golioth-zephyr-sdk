@@ -38,4 +38,4 @@ jobs:
 
       - name: Run twister
         run: |
-          zephyr/scripts/twister -p qemu_x86 -T modules/lib/golioth
+          zephyr/scripts/twister -T modules/lib/golioth
