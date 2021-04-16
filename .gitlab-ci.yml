@@ -103,13 +103,13 @@ pre-commit:
 
 qemu_x86: { extends: .board }
 
-.twister:
+twister:
   extends: .west-build
   stage: test
   script:
     - BOARD=${CI_JOB_NAME%%_twister}
     - >
-      zephyr/scripts/twister -p ${BOARD}
+      zephyr/scripts/twister
       -o reports
       -T modules/lib/golioth
   artifacts:
@@ -118,6 +118,3 @@ qemu_x86: { extends: .board }
       - reports/*
     reports:
       junit: reports/twister.xml
-
-qemu_x86_twister:
-  extends: .twister
