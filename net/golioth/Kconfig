@@ -30,4 +30,62 @@ config GOLIOTH_COAP_MAX_OPTIONS
 	help
 	  Maximum CoAP options supported by Golioth client.
 
+config GOLIOTH_SYSTEM_CLIENT
+	bool "System client"
+	help
+	  Enable Golioth system client, which will configure client connection
+	  and be responsible for reconnecting in case of networking issues.
+
+if GOLIOTH_SYSTEM_CLIENT
+
+config GOLIOTH_SYSTEM_SERVER_IP_ADDR
+	string "Server IP Address"
+	default "104.197.107.212" if NET_IPV4
+	default NET_CONFIG_PEER_IPV6_ADDR if (NET_CONFIG_SETTINGS && NET_IPV6)
+	help
+	  Defines IPv4 address of Golioth server.
+
+config GOLIOTH_SYSTEM_SERVER_PORT
+	int "Server Port"
+	default 5684 if NET_SOCKETS_SOCKOPT_TLS
+	default 5683
+	help
+	  Defines port number of Golioth server.
+
+config GOLIOTH_SYSTEM_CLIENT_PSK_ID
+	string "PSK ID"
+	help
+	  Defines PSK ID used during DTLS handshake with Golioth server.
+
+config GOLIOTH_SYSTEM_CLIENT_PSK
+	string "PSK"
+	help
+	  Defines PSK used during DTLS handshake with Golioth server.
+
+module = GOLIOTH_SYSTEM_CLIENT
+module-str = Log level for Golioth system client
+module-help = Sets log level for Golioth system client.
+source "subsys/logging/Kconfig.template.log_config"
+
+config GOLIOTH_SYSTEM_CLIENT_INIT_PRIORITY
+	int "Initialization priority"
+	default APPLICATION_INIT_PRIORITY
+	help
+	  Initialization priority of Golioth system client.
+
+config GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC
+	int "Receive timeout (seconds)"
+	default 30
+	help
+	  Receive timeout, after which connection will be reestablished.
+
+config GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
+	int "Receive buffer size"
+	default 1280
+	help
+	  Size of receive buffer, which is used for reading data from network
+	  socket.
+
+endif # GOLIOTH_SYSTEM_CLIENT
+
 endif # GOLIOTH

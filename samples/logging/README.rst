@@ -18,15 +18,15 @@ Building and Running
 
 Configure the following Kconfig options based on your Golioth credentials:
 
-- GOLIOTH_SERVER_DTLS_PSK_ID  - PSK ID of registered device
-- GOLIOTH_SERVER_DTLS_PSK     - PSK of registered device
+- GOLIOTH_SYSTEM_CLIENT_PSK_ID  - PSK ID of registered device
+- GOLIOTH_SYSTEM_CLIENT_PSK     - PSK of registered device
 
 by adding these lines to configuration file (e.g. ``prj.conf``):
 
 .. code-block:: cfg
 
-   CONFIG_GOLIOTH_SERVER_DTLS_PSK_ID="my-psk-id"
-   CONFIG_GOLIOTH_SERVER_DTLS_PSK="my-psk"
+   CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID="my-psk-id"
+   CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK="my-psk"
 
 Platform specific configuration
 ===============================
