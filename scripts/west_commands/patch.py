@@ -39,7 +39,7 @@ class Patch(_ProjectCommand):
             for patch in sorted(patches):
                 try:
                     log.inf(f'git {am} {patch.name}')
-                    project.git(f'{am} {patch}')
+                    project.git(am.split() + [str(patch)])
                 except subprocess.CalledProcessError:
                     failed.append(project)
                     continue
