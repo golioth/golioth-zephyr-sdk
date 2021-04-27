@@ -57,6 +57,7 @@ struct golioth_client {
 	struct k_mutex lock;
 	int sock;
 
+	void (*on_connect)(struct golioth_client *client);
 	void (*on_message)(struct golioth_client *client,
 			   struct coap_packet *rx);
 };

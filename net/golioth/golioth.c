@@ -125,6 +125,10 @@ int golioth_connect(struct golioth_client *client)
 		golioth_lock(client);
 		client->sock = sock;
 		golioth_unlock(client);
+
+		if (client->on_connect) {
+			client->on_connect(client);
+		}
 	}
 
 	return err;
