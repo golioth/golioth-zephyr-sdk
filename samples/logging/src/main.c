@@ -24,6 +24,10 @@ LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 
 #define PSK_TAG			1
 
+static sec_tag_t sec_tag_list[] = {
+	PSK_TAG,
+};
+
 /* Golioth instance */
 static struct golioth_client g_client;
 static struct golioth_client *client = &g_client;
@@ -102,11 +106,6 @@ static int init_tls(void)
 
 static int initialize_client(void)
 {
-	sec_tag_t sec_tag_list[] = {
-#if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
-		PSK_TAG,
-#endif /* defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS) */
-	};
 	int err;
 
 	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
