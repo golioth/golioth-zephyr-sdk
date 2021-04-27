@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-config NET_GOLIOTH
+config GOLIOTH
 	bool "Golioth"
 	depends on NETWORKING
 	select COAP
@@ -18,16 +18,16 @@ config NET_GOLIOTH
 	help
 	  Enable library for communication with Golioth cloud.
 
-if NET_GOLIOTH
+if GOLIOTH
 
-module = NET_GOLIOTH
-module-str = net_golioth
+module = GOLIOTH
+module-str = golioth
 source "subsys/logging/Kconfig.template.log_config"
 
-config NET_GOLIOTH_COAP_MAX_OPTIONS
+config GOLIOTH_COAP_MAX_OPTIONS
 	int "Maximum CoAP options supported"
 	default 16
 	help
 	  Maximum CoAP options supported by Golioth client.
 
-endif # NET_GOLIOTH
+endif # GOLIOTH

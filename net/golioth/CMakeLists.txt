@@ -1,1 +1,1 @@
-zephyr_library_sources_ifdef(CONFIG_NET_GOLIOTH golioth.c)
+zephyr_library_sources_ifdef(CONFIG_GOLIOTH golioth.c)

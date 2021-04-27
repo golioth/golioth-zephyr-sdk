@@ -8,7 +8,7 @@ config LOG_BACKEND_GOLIOTH
 	bool "Golioth logging backend"
 	depends on LOG
 	depends on !LOG_IMMEDIATE
-	depends on NET_GOLIOTH
+	depends on GOLIOTH
 	select TINYCBOR
 	help
 	  Enable sending logs to Golioth cloud.
