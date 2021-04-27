@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_NET_GOLIOTH_H_
-#define ZEPHYR_INCLUDE_NET_GOLIOTH_H_
+#ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_H_
+#define GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 
 #include <kernel.h>
 #include <net/coap.h>
@@ -294,4 +294,4 @@ int golioth_observe_blockwise(struct golioth_client *client,
  */
 int golioth_process_rx(struct golioth_client *client);
 
-#endif /* ZEPHYR_INCLUDE_NET_GOLIOTH_H_ */
+#endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_H_ */
