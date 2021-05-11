@@ -54,11 +54,13 @@ config GOLIOTH_SYSTEM_SERVER_PORT
 
 config GOLIOTH_SYSTEM_CLIENT_PSK_ID
 	string "PSK ID"
+	depends on !GOLIOTH_SYSTEM_SETTINGS
 	help
 	  Defines PSK ID used during DTLS handshake with Golioth server.
 
 config GOLIOTH_SYSTEM_CLIENT_PSK
 	string "PSK"
+	depends on !GOLIOTH_SYSTEM_SETTINGS
 	help
 	  Defines PSK used during DTLS handshake with Golioth server.
 
@@ -85,6 +87,14 @@ config GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 	help
 	  Size of receive buffer, which is used for reading data from network
 	  socket.
+
+config GOLIOTH_SYSTEM_SETTINGS
+	bool "Load credentials from persistent settings"
+	depends on SETTINGS
+	default y
+	help
+	  When selected, Golioth credentials will be loaded from settings
+	  subsystem.
 
 endif # GOLIOTH_SYSTEM_CLIENT
 
