@@ -1,0 +1,10 @@
+sample:
+  description: >
+    Say Hello to Golioth server, with credentials stored in settings subsystem
+  name: settings
+common:
+  harness: net
+  platform_allow: nrf52840dk_nrf52840
+  tags: golioth net settings socket
+tests:
+  sample.golioth.settings: {}
