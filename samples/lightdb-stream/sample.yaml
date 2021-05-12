@@ -1,0 +1,9 @@
+sample:
+  description: Access Golioth Light DB Stream
+  name: lightdb-stream
+common:
+  harness: net
+  platform_allow: esp32 particle_xenon qemu_cortex_m3 qemu_x86
+  tags: golioth net socket
+tests:
+  sample.golioth.lightdb-stream: {}

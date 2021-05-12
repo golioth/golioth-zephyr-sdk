@@ -1,0 +1,29 @@
+&uart1 {
+  compatible = "nordic,nrf-uarte";
+  current-speed = <115200>;
+  status = "okay";
+  tx-pin = <40>;
+  rx-pin = <42>;
+  rts-pin = <35>;
+  cts-pin = <43>;
+  hw-flow-control;
+
+  esp_wifi: esp-wifi {
+    compatible = "espressif,esp";
+    label = "esp-wifi";
+    // reset-gpios = <&feather_header 20 GPIO_ACTIVE_LOW>;
+    status = "okay";
+  };
+};
+
+&arduino_i2c {
+  status = "okay";
+  bme280@76 {
+    compatible = "bosch,bme280";
+    reg = <0x76>;
+    label = "BME280_I2C";
+  };
+};
+
+
+

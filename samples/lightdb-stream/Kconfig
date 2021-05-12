@@ -1,0 +1,45 @@
+# Copyright (c) 2021 Golioth, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Golioth Light DB Stream application options"
+
+config GOLIOTH_SERVER_IP_ADDR
+	string "Server IP Address"
+	default "104.197.107.212" if NET_IPV4
+	default NET_CONFIG_PEER_IPV6_ADDR if (NET_CONFIG_SETTINGS && NET_IPV6)
+	help
+	  Defines IPv4 address of Golioth server.
+
+config GOLIOTH_SERVER_PORT
+	int "Server Port"
+	default 5684 if NET_SOCKETS_SOCKOPT_TLS
+	default 5683
+	help
+	  Defines port number of Golioth server.
+
+config GOLIOTH_SERVER_DTLS_PSK_ID
+	string "PSK ID"
+	help
+	  Defines PSK ID used during DTLS handshake.
+
+config GOLIOTH_SERVER_DTLS_PSK
+	string "PSK"
+	help
+	  Defines PSK ID used during DTLS handshake.
+
+if NET_L2_WIFI_MGMT
+
+config GOLIOTH_SAMPLE_WIFI_SSID
+	string "WiFi SSID"
+	help
+	  WiFi SSID used when connecting to WiFi AP.
+
+config GOLIOTH_SAMPLE_WIFI_PSK
+	string "WiFi PSK"
+	help
+	  WiFi PSK used when connecting to WiFi AP. Leave empty if connecting to
+	  unsecure (open) AP.
+
+endif # NET_L2_WIFI_MGMT
+
+source "Kconfig.zephyr"

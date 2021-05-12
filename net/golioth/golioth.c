@@ -434,6 +434,39 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 	return golioth_send_coap_payload(client, &packet, data, data_len);
 }
 
+int golioth_lightdb_stream_send(struct golioth_client *client, const uint8_t *path,
+			enum coap_content_format format,
+			uint8_t *data, uint16_t data_len)
+{
+	struct coap_packet packet;
+	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
+	int err;
+
+	err = coap_packet_init(&packet, buffer, sizeof(buffer),
+			       COAP_VERSION_1, COAP_TYPE_NON_CON,
+			       COAP_TOKEN_MAX_LEN, coap_next_token(),
+			       COAP_METHOD_POST, coap_next_id());
+	if (err) {
+		return err;
+	}
+
+	err = coap_packet_append_option(&packet, COAP_OPTION_URI_PATH,
+					path, strlen(path));
+	if (err) {
+		LOG_ERR("Unable add uri path to packet");
+		return err;
+	}
+
+	err = coap_append_option_int(&packet, COAP_OPTION_CONTENT_FORMAT,
+				     format);
+	if (err) {
+		LOG_ERR("Unable add content format to packet");
+		return err;
+	}
+
+	return golioth_send_coap_payload(client, &packet, data, data_len);
+}
+
 static int golioth_coap_observe_init(struct coap_packet *packet,
 				     uint8_t *buffer, size_t buffer_len,
 				     const char *path)

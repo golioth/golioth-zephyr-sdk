@@ -17,7 +17,8 @@
 #define GOLIOTH_MAX_IDENTITY_LEN	32
 #define GOLIOTH_EMPTY_PACKET_LEN	(16 + GOLIOTH_MAX_IDENTITY_LEN)
 
-#define GOLIOTH_LIGHTDB_PATH(x)		".d/" x
+#define GOLIOTH_LIGHTDB_PATH(x)		        ".d/" x
+#define GOLIOTH_LIGHTDB_STREAM_PATH(x)		".s/" x
 
 /**
  * @brief UDP (unsecure) credentials (identity only) of Golioth client.
@@ -240,6 +241,24 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
  * @retval <0 On failure
  */
 int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
+			enum coap_content_format format,
+			uint8_t *data, uint16_t data_len);
+
+/**
+ * @brief Send value to Golioth's Light DB Stream
+ *
+ * Send value to Light DB Stream as non confirmable message.
+ *
+ * @param client Client instance
+ * @param path Light DB resource path
+ * @param format Format of payload
+ * @param data Payload data
+ * @param data_len Payload length
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_lightdb_stream_send(struct golioth_client *client, const uint8_t *path,
 			enum coap_content_format format,
 			uint8_t *data, uint16_t data_len);
 
