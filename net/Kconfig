@@ -1,1 +1,2 @@
 rsource "golioth/Kconfig"
+rsource "wifi/Kconfig"

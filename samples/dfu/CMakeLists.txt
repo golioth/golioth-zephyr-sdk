@@ -6,4 +6,3 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(dfu)
 
 target_sources(app PRIVATE src/main.c)
-target_sources_ifdef(CONFIG_NET_L2_WIFI_MGMT app PRIVATE src/wifi.c)

@@ -7,9 +7,8 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(golioth_wifi, LOG_LEVEL_DBG);
 
+#include <net/golioth/wifi.h>
 #include <net/wifi_mgmt.h>
-
-#include "wifi.h"
 
 struct wifi_data {
 	struct net_mgmt_event_callback wifi_mgmt_cb;

@@ -1,9 +1,16 @@
-# Copyright (c) 2021 Golioth, Inc.
+#
+# Copyright (C) 2021 Golioth, Inc.
+#
 # SPDX-License-Identifier: Apache-2.0
+#
 
-mainmenu "Golioth DFU application options"
+config GOLIOTH_SAMPLE_WIFI
+	bool "WiFi utilities for samples"
+	depends on NET_L2_WIFI_MGMT
+	help
+	  Enable utilities for easy WiFi setup, mainly for use inside samples/.
 
-if NET_L2_WIFI_MGMT
+if GOLIOTH_SAMPLE_WIFI
 
 config GOLIOTH_SAMPLE_WIFI_SSID
 	string "WiFi SSID"
@@ -16,6 +23,4 @@ config GOLIOTH_SAMPLE_WIFI_PSK
 	  WiFi PSK used when connecting to WiFi AP. Leave empty if connecting to
 	  unsecure (open) AP.
 
-endif # NET_L2_WIFI_MGMT
-
-source "Kconfig.zephyr"
+endif # GOLIOTH_SAMPLE_WIFI

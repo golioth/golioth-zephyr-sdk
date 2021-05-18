@@ -9,6 +9,7 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 
 #include <net/coap.h>
 #include <net/golioth/system_client.h>
+#include <net/golioth/wifi.h>
 
 #include <dfu/flash_img.h>
 #include <dfu/mcuboot.h>
@@ -16,8 +17,6 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 #include <power/reboot.h>
 #include <stdlib.h>
 #include <storage/flash_map.h>
-
-#include "wifi.h"
 
 #define REBOOT_DELAY_SEC	1
 
@@ -243,7 +242,7 @@ void main(void)
 		LOG_ERR("Failed to confirm image: %d", err);
 	}
 
-	if (IS_ENABLED(CONFIG_NET_L2_WIFI_MGMT)) {
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");
 		wifi_connect();
 	}
