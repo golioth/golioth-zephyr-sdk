@@ -110,6 +110,7 @@ twister:
     - BOARD=${CI_JOB_NAME%%_twister}
     - >
       zephyr/scripts/twister
+      --all
       -o reports
       -T modules/lib/golioth
   artifacts:
