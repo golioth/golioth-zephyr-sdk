@@ -53,16 +53,16 @@ ESP32
 
 Configure the following Kconfig options based on your WiFi AP credentials:
 
-- ESP32_WIFI_SSID     - WiFi SSID
-- ESP32_WIFI_PASSWORD - WiFi PSK
+- GOLIOTH_SAMPLE_WIFI_SSID  - WiFi SSID
+- GOLIOTH_SAMPLE_WIFI_PSK   - WiFi PSK
 
 by adding these lines to configuration file (e.g. ``prj.conf`` or
 ``board/esp32.conf``):
 
 .. code-block:: cfg
 
-   CONFIG_ESP32_WIFI_SSID="my-wifi"
-   CONFIG_ESP32_WIFI_PASSWORD="my-psk"
+   CONFIG_GOLIOTH_SAMPLE_WIFI_SSID="my-wifi"
+   CONFIG_GOLIOTH_SAMPLE_WIFI_PSK="my-psk"
 
 On your host computer open a terminal window, locate the source code of this
 sample application (i.e., ``samples/logging``) and type:
