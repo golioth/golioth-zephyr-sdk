@@ -3,7 +3,7 @@ sample:
   name: hello
 common:
   harness: net
-  platform_allow: esp32 qemu_cortex_m3 qemu_x86
+  platform_allow: esp32 qemu_cortex_m3 qemu_x86 nrf52840dk_nrf52840
   tags: golioth net socket
 tests:
   sample.golioth.hello: {}

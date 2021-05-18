@@ -9,6 +9,7 @@ LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 
 #include <net/coap.h>
 #include <net/golioth/system_client.h>
+#include <net/golioth/wifi.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
@@ -42,6 +43,11 @@ void main(void)
 	int counter = 0;
 
 	LOG_DBG("Start Logging sample");
+
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
+		LOG_INF("Connecting to WiFi");
+		wifi_connect();
+	}
 
 	client->on_message = golioth_on_message;
 	golioth_system_client_start();

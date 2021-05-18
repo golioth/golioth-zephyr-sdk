@@ -9,6 +9,7 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 #include <net/coap.h>
 #include <net/golioth/system_client.h>
+#include <net/golioth/wifi.h>
 
 #include <drivers/gpio.h>
 #include <stdlib.h>
@@ -219,6 +220,11 @@ void main(void)
 	int err;
 
 	LOG_DBG("Start Light DB sample");
+
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
+		LOG_INF("Connecting to WiFi");
+		wifi_connect();
+	}
 
 	golioth_led_initialize();
 

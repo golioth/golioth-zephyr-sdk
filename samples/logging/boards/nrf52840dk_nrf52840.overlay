@@ -1,0 +1,19 @@
+/*
+ * Copyright (C) 2021 Golioth, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+&uart1 {
+	status = "okay";
+	cts-pin = <35>;
+	rts-pin = <36>;
+	hw-flow-control;
+
+	esp_wifi: esp-wifi {
+		compatible = "espressif,esp-at";
+		label = "esp-wifi";
+		power-gpios = <&gpio1 5 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		status = "okay";
+	};
+};
