@@ -128,6 +128,24 @@ sample application (i.e., ``samples/hello``) and type:
    $ west build -b nrf52840dk_nrf52840 samples/hello
    $ west flash
 
+nRF9160 Feather
+---------------
+
+On your host computer open a terminal window, locate the source code of this
+sample application (i.e., ``samples/hello``) and type:
+
+.. code-block:: console
+
+   $ west build -b circuitdojo_feather_nrf9160ns samples/hello
+
+Enter bootloader and use ``mcumgr`` (or ``newtmgr``) to flash firmware:
+
+.. code-block:: console
+
+   $ mcumgr --conntype serial --connstring /dev/ttyUSB0,baudrate=1000000 build/zephyr/app_update.bin
+
+See `nRF9160 Feather Programming and Debugging`_ for details.
+
 Sample output
 =============
 
@@ -154,3 +172,4 @@ means that communication with Golioth is working.
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
 .. _ESP32: https://docs.zephyrproject.org/latest/boards/xtensa/esp32/doc/index.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
+.. _nRF9160 Feather Programming and Debugging: https://docs.jaredwolff.com/nrf9160-programming-and-debugging.html

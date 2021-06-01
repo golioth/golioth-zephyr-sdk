@@ -130,6 +130,24 @@ sample application (i.e., ``samples/lightdb_stream``) and type:
    $ west build -b nrf52840dk_nrf52840 samples/lightdb_stream
    $ west flash
 
+nRF9160 Feather
+---------------
+
+On your host computer open a terminal window, locate the source code of this
+sample application (i.e., ``samples/ligthdb_stream``) and type:
+
+.. code-block:: console
+
+   $ west build -b circuitdojo_feather_nrf9160ns samples/lightdb_stream
+
+Enter bootloader and use ``mcumgr`` (or ``newtmgr``) to flash firmware:
+
+.. code-block:: console
+
+   $ mcumgr --conntype serial --connstring /dev/ttyUSB0,baudrate=1000000 build/zephyr/app_update.bin
+
+See `nRF9160 Feather Programming and Debugging`_ for details.
+
 Sample output
 =============
 
