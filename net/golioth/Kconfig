@@ -90,6 +90,24 @@ config GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 	  Size of receive buffer, which is used for reading data from network
 	  socket.
 
+choice GOLIOTH_SYSTEM_CLIENT_TIMEOUT
+	prompt "Communication timeout mechanism"
+	default GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD
+
+config GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD
+	bool "eventfd"
+	help
+	  Delayable work is used to detect communication timeouts and then
+	  eventfd mechanism is used to trigger mainloop.
+
+config GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_POLL
+	bool "poll"
+	help
+	  Timeout parameter is passed to poll() system call, so that any receive
+	  communication timeouts are detected directly there.
+
+endchoice
+
 config GOLIOTH_SYSTEM_SETTINGS
 	bool "Load credentials from persistent settings"
 	depends on SETTINGS

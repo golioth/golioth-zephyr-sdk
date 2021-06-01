@@ -18,6 +18,9 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #define RX_TIMEOUT							\
 	K_SECONDS(CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC)
 
+#define USE_EVENTFD							\
+	IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD)
+
 #define RX_BUFFER_SIZE		CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 
 #ifdef CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID
@@ -54,7 +57,9 @@ static sec_tag_t sec_tag_list[] = {
 
 static inline void client_request_reconnect(void)
 {
-	eventfd_write(fds[POLLFD_EVENT_RECONNECT].fd, 1);
+	if (USE_EVENTFD) {
+		eventfd_write(fds[POLLFD_EVENT_RECONNECT].fd, 1);
+	}
 }
 
 static void client_rx_timeout(struct k_work *work)
@@ -136,8 +141,10 @@ static int client_initialize(struct golioth_client *client)
 		client->server = (struct sockaddr *)addr6;
 	}
 
-	fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
-	fds[POLLFD_EVENT_RECONNECT].events = ZSOCK_POLLIN;
+	if (USE_EVENTFD) {
+		fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
+		fds[POLLFD_EVENT_RECONNECT].events = ZSOCK_POLLIN;
+	}
 
 	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
 		log_backend_golioth_init(client);
@@ -198,6 +205,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 	struct golioth_client *client = arg1;
 	eventfd_t eventfd_value;
 	int err;
+	int ret;
 
 	while (true) {
 		if (client->sock < 0) {
@@ -209,22 +217,36 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 				continue;
 			}
 
-			/* Add RX timeout */
-			k_work_reschedule(&rx_timeout, RX_TIMEOUT);
+			if (USE_EVENTFD) {
+				/* Add RX timeout */
+				k_work_reschedule(&rx_timeout, RX_TIMEOUT);
 
-			/* Flush reconnect requests */
-			(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
-					   &eventfd_value);
+				/* Flush reconnect requests */
+				(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
+						   &eventfd_value);
+			}
 
 			LOG_INF("Client connected!");
 		}
 
-		if (zsock_poll(fds, ARRAY_SIZE(fds), -1) < 0) {
+		if (USE_EVENTFD) {
+			ret = zsock_poll(fds, ARRAY_SIZE(fds), -1);
+		} else {
+			ret = zsock_poll(&fds[POLLFD_SOCKET], 1, 30 * 1000);
+		}
+
+		if (ret < 0) {
 			LOG_ERR("Error in poll:%d", errno);
 			break;
 		}
 
-		if (fds[POLLFD_EVENT_RECONNECT].revents) {
+		if (ret == 0) {
+			LOG_ERR("Timeout in poll");
+			golioth_disconnect(client);
+			continue;
+		}
+
+		if (USE_EVENTFD && fds[POLLFD_EVENT_RECONNECT].revents) {
 			(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
 					   &eventfd_value);
 			LOG_INF("Reconnect request");
@@ -233,8 +255,10 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 		}
 
 		if (fds[POLLFD_SOCKET].revents) {
-			/* Restart timer */
-			k_work_reschedule(&rx_timeout, RX_TIMEOUT);
+			if (USE_EVENTFD) {
+				/* Restart timer */
+				k_work_reschedule(&rx_timeout, RX_TIMEOUT);
+			}
 
 			err = golioth_process_rx(client);
 			if (err) {
