@@ -33,6 +33,7 @@ config GOLIOTH_COAP_MAX_OPTIONS
 
 config GOLIOTH_SYSTEM_CLIENT
 	bool "System client"
+	select EVENTFD
 	help
 	  Enable Golioth system client, which will configure client connection
 	  and be responsible for reconnecting in case of networking issues.
