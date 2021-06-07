@@ -1,0 +1,64 @@
+From eb9eb34dd0912058d953bad82a54dfa6d46fb79e Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@emb.dev>
+Date: Tue, 8 Jun 2021 01:54:53 +0200
+Subject: [PATCH] drivers: wifi: esp32: create event handling thread in runtime
+
+Commit 95b916d1045e ("drivers: wifi: esp32: fix reconnect issue")
+switched from thread created at runtime to statically defined thread.
+The difference is mainly visible for simple applications that use
+CONFIG_NET_CONFIG_AUTO_INIT=y, where networking setup code is executed
+before main() and any statically defined threads. All ESP32 events are
+just queued and never handled, so conditions enforced by
+CONFIG_NET_CONFIG_NEED_IPV4=y are never met (e.g. Zephyr networking
+layer is never informed about being connected).
+
+Switch back to thread created at runtime, which starts at the moment
+when k_thread_create() is invoked. This allows ESP32 event processing to
+happen just after ESP32 WiFi driver gets initialized and before Zephyr
+network auto initialization code (CONFIG_NET_CONFIG_AUTO_INIT=y).
+
+Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
+---
+ drivers/wifi/esp32/src/esp_wifi_drv.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/wifi/esp32/src/esp_wifi_drv.c b/drivers/wifi/esp32/src/esp_wifi_drv.c
+index c8e0943762..eece28c691 100644
+--- a/drivers/wifi/esp32/src/esp_wifi_drv.c
++++ b/drivers/wifi/esp32/src/esp_wifi_drv.c
+@@ -44,8 +44,8 @@ struct esp32_wifi_runtime {
+ static void esp_wifi_event_task(void);
+ 
+ K_MSGQ_DEFINE(esp_wifi_msgq, sizeof(system_event_t), 10, 4);
+-K_THREAD_DEFINE(esp_wifi_event_tid, CONFIG_ESP32_WIFI_EVENT_TASK_STACK_SIZE,
+-		esp_wifi_event_task, NULL, NULL, NULL, CONFIG_ESP32_WIFI_EVENT_TASK_PRIO, 0, 0);
++K_THREAD_STACK_DEFINE(esp_wifi_event_stack, CONFIG_ESP32_WIFI_EVENT_TASK_STACK_SIZE);
++static struct k_thread esp_wifi_event_thread;
+ 
+ /* internal wifi library callback function */
+ esp_err_t esp_event_send_internal(esp_event_base_t event_base,
+@@ -109,7 +109,7 @@ pkt_unref:
+ 	return ESP_FAIL;
+ }
+ 
+-void esp_wifi_event_task(void)
++static void esp_wifi_event_task(void)
+ {
+ 	int32_t event_id;
+ 
+@@ -175,6 +175,12 @@ static int eth_esp32_dev_init(const struct device *dev)
+ {
+ 	esp_timer_init();
+ 
++	k_thread_create(&esp_wifi_event_thread, esp_wifi_event_stack,
++			CONFIG_ESP32_WIFI_EVENT_TASK_STACK_SIZE,
++			(k_thread_entry_t)esp_wifi_event_task, NULL, NULL, NULL,
++			CONFIG_ESP32_WIFI_EVENT_TASK_PRIO, K_INHERIT_PERMS,
++			K_NO_WAIT);
++
+ 	wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
+ 	esp_err_t ret = esp_wifi_init(&config);
+ 
+-- 
+2.31.1
+
