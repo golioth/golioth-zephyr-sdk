@@ -18,6 +18,7 @@
 #define GOLIOTH_EMPTY_PACKET_LEN	(16 + GOLIOTH_MAX_IDENTITY_LEN)
 
 #define GOLIOTH_LIGHTDB_PATH(x)		".d/" x
+#define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
 
 /**
  * @brief UDP (unsecure) credentials (identity only) of Golioth client.
