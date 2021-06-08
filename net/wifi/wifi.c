@@ -9,6 +9,7 @@ LOG_MODULE_REGISTER(golioth_wifi, LOG_LEVEL_DBG);
 
 #include <net/golioth/wifi.h>
 #include <net/wifi_mgmt.h>
+#include <settings/settings.h>
 
 struct wifi_data {
 	struct net_mgmt_event_callback wifi_mgmt_cb;
@@ -34,15 +35,96 @@ static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb,
 	}
 }
 
+#if defined(CONFIG_GOLIOTH_SAMPLE_WIFI_SETTINGS)
+
+static uint8_t wifi_ssid[WIFI_SSID_MAX_LEN];
+static size_t wifi_ssid_len;
+static uint8_t wifi_psk[WIFI_PSK_MAX_LEN];
+static size_t wifi_psk_len;
+
+static int wifi_settings_get(const char *name, char *dst, int val_len_max)
+{
+	uint8_t *val;
+	size_t val_len;
+
+	if (!strcmp(name, "ssid")) {
+		val = wifi_ssid;
+		val_len = wifi_ssid_len;
+	} else if (!strcmp(name, "psk")) {
+		val = wifi_psk;
+		val_len = wifi_psk_len;
+	} else {
+		LOG_WRN("Unsupported key '%s'", log_strdup(name));
+		return -ENOENT;
+	}
+
+	if (val_len > val_len_max) {
+		LOG_ERR("Not enough space (%zu %d)", val_len, val_len_max);
+		return -ENOMEM;
+	}
+
+	memcpy(dst, val, val_len);
+
+	return val_len;
+}
+
+static int wifi_settings_set(const char *name, size_t len_rd,
+			     settings_read_cb read_cb, void *cb_arg)
+{
+	uint8_t *buffer;
+	size_t buffer_len;
+	size_t *ret_len;
+	ssize_t ret;
+
+	if (!strcmp(name, "ssid")) {
+		buffer = wifi_ssid;
+		buffer_len = sizeof(wifi_ssid);
+		ret_len = &wifi_ssid_len;
+	} else if (!strcmp(name, "psk")) {
+		buffer = wifi_psk;
+		buffer_len = sizeof(wifi_psk);
+		ret_len = &wifi_psk_len;
+	} else {
+		LOG_WRN("Unsupported key '%s'", log_strdup(name));
+		return -ENOENT;
+	}
+
+	ret = read_cb(cb_arg, buffer, buffer_len);
+	if (ret < 0) {
+		LOG_ERR("Failed to read value: %d", (int) ret);
+		return ret;
+	}
+
+	LOG_DBG("Name: %s", log_strdup(name));
+	LOG_HEXDUMP_DBG(buffer, ret, "value");
+
+	*ret_len = ret;
+
+	return 0;
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(wifi, "wifi",
+	IS_ENABLED(CONFIG_SETTINGS_RUNTIME) ? wifi_settings_get : NULL,
+	wifi_settings_set, NULL, NULL);
+
+#else /* defined(CONFIG_GOLIOTH_SAMPLE_WIFI_SETTINGS) */
+
+static uint8_t wifi_ssid[] = CONFIG_GOLIOTH_SAMPLE_WIFI_SSID;
+static size_t wifi_ssid_len = sizeof(CONFIG_GOLIOTH_SAMPLE_WIFI_SSID) - 1;
+static uint8_t wifi_psk[] = CONFIG_GOLIOTH_SAMPLE_WIFI_PSK;
+static size_t wifi_psk_len = sizeof(CONFIG_GOLIOTH_SAMPLE_WIFI_PSK) - 1;
+
+#endif /* defined(CONFIG_GOLIOTH_SAMPLE_WIFI_SETTINGS) */
+
 void wifi_connect(void)
 {
 	struct wifi_connect_req_params params = {
-		.ssid = CONFIG_GOLIOTH_SAMPLE_WIFI_SSID,
-		.ssid_length = sizeof(CONFIG_GOLIOTH_SAMPLE_WIFI_SSID) - 1,
-		.psk = CONFIG_GOLIOTH_SAMPLE_WIFI_PSK,
-		.psk_length = sizeof(CONFIG_GOLIOTH_SAMPLE_WIFI_PSK) - 1,
+		.ssid = wifi_ssid,
+		.ssid_length = wifi_ssid_len,
+		.psk = wifi_psk,
+		.psk_length = wifi_psk_len,
 		.channel = WIFI_CHANNEL_ANY,
-		.security = sizeof(CONFIG_GOLIOTH_SAMPLE_WIFI_PSK) - 1 > 0 ?
+		.security = wifi_psk_len > 0 ?
 			WIFI_SECURITY_TYPE_PSK : WIFI_SECURITY_TYPE_NONE,
 	};
 	struct wifi_data wifi;

@@ -13,8 +13,42 @@ Requirements
 - Golioth credentials
 - Network connectivity
 
+Using nRF9160 Feather with nRF Connect SDK
+******************************************
+
+Build Zephyr sample application for nRF9160 Feather:
+
+.. code-block:: console
+
+   $ west build -b circuitdojo_feather_nrf9160ns samples/dfu
+
+Enter bootloader and use ``mcumgr`` to flash firmware:
+
+.. code-block:: console
+
+   $ mcumgr --conntype serial --connstring /dev/ttyUSB,baudrate=1000000 build/zephyr/app_update.bin
+
+Now rebuild application with assigned new version to 1.2.3 to distinguish it
+from old firmware::
+
+.. code-block:: console
+
+   $ west build -p -b circuitdojo_feather_nrf9160ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
+
+Follow `Start DFU using goliothctl`_ to send new firmware, but use
+``build/zephyr/app_update.bin`` instead of ``new.bin`` in the first step:
+
+.. code-block:: console
+
+   $ goliothctl updates send <device-id> build/zephyr/app_update.bin
+
+See `nRF9160 Feather Programming and Debugging`_ for details.
+
+Using with Zephyr
+*****************
+
 Building and flashing MCUboot
-*****************************
+=============================
 
 The below steps describe how to build and run the MCUboot bootloader. Detailed
 instructions can be found in the `MCUboot`_ documentation page.
@@ -30,7 +64,7 @@ means that we can build and flash it like normal using ``west``, like so:
 Substitute <board> for one of the boards supported by the sample.
 
 Building the sample application
-*******************************
+===============================
 
 Configure the following Kconfig options based on your Golioth credentials:
 
@@ -45,10 +79,10 @@ by adding these lines to configuration file (e.g. ``prj.conf``):
    CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK="my-psk"
 
 Platform specific configuration
-===============================
+-------------------------------
 
 nRF52840 DK + ESP32-WROOM-32
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This subsection documents using nRF52840 DK running Zephyr with offloaded ESP-AT
 WiFi driver and ESP32-WROOM-32 module based board (such as ESP32 DevkitC rev.
@@ -92,7 +126,7 @@ Now build Zephyr sample application for nRF52840 DK:
    $ west build -b nrf52840dk_nrf52840 samples/dfu
 
 Signing the sample image
-************************
+========================
 
 A key feature of MCUboot is that images must be signed before they can be
 successfully uploaded and run on a target. To sign images, the MCUboot tool
@@ -111,7 +145,7 @@ For more information on image signing and ``west sign``, see the `Signing
 Binaries`_ documentation.
 
 Flashing the sample image
-*************************
+=========================
 
 Upload the ``zephyr.signed.bin`` (or ``zephyr.signed.hex``) file from the
 previous step to first application image slot of your board (see `Flash map`_
@@ -150,7 +184,7 @@ slot (primary area):
    failed to read secondary area (2) header: -5
 
 Prepare new firmware
-********************
+====================
 
 For testing purposes of DFU mechanism the same firmware will be used. To
 distinguish between old firmware and new firmware, a firmware version will be
@@ -170,7 +204,7 @@ was specified to distinguish between old firmware (default version is ``0.0.0``
 if not explicitly specified) and new firmware.
 
 Start DFU using goliothctl
-**************************
+==========================
 
 Run following command on host PC to send new firmware:
 
@@ -241,3 +275,4 @@ running from primary area (first application slot):
 .. _Signing Binaries: https://docs.zephyrproject.org/latest/guides/west/sign.html#west-sign
 .. _Flash map: https://docs.zephyrproject.org/latest/reference/storage/flash_map/flash_map.html#flash-map-api
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
+.. _nRF9160 Feather Programming and Debugging: https://docs.jaredwolff.com/nrf9160-programming-and-debugging.html

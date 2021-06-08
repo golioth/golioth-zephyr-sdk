@@ -1,11 +1,13 @@
-Golioth Light DB sample
-#######################
+Golioth Light DB stream sample
+##############################
 
 Overview
 ********
 
-This Light DB application demonstrates how to connect with Golioth and access
-Light DB.
+This Light DB stream application demonstrates how to connect with Golioth and
+periodically send data to Light DB stream. In this sample temperature
+measurements are sent to ``/temp`` Light DB stream path. For platforms that do
+not have temperature sensor a value is generated from 20 up to 30.
 
 Requirements
 ************
@@ -38,11 +40,11 @@ This application has been built and tested with QEMU x86 (qemu_x86) and QEMU ARM
 Cortex-M3 (qemu_cortex_m3).
 
 On your Linux host computer, open a terminal window, locate the source code
-of this sample application (i.e., ``samples/lightdb``) and type:
+of this sample application (i.e., ``samples/lightdb_stream``) and type:
 
 .. code-block:: console
 
-   $ west build -b qemu_x86 samples/lightdb
+   $ west build -b qemu_x86 samples/lightdb_stream
    $ west build -t run
 
 See `Networking with QEMU`_ on how to setup networking on host and configure
@@ -65,11 +67,11 @@ by adding these lines to configuration file (e.g. ``prj.conf`` or
    CONFIG_GOLIOTH_SAMPLE_WIFI_PSK="my-psk"
 
 On your host computer open a terminal window, locate the source code of this
-sample application (i.e., ``samples/lightdb``) and type:
+sample application (i.e., ``samples/lightdb_stream``) and type:
 
 .. code-block:: console
 
-   $ west build -b esp32 samples/lightdb
+   $ west build -b esp32 samples/lightdb_stream
    $ west flash
 
 See `ESP32`_ for details on how to use ESP32 board.
@@ -121,22 +123,22 @@ by adding these lines to configuration file (e.g. ``prj.conf`` or
    CONFIG_GOLIOTH_SAMPLE_WIFI_PSK="my-psk"
 
 On your host computer open a terminal window, locate the source code of this
-sample application (i.e., ``samples/lightdb``) and type:
+sample application (i.e., ``samples/lightdb_stream``) and type:
 
 .. code-block:: console
 
-   $ west build -b nrf52840dk_nrf52840 samples/lightdb
+   $ west build -b nrf52840dk_nrf52840 samples/lightdb_stream
    $ west flash
 
 nRF9160 Feather
 ---------------
 
 On your host computer open a terminal window, locate the source code of this
-sample application (i.e., ``samples/ligthdb``) and type:
+sample application (i.e., ``samples/ligthdb_stream``) and type:
 
 .. code-block:: console
 
-   $ west build -b circuitdojo_feather_nrf9160ns samples/lightdb
+   $ west build -b circuitdojo_feather_nrf9160ns samples/lightdb_stream
 
 Enter bootloader and use ``mcumgr`` (or ``newtmgr``) to flash firmware:
 
@@ -153,64 +155,94 @@ This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:00.010,000] <wrn> net_sock_tls: No entropy device on the system, TLS communication may be insecure!
-   [00:00:00.010,000] <inf> net_config: Initializing network
-   [00:00:00.010,000] <inf> net_config: IPv4 address: 192.0.2.1
-   [00:00:00.010,000] <dbg> golioth_lightdb.main: Start Light DB sample
-   [00:00:00.020,000] <inf> golioth_lightdb: Initializing golioth client
-   [00:00:00.020,000] <inf> golioth_lightdb: Golioth client initialized
-   [00:00:00.020,000] <inf> golioth_lightdb: Starting connect
-   [00:00:00.040,000] <inf> golioth_lightdb: Client connected!
-   [00:00:00.040,000] <dbg> golioth_lightdb: Payload
-                                             a1 63 6d 73 67 62 4f 4b                          |.cmsgbOK
-   [00:00:00.040,000] <wrn> golioth_lightdb: Map key is not boolean
-   [00:00:00.040,000] <dbg> golioth_lightdb: Payload
-                                             a4 61 31 f4 61 32 f5 61  33 f5 61 30 f5          |.a1.a2.a 3.a0.
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 1 -> 0
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 2 -> 1
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 3 -> 1
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 0 -> 1
+   [00:00:00.000,000] <inf> golioth_system: Initializing
+   [00:00:00.000,000] <inf> net_config: Initializing network
+   [00:00:00.000,000] <inf> net_config: IPv4 address: 192.0.2.1
+   [00:00:00.000,000] <dbg> golioth_lightdb_stream.main: Start Light DB stream sample
+   [00:00:00.000,000] <dbg> golioth_lightdb_stream.main: Sending temperature 20.000000
+   [00:00:00.000,000] <inf> golioth_system: Starting connect
+   [00:00:00.010,000] <inf> golioth_system: Client connected!
+   [00:00:05.010,000] <dbg> golioth_lightdb_stream.main: Sending temperature 20.500000
+   [00:00:10.040,000] <dbg> golioth_lightdb_stream.main: Sending temperature 21.000000
+   [00:00:15.050,000] <dbg> golioth_lightdb_stream.main: Sending temperature 21.500000
+   [00:00:20.060,000] <dbg> golioth_lightdb_stream.main: Sending temperature 22.000000
+   [00:00:25.070,000] <dbg> golioth_lightdb_stream.main: Sending temperature 22.500000
+   [00:00:30.080,000] <dbg> golioth_lightdb_stream.main: Sending temperature 23.000000
+   [00:00:35.090,000] <dbg> golioth_lightdb_stream.main: Sending temperature 23.500000
+   [00:00:40.100,000] <dbg> golioth_lightdb_stream.main: Sending temperature 24.000000
+   [00:00:45.110,000] <dbg> golioth_lightdb_stream.main: Sending temperature 24.500000
+   [00:00:50.120,000] <dbg> golioth_lightdb_stream.main: Sending temperature 25.000000
+   [00:00:55.130,000] <dbg> golioth_lightdb_stream.main: Sending temperature 25.500000
+   [00:01:00.140,000] <dbg> golioth_lightdb_stream.main: Sending temperature 26.000000
 
-Monitor counter value
-=====================
+Monitor temperature value over time
+===================================
 
-Device increments counter every 5s and updates ``/counter`` resource in Light DB
-with its value. Current value can be fetched using following command:
-
-.. code-block:: console
-
-   goliothctl lightdb get <device-id> /counter
-
-Control LEDs
-============
-
-Multiple LEDs can be changed simultaneously using following command:
+Device sends temperature measurements every 5s and updates ``/temp`` resource in
+Light DB stream. Current value can be fetched using following command:
 
 .. code-block:: console
 
-   goliothctl lightdb set <device-id> /led -b '{"0":true,"1":false,"2":true,"3":true}'
+   $ goliothctl stream get <device-id> /temp
+   26
 
-This request should result in following serial console output:
+Historical data can be queried using following command:
 
 .. code-block:: console
 
-   [00:00:04.050,000] <dbg> golioth_lightdb: Payload
-                                             a4 61 33 f5 61 30 f5 61  31 f4 61 32 f5          |.a3.a0.a 1.a2.
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 3 -> 1
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 0 -> 1
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 1 -> 0
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 2 -> 1
-
-Additionally board LEDs will be changed, if they are configured in device-tree
-as:
-
-- ``/aliases/led0``
-- ``/aliases/led1``
-- ``/aliases/led2``
-- ``/aliases/led3``
+   $ goliothctl stream query --interval 5m --field time --field temp | jq ''
+   [
+     {
+       "temp": 26,
+       "time": "2021-06-08 12:17:01.158 +0000 UTC"
+     },
+     {
+       "temp": 25.5,
+       "time": "2021-06-08 12:16:56.146 +0000 UTC"
+     },
+     {
+       "temp": 25,
+       "time": "2021-06-08 12:16:51.138 +0000 UTC"
+     },
+     {
+       "temp": 24.5,
+       "time": "2021-06-08 12:16:46.126 +0000 UTC"
+     },
+     {
+       "temp": 24,
+       "time": "2021-06-08 12:16:41.114 +0000 UTC"
+     },
+     {
+       "temp": 23.5,
+       "time": "2021-06-08 12:16:36.108 +0000 UTC"
+     },
+     {
+       "temp": 23,
+       "time": "2021-06-08 12:16:31.098 +0000 UTC"
+     },
+     {
+       "temp": 22.5,
+       "time": "2021-06-08 12:16:26.088 +0000 UTC"
+     },
+     {
+       "temp": 22,
+       "time": "2021-06-08 12:16:21.078 +0000 UTC"
+     },
+     {
+       "temp": 21.5,
+       "time": "2021-06-08 12:16:16.068 +0000 UTC"
+     },
+     {
+       "temp": 21,
+       "time": "2021-06-08 12:16:11.054 +0000 UTC"
+     },
+     {
+       "temp": 20.5,
+       "time": "2021-06-08 12:16:06.049 +0000 UTC"
+     }
+   ]
 
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
 .. _ESP32: https://docs.zephyrproject.org/latest/boards/xtensa/esp32/doc/index.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
-.. _nRF9160 Feather Programming and Debugging: https://docs.jaredwolff.com/nrf9160-programming-and-debugging.html

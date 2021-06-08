@@ -9,6 +9,7 @@ config GOLIOTH
 	depends on NETWORKING
 	select COAP
 	select MBEDTLS
+	select MBEDTLS_DTLS
 	select MBEDTLS_KEY_EXCHANGE_PSK_ENABLED if MBEDTLS_BUILTIN
 	select MBEDTLS_CIPHER_GCM_ENABLED if MBEDTLS_BUILTIN
 	select NET_SOCKETS
@@ -32,6 +33,7 @@ config GOLIOTH_COAP_MAX_OPTIONS
 
 config GOLIOTH_SYSTEM_CLIENT
 	bool "System client"
+	select EVENTFD
 	help
 	  Enable Golioth system client, which will configure client connection
 	  and be responsible for reconnecting in case of networking issues.
@@ -54,11 +56,13 @@ config GOLIOTH_SYSTEM_SERVER_PORT
 
 config GOLIOTH_SYSTEM_CLIENT_PSK_ID
 	string "PSK ID"
+	depends on !GOLIOTH_SYSTEM_SETTINGS
 	help
 	  Defines PSK ID used during DTLS handshake with Golioth server.
 
 config GOLIOTH_SYSTEM_CLIENT_PSK
 	string "PSK"
+	depends on !GOLIOTH_SYSTEM_SETTINGS
 	help
 	  Defines PSK used during DTLS handshake with Golioth server.
 
@@ -85,6 +89,32 @@ config GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 	help
 	  Size of receive buffer, which is used for reading data from network
 	  socket.
+
+choice GOLIOTH_SYSTEM_CLIENT_TIMEOUT
+	prompt "Communication timeout mechanism"
+	default GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD
+
+config GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD
+	bool "eventfd"
+	help
+	  Delayable work is used to detect communication timeouts and then
+	  eventfd mechanism is used to trigger mainloop.
+
+config GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_POLL
+	bool "poll"
+	help
+	  Timeout parameter is passed to poll() system call, so that any receive
+	  communication timeouts are detected directly there.
+
+endchoice
+
+config GOLIOTH_SYSTEM_SETTINGS
+	bool "Load credentials from persistent settings"
+	depends on SETTINGS
+	default y
+	help
+	  When selected, Golioth credentials will be loaded from settings
+	  subsystem.
 
 endif # GOLIOTH_SYSTEM_CLIENT
 

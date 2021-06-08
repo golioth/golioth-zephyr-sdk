@@ -13,14 +13,27 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #include <net/socket.h>
 #include <net/tls_credentials.h>
 #include <posix/sys/eventfd.h>
+#include <settings/settings.h>
 
 #define RX_TIMEOUT							\
 	K_SECONDS(CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC)
 
+#define USE_EVENTFD							\
+	IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD)
+
 #define RX_BUFFER_SIZE		CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 
+#ifdef CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID
 #define TLS_PSK_ID		CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID
+#else
+#define TLS_PSK_ID		""
+#endif
+
+#ifdef CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK
 #define TLS_PSK			CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK
+#else
+#define TLS_PSK			""
+#endif
 
 #define PSK_TAG			1
 
@@ -44,7 +57,9 @@ static sec_tag_t sec_tag_list[] = {
 
 static inline void client_request_reconnect(void)
 {
-	eventfd_write(fds[POLLFD_EVENT_RECONNECT].fd, 1);
+	if (USE_EVENTFD) {
+		eventfd_write(fds[POLLFD_EVENT_RECONNECT].fd, 1);
+	}
 }
 
 static void client_rx_timeout(struct k_work *work)
@@ -126,8 +141,10 @@ static int client_initialize(struct golioth_client *client)
 		client->server = (struct sockaddr *)addr6;
 	}
 
-	fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
-	fds[POLLFD_EVENT_RECONNECT].events = ZSOCK_POLLIN;
+	if (USE_EVENTFD) {
+		fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
+		fds[POLLFD_EVENT_RECONNECT].events = ZSOCK_POLLIN;
+	}
 
 	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
 		log_backend_golioth_init(client);
@@ -143,14 +160,22 @@ static int golioth_system_init(const struct device *dev)
 
 	LOG_INF("Initializing");
 
-	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
-		init_tls();
-	}
-
 	err = client_initialize(client);
 	if (err) {
 		LOG_ERR("Failed to initialize client: %d", err);
 		return err;
+	}
+
+	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
+		if (IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_SETTINGS)) {
+			err = settings_subsys_init();
+			if (err) {
+				LOG_ERR("Failed to initialize settings subsystem: %d", err);
+				return err;
+			}
+		} else {
+			init_tls();
+		}
 	}
 
 	return 0;
@@ -180,6 +205,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 	struct golioth_client *client = arg1;
 	eventfd_t eventfd_value;
 	int err;
+	int ret;
 
 	while (true) {
 		if (client->sock < 0) {
@@ -191,22 +217,36 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 				continue;
 			}
 
-			/* Add RX timeout */
-			k_work_reschedule(&rx_timeout, RX_TIMEOUT);
+			if (USE_EVENTFD) {
+				/* Add RX timeout */
+				k_work_reschedule(&rx_timeout, RX_TIMEOUT);
 
-			/* Flush reconnect requests */
-			(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
-					   &eventfd_value);
+				/* Flush reconnect requests */
+				(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
+						   &eventfd_value);
+			}
 
 			LOG_INF("Client connected!");
 		}
 
-		if (zsock_poll(fds, ARRAY_SIZE(fds), -1) < 0) {
+		if (USE_EVENTFD) {
+			ret = zsock_poll(fds, ARRAY_SIZE(fds), -1);
+		} else {
+			ret = zsock_poll(&fds[POLLFD_SOCKET], 1, 30 * 1000);
+		}
+
+		if (ret < 0) {
 			LOG_ERR("Error in poll:%d", errno);
 			break;
 		}
 
-		if (fds[POLLFD_EVENT_RECONNECT].revents) {
+		if (ret == 0) {
+			LOG_ERR("Timeout in poll");
+			golioth_disconnect(client);
+			continue;
+		}
+
+		if (USE_EVENTFD && fds[POLLFD_EVENT_RECONNECT].revents) {
 			(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
 					   &eventfd_value);
 			LOG_INF("Reconnect request");
@@ -215,8 +255,10 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 		}
 
 		if (fds[POLLFD_SOCKET].revents) {
-			/* Restart timer */
-			k_work_reschedule(&rx_timeout, RX_TIMEOUT);
+			if (USE_EVENTFD) {
+				/* Restart timer */
+				k_work_reschedule(&rx_timeout, RX_TIMEOUT);
+			}
 
 			err = golioth_process_rx(client);
 			if (err) {
@@ -235,3 +277,105 @@ void golioth_system_client_start(void)
 {
 	k_thread_start(golioth_system);
 }
+
+#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&	\
+	defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+
+/*
+ * TLS credentials subsystem just remembers pointers to memory areas where
+ * credentials are stored. This means that we need to allocate memory for
+ * credentials ourselves.
+ */
+static uint8_t golioth_dtls_psk[64];
+static size_t golioth_dtls_psk_len;
+static uint8_t golioth_dtls_psk_id[64];
+static size_t golioth_dtls_psk_id_len;
+
+static int golioth_settings_get(const char *name, char *dst, int val_len_max)
+{
+	uint8_t *val;
+	size_t val_len;
+
+	if (!strcmp(name, "psk")) {
+		val = golioth_dtls_psk;
+		val_len = strlen(golioth_dtls_psk);
+	} else if (!strcmp(name, "psk-id")) {
+		val = golioth_dtls_psk_id;
+		val_len = strlen(golioth_dtls_psk_id);
+	} else {
+		LOG_WRN("Unsupported key '%s'", log_strdup(name));
+		return -ENOENT;
+	}
+
+	if (val_len > val_len_max) {
+		LOG_ERR("Not enough space (%zu %d)", val_len, val_len_max);
+		return -ENOMEM;
+	}
+
+	memcpy(dst, val, val_len);
+
+	return val_len;
+}
+
+static int golioth_settings_set(const char *name, size_t len_rd,
+				settings_read_cb read_cb, void *cb_arg)
+{
+	enum tls_credential_type type;
+	uint8_t *value;
+	size_t *value_len;
+	size_t buffer_len;
+	ssize_t ret;
+	int err;
+
+	if (!strcmp(name, "psk")) {
+		type = TLS_CREDENTIAL_PSK;
+		value = golioth_dtls_psk;
+		value_len = &golioth_dtls_psk_len;
+		buffer_len = sizeof(golioth_dtls_psk);
+	} else if (!strcmp(name, "psk-id")) {
+		type = TLS_CREDENTIAL_PSK_ID;
+		value = golioth_dtls_psk_id;
+		value_len = &golioth_dtls_psk_id_len;
+		buffer_len = sizeof(golioth_dtls_psk_id);
+	} else {
+		LOG_ERR("Unsupported key '%s'", log_strdup(name));
+		return -ENOTSUP;
+	}
+
+	if (IS_ENABLED(CONFIG_SETTINGS_RUNTIME)) {
+		err = tls_credential_delete(PSK_TAG, type);
+		if (err && err != -ENOENT) {
+			LOG_ERR("Failed to delete cred %s: %d",
+				log_strdup(name), err);
+			return err;
+		}
+	}
+
+	ret = read_cb(cb_arg, value, buffer_len);
+	if (ret < 0) {
+		LOG_ERR("Failed to read value: %d", (int) ret);
+		return ret;
+	}
+
+	*value_len = ret;
+
+	LOG_DBG("Name: %s", log_strdup(name));
+	LOG_HEXDUMP_DBG(value, *value_len, "value");
+
+	err = tls_credential_add(PSK_TAG, type, value, *value_len);
+	if (err) {
+		LOG_ERR("Failed to add cred %s: %d", log_strdup(name), err);
+		return err;
+	}
+
+	client_request_reconnect();
+
+	return 0;
+}
+
+SETTINGS_STATIC_HANDLER_DEFINE(golioth, "golioth",
+	IS_ENABLED(CONFIG_SETTINGS_RUNTIME) ? golioth_settings_get : NULL,
+	golioth_settings_set, NULL, NULL);
+
+#endif /* defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&
+	* defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS) */
