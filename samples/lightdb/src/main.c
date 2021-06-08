@@ -18,7 +18,7 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
-static struct coap_reply coap_replies[2];
+static struct coap_reply coap_replies[1];
 
 #define LED_GPIO_SPEC(i, _)						\
 	COND_CODE_1(DT_NODE_HAS_STATUS(DT_ALIAS(led##i), okay),		\
@@ -155,22 +155,6 @@ static int golioth_led_handle(const struct coap_packet *response,
 	return 0;
 }
 
-static int golioth_leds_get(struct golioth_client *client,
-			    coap_reply_t reply_cb)
-{
-	struct coap_reply *reply =
-		coap_reply_next_unused(coap_replies, ARRAY_SIZE(coap_replies));
-
-	if (!reply) {
-		LOG_ERR("No more reply handlers");
-		return -ENOMEM;
-	}
-
-	return golioth_lightdb_get(client, GOLIOTH_LIGHTDB_PATH("led"),
-				   COAP_CONTENT_FORMAT_APP_CBOR, reply,
-				   reply_cb);
-}
-
 static void golioth_on_connect(struct golioth_client *client)
 {
 	struct coap_reply *observe_reply;
@@ -191,8 +175,6 @@ static void golioth_on_connect(struct golioth_client *client)
 	err = golioth_lightdb_observe(client, GOLIOTH_LIGHTDB_PATH("led"),
 				      COAP_CONTENT_FORMAT_APP_CBOR,
 				      observe_reply, golioth_led_handle);
-
-	err = golioth_leds_get(client, golioth_led_handle);
 }
 
 static void golioth_on_message(struct golioth_client *client,
