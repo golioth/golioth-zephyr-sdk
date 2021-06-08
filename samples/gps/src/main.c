@@ -15,24 +15,7 @@ LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 
 #include "gps.h"
 
-#define GOLIOTH_LIGHTDB_STREAM_PATH(x) ".s/" x
-
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
-
-static void golioth_on_message(struct golioth_client *client,
-                   struct coap_packet *rx)
-{
-    uint16_t payload_len;
-    const uint8_t *payload;
-    uint8_t type;
-
-    type = coap_header_get_type(rx);
-    payload = coap_packet_get_payload(rx, &payload_len);
-
-    if (!IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH) && payload) {
-        LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
-    }
-}
 
 static void print_gps_fix_data(nrf_gnss_data_frame_t *gps_data)
 {
@@ -112,13 +95,12 @@ void main(void)
         wifi_connect();
     }
 
-    client->on_message = golioth_on_message;
     golioth_system_client_start();
 
     while (true) {
         // Loop until we don't have any more data to read.
         while (gps_process_data(&gps_data) > 0) {}
-        
+
         if (gps_has_fix()) {
             print_gps_fix_data(&gps_data);
             upload_gps_fix_data(&gps_data);
