@@ -12,6 +12,12 @@
 #include <net/tls_credentials.h>
 #include <stdint.h>
 
+/**
+ * @defgroup net Golioth Networking
+ * Functions for communicating with the Golioth servers
+ * @{
+ */
+
 #define GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN	128
 
 #define GOLIOTH_MAX_IDENTITY_LEN	32
@@ -295,5 +301,7 @@ int golioth_observe_blockwise(struct golioth_client *client,
  * @retval <0 On failure
  */
 int golioth_process_rx(struct golioth_client *client);
+
+/** @} */
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_H_ */

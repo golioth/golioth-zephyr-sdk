@@ -12,6 +12,12 @@
 extern struct golioth_client _golioth_system_client;
 
 /**
+ * @defgroup system_client Golioth System Client
+ * @ingroup net
+ * @{
+ */
+
+/**
  * @brief Start Golioth system client
  */
 void golioth_system_client_start(void);
@@ -20,5 +26,7 @@ void golioth_system_client_start(void);
  * @brief Get pointer to Golioth system client instance
  */
 #define GOLIOTH_SYSTEM_CLIENT_GET()	(&_golioth_system_client)
+
+/** @} */
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_SYSTEM_CLIENT_H_ */
