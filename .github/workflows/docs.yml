@@ -34,6 +34,12 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: golioth-docs
           ref: 'main'
+          
+      - name: Create docs directory
+        run: |
+          mkdir docs
+          mkdir docs/md
+          mkdir docs/xml
       
       - name: Doxygen Action
         # You may pin to the exact commit or the version.
@@ -42,16 +48,11 @@ jobs:
         with:
           doxyfile-path: zephyr/Doxyfile
           working-directory: .
-      
-      - run: |
-          ls
-          ls docs
-        
+
       - name: Download and Run Doxybook2
         run: |
           wget -O doxybook2.zip https://github.com/matusnovak/doxybook2/releases/download/v1.3.4/doxybook2-linux-amd64-v1.3.4.zip
           unzip doxybook2.zip -d doxybook2
-          mkdir docs/md
           doxybook2/bin/doxybook2 --input docs/xml/ --output docs/md
           
       - name: Copy generated documentation to golioth/docs
