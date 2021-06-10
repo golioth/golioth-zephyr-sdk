@@ -53,7 +53,7 @@ jobs:
         run: |
           wget -O doxybook2.zip https://github.com/matusnovak/doxybook2/releases/download/v1.3.4/doxybook2-linux-amd64-v1.3.4.zip
           unzip doxybook2.zip -d doxybook2
-          doxybook2/bin/doxybook2 --input docs/xml/ --output docs/md
+          doxybook2/bin/doxybook2 --input docs/xml --output docs/md
           
       - name: Copy generated documentation to golioth/docs
         run: |
