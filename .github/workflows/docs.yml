@@ -48,6 +48,8 @@ jobs:
         with:
           doxyfile-path: zephyr/Doxyfile
           working-directory: .
+      
+      - run: cat docs/xml/index.xml
 
       - name: Download and Run Doxybook2
         run: |
