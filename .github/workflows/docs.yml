@@ -46,7 +46,7 @@ jobs:
         # uses: mattnotmitt/doxygen-action@9964e41e7f2e2a56e42fe789421f3fe33e938d63
         uses: mattnotmitt/doxygen-action@v1.3.1
         with:
-          doxyfile-path: zephyr/Doxyfile
+          doxyfile-path: Doxyfile
           working-directory: zephyr
       
       - run: cp -r zephyr/docs/xml/ docs/xml/
