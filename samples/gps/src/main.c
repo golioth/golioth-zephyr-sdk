@@ -17,6 +17,14 @@ LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
+static void print_gps_satellite_stats(nrf_gnss_data_frame_t *gps_data) {
+    uint8_t tracked, in_fix, unhealthy;
+
+    gps_satellite_stats(gps_data, &tracked, &in_fix, &unhealthy);
+
+    printk("Tracking: %d, Using: [%d/%d], Unhealthy: [%d/%d]\n", tracked, in_fix, tracked, unhealthy, tracked);
+}
+
 static void print_gps_fix_data(nrf_gnss_data_frame_t *gps_data)
 {
     printk("Longitude:  %f\n", gps_data->pvt.longitude);
@@ -100,6 +108,8 @@ void main(void)
     while (true) {
         // Loop until we don't have any more data to read.
         while (gps_process_data(&gps_data) > 0) {}
+
+        print_gps_satellite_stats(&gps_data);
 
         if (gps_has_fix()) {
             print_gps_fix_data(&gps_data);

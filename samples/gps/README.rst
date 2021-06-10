@@ -1,6 +1,9 @@
 Golioth GPS Sample
 ##################
 
+.. note::
+    This sample *must* be run on an nRF9160 for licensing reasons.
+
 Overview
 ********
 

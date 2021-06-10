@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2021 Golioth, Inc.
+ * Copyright (c) 2019 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+ */
+
 #include <net/socket.h>
 #include <modem/at_cmd.h>
 #include <modem/at_notif.h>
@@ -18,6 +25,7 @@ static uint32_t              nmea_string_cnt;
 
 static bool                  got_fix = false;
 static uint64_t              fix_timestamp;
+static nrf_gnss_data_frame_t in_progress_pvt = { 0 };
 
 static const char *const at_commands[] = {
 	AT_XSYSTEMMODE,
@@ -140,36 +148,40 @@ int gps_process_data(nrf_gnss_data_frame_t *gps_data)
 	int retval;
 
 	retval = nrf_recv(gnss_fd,
-			  gps_data,
+			  &in_progress_pvt,
 			  sizeof(nrf_gnss_data_frame_t),
 			  NRF_MSG_DONTWAIT);
 
 	if (retval > 0) {
+		switch (in_progress_pvt.data_id) {
+			case NRF_GNSS_PVT_DATA_ID:
+				memcpy(&in_progress_pvt,
+						gps_data,
+						sizeof(nrf_gnss_data_frame_t));
 
-		switch (gps_data->data_id) {
-		case NRF_GNSS_PVT_DATA_ID:
-			nmea_string_cnt = 0;
-			got_fix = false;
+				nmea_string_cnt = 0;
+				got_fix = false;
 
-			if ((gps_data->pvt.flags &
-				NRF_GNSS_PVT_FLAG_FIX_VALID_BIT)
-				== NRF_GNSS_PVT_FLAG_FIX_VALID_BIT) {
+				if ((in_progress_pvt.pvt.flags &
+					NRF_GNSS_PVT_FLAG_FIX_VALID_BIT)
+					== NRF_GNSS_PVT_FLAG_FIX_VALID_BIT)
+				{
 
-				got_fix = true;
-				fix_timestamp = k_uptime_get();
-			}
-			break;
+					got_fix = true;
+					fix_timestamp = k_uptime_get();
+				}
+				break;
 
-		case NRF_GNSS_NMEA_DATA_ID:
-			if (nmea_string_cnt < 10) {
-				memcpy(nmea_strings[nmea_string_cnt++],
-				       gps_data->nmea,
-				       retval);
-			}
-			break;
+			case NRF_GNSS_NMEA_DATA_ID:
+				if (nmea_string_cnt < 10) {
+					memcpy(nmea_strings[nmea_string_cnt++],
+						in_progress_pvt.nmea,
+						retval);
+				}
+				break;
 
-		default:
-			break;
+			default:
+				break;
 		}
 	}
 
@@ -184,4 +196,27 @@ bool gps_has_fix(void)
 uint64_t gps_msec_since_last_fix(void)
 {
     return k_uptime_get() - fix_timestamp;
+}
+
+void gps_satellite_stats(nrf_gnss_data_frame_t *gps_data, uint8_t *tracked, uint8_t* in_fix, uint8_t *unhealthy)
+{
+	*tracked = 0;
+	*in_fix = 0;
+	*unhealthy = 0;
+
+	for (int i = 0; i < NRF_GNSS_MAX_SATELLITES; ++i) {
+		if ((in_progress_pvt.pvt.sv[i].sv > 0) &&
+			(in_progress_pvt.pvt.sv[i].sv < 33))
+		{
+			(*tracked)++;
+
+			if (in_progress_pvt.pvt.sv[i].flags & NRF_GNSS_SV_FLAG_USED_IN_FIX) {
+				(*in_fix)++;
+			}
+
+			if (in_progress_pvt.pvt.sv[i].flags & NRF_GNSS_SV_FLAG_UNHEALTHY) {
+				(*unhealthy)++;
+			}
+		}
+	}
 }
