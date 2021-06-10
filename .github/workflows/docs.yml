@@ -39,7 +39,6 @@ jobs:
         run: |
           mkdir docs
           mkdir docs/md
-          mkdir docs/xml
       
       - name: Doxygen Action
         # You may pin to the exact commit or the version.
@@ -49,7 +48,7 @@ jobs:
           doxyfile-path: Doxyfile
           working-directory: zephyr
       
-      - run: cp -r zephyr/docs/xml/ docs/xml/
+      - run: mv zephyr/docs/xml docs/
       
       - run: cat docs/xml/index.xml
 
