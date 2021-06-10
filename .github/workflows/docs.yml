@@ -43,7 +43,9 @@ jobs:
           doxyfile-path: zephyr/Doxyfile
           working-directory: .
       
-      - run: ls
+      - run: |
+          ls
+          ls docs
         
       - name: Download and Run Doxybook2
         run: |
