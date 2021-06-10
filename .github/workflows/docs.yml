@@ -47,6 +47,7 @@ jobs:
         run: |
           wget -O doxybook2.zip https://github.com/matusnovak/doxybook2/releases/download/v1.3.4/doxybook2-linux-amd64-v1.3.4.zip
           unzip doxybook2.zip -d doxybook2
+          mkdir docs/md
           doxybook2/bin/doxybook2 --input docs/xml/ --output docs/md
           
       - name: Copy generated documentation to golioth/docs
@@ -58,6 +59,7 @@ jobs:
         # uses: peter-evans/create-pull-request@9825ae65b1cb54b543b938503728b432a0176d29
         uses: peter-evans/create-pull-request@v3.10.0
         with:
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           # Relative path under $GITHUB_WORKSPACE to the repository. Defaults to $GITHUB_WORKSPACE.
           path: golioth-docs/ # optional
           # The message to use when committing changes.
