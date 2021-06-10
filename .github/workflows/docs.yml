@@ -47,15 +47,8 @@ jobs:
         with:
           doxyfile-path: Doxyfile
           working-directory: zephyr
-      
-      - name: Debugging with tmate
-        # You may pin to the exact commit or the version.
-        # uses: mxschmitt/action-tmate@18c3652e863e41474701cc45349bfc24a902636e
-        uses: mxschmitt/action-tmate@v3.5
-      
-      - run: mv zephyr/docs/xml docs/
-      
-      - run: cat docs/xml/index.xml
+
+      - run: cp -r zephyr/docs/xml docs/
 
       - name: Download and Run Doxybook2
         run: |
