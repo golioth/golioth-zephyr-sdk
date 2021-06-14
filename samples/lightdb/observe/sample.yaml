@@ -1,0 +1,9 @@
+sample:
+  description: Use Light DB observe
+  name: lightdb-observe
+common:
+  harness: net
+  platform_allow: esp32 qemu_cortex_m3 qemu_x86 nrf52840dk_nrf52840
+  tags: golioth lightdb net socket
+tests:
+  sample.golioth.lightdb_observe: {}

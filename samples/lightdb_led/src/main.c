@@ -201,7 +201,7 @@ void main(void)
 	int counter = 0;
 	int err;
 
-	LOG_DBG("Start Light DB sample");
+	LOG_DBG("Start Light DB LED sample");
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");
