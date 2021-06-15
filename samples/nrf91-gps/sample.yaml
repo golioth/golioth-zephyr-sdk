@@ -1,9 +1,9 @@
 sample:
   description: Log GPS fix to Golioth server
-  name: gps
+  name: nrf91-gps
 common:
   harness: net
   platform_allow: esp32 circuitdojo_feather_nrf9160ns
   tags: golioth gps asset tracker
 tests:
-  sample.golioth.gps: {}
+  sample.golioth.nrf91-gps: {}
