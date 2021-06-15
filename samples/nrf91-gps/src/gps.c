@@ -2,7 +2,7 @@
  * Copyright (c) 2021 Golioth, Inc.
  * Copyright (c) 2019 Nordic Semiconductor ASA
  *
- * SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
 #include <net/socket.h>
@@ -13,12 +13,37 @@
 
 #define AT_XSYSTEMMODE      "AT\%XSYSTEMMODE=1,0,1,0"
 #define AT_ACTIVATE_GPS     "AT+CFUN=31"
-// #define AT_COEX0            "AT\\%XCOEX0=1,1,1570,1580"
-#define AT_COEX0			"AT%XCOEX0=1,1,1565,1586"
+#define AT_ACTIVATE_LTE     "AT+CFUN=21"
+#define AT_DEACTIVATE_LTE   "AT+CFUN=20"
 
 #define GNSS_INIT_AND_START 1
 #define GNSS_STOP           2
 #define GNSS_RESTART        3
+
+#define AT_CMD_SIZE(x) (sizeof(x) - 1)
+
+#ifdef CONFIG_BOARD_NRF9160DK_NRF9160NS
+#define AT_MAGPIO      "AT\%XMAGPIO=1,0,0,1,1,1574,1577"
+#ifdef CONFIG_GPS_SAMPLE_ANTENNA_ONBOARD
+#define AT_COEX0       "AT\%XCOEX0=1,1,1565,1586"
+#elif CONFIG_GPS_SAMPLE_ANTENNA_EXTERNAL
+#define AT_COEX0       "AT\%XCOEX0"
+#endif
+#endif /* CONFIG_BOARD_NRF9160DK_NRF9160NS */
+
+#ifdef CONFIG_BOARD_THINGY91_NRF9160NS
+#define AT_MAGPIO      "AT\%XMAGPIO=1,1,1,7,1,746,803,2,698,748,2,1710,2200," \
+			"3,824,894,4,880,960,5,791,849,7,1565,1586"
+#ifdef CONFIG_GPS_SAMPLE_ANTENNA_ONBOARD
+#define AT_COEX0       "AT\%XCOEX0=1,1,1565,1586"
+#elif CONFIG_GPS_SAMPLE_ANTENNA_EXTERNAL
+#define AT_COEX0       "AT\%XCOEX0"
+#endif
+#endif /* CONFIG_BOARD_THINGY91_NRF9160NS */
+
+#ifdef CONFIG_BOARD_CIRCUITDOJO_FEATHER_NRF9160NS
+#define AT_COEX0 		"AT%XCOEX0=1,1,1565,1586"
+#endif /* CONFIG_BOARD_CIRCUITDOJO_FEATHER_NRF9160NS */
 
 static int                   gnss_fd;
 static char                  nmea_strings[10][NRF_GNSS_NMEA_MAX_LEN];
@@ -28,24 +53,73 @@ static bool                  got_fix = false;
 static uint64_t              fix_timestamp;
 static nrf_gnss_data_frame_t in_progress_pvt = { 0 };
 
+static const char status1[] = "+CEREG: 1";
+static const char status2[] = "+CEREG:1";
+static const char status3[] = "+CEREG: 5";
+static const char status4[] = "+CEREG:5";
+
+K_SEM_DEFINE(lte_ready, 0, 1);
+
 static const char *const at_commands[] = {
-    AT_XSYSTEMMODE,
-    AT_COEX0,
-    AT_ACTIVATE_GPS
+	AT_XSYSTEMMODE,
+#if defined(CONFIG_BOARD_NRF9160DK_NRF9160NS) || \
+	defined(CONFIG_BOARD_THINGY91_NRF9160NS)
+	AT_MAGPIO,
+	AT_COEX0,
+#elif defined(CONFIG_BOARD_CIRCUITDOJO_FEATHER_NRF9160NS) 
+	AT_COEX0,
+#endif
+	AT_ACTIVATE_GPS
 };
 
 static int setup_modem(void)
 {
-    int res;
     for (int i = 0; i < ARRAY_SIZE(at_commands); i++) {
-        res = at_cmd_write(at_commands[i], NULL, 0, NULL);
-        if (res != 0) {
-            printk("Failed to write AT command[%d], err: %d\n", i, res);
+        int err = at_cmd_write(at_commands[i], NULL, 0, NULL);
+        if (err != 0) {
+            printk("Failed to write AT command[%d], err: %d\n", i, err);
             return -1;
         }
     }
 
     return 0;
+}
+
+static void wait_for_lte(void *context, const char *response)
+{
+	if (!memcmp(status1, response, AT_CMD_SIZE(status1)) ||
+		!memcmp(status2, response, AT_CMD_SIZE(status2)) ||
+		!memcmp(status3, response, AT_CMD_SIZE(status3)) ||
+		!memcmp(status4, response, AT_CMD_SIZE(status4))) {
+		k_sem_give(&lte_ready);
+	}
+}
+
+static int activate_lte(bool activate)
+{
+	if (activate) {
+		if (at_cmd_write(AT_ACTIVATE_LTE, NULL, 0, NULL) != 0) {
+			return -1;
+		}
+
+		at_notif_register_handler(NULL, wait_for_lte);
+		if (at_cmd_write("AT+CEREG=2", NULL, 0, NULL) != 0) {
+			return -1;
+		}
+
+		k_sem_take(&lte_ready, K_FOREVER);
+
+		at_notif_deregister_handler(NULL, wait_for_lte);
+		if (at_cmd_write("AT+CEREG=0", NULL, 0, NULL) != 0) {
+			return -1;
+		}
+	} else {
+		if (at_cmd_write(AT_DEACTIVATE_LTE, NULL, 0, NULL) != 0) {
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 static int gnss_ctrl(uint32_t ctrl)
@@ -136,6 +210,8 @@ int gps_init(void)
 {
     int retval;
 
+    activate_lte(false);
+
     if (setup_modem() != 0) {
         printk("Failed to initialize modem\n");
         return -1;
@@ -143,10 +219,12 @@ int gps_init(void)
 
     retval = gnss_ctrl(GNSS_INIT_AND_START);
 
+    activate_lte(true);
+
     return retval;
 }
 
-int gps_process_data(nrf_gnss_data_frame_t *gps_data)
+static int gps_process_data(nrf_gnss_data_frame_t *gps_data)
 {
     int retval;
 
@@ -189,6 +267,18 @@ int gps_process_data(nrf_gnss_data_frame_t *gps_data)
     }
 
     return retval;
+}
+
+int gps_get_data(nrf_gnss_data_frame_t *gps_data)
+{
+    int err;
+
+    while (true) {
+        err = gps_process_data(gps_data);
+        if (err <= 0) {
+            return err;
+        }
+    }
 }
 
 bool gps_has_fix(void)

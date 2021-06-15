@@ -106,8 +106,9 @@ void main(void)
     golioth_system_client_start();
 
     while (true) {
-        // Loop until we don't have any more data to read.
-        while (gps_process_data(&gps_data) > 0) {}
+        if (gps_get_data(&gps_data) != 0) {
+            LOG_WRN("failed to get GPS data");
+        }
 
         print_gps_satellite_stats(&gps_data);
 

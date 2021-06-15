@@ -2,7 +2,7 @@
  * Copyright (c) 2021 Golioth, Inc.
  * Copyright (c) 2019 Nordic Semiconductor ASA
  *
- * SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
 #ifndef GPS_H
@@ -16,7 +16,7 @@ extern "C" {
 
 int gps_init(void);
 
-int gps_process_data(nrf_gnss_data_frame_t *gps_data);
+int gps_get_data(nrf_gnss_data_frame_t *gps_data);
 
 bool gps_has_fix(void);
 uint64_t gps_msec_since_last_fix(void);
