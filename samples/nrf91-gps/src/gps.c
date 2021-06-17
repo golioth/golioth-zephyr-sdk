@@ -219,7 +219,7 @@ int gps_init(void)
 
     retval = gnss_ctrl(GNSS_INIT_AND_START);
 
-    activate_lte(true);
+    // activate_lte(true);
 
     return retval;
 }

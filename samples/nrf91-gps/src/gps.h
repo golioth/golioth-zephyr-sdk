@@ -8,6 +8,7 @@
 #ifndef GPS_H
 #define GPS_H
 
+#include <stdbool.h>
 #include <nrf_socket.h>
 
 #ifdef __cplusplus
