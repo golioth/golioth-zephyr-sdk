@@ -16,9 +16,6 @@ LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 #include <modem/lte_lc.h>
 #include <modem/at_cmd.h>
 #include <modem/at_notif.h>
-
-// #include "gps.h"
-
 #include <drivers/gps.h>
 
 // static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
@@ -95,57 +92,15 @@ static const struct device *gps_device;
 //     }
 // }
 
-static const char status1[] = "+CEREG: 1";
-static const char status2[] = "+CEREG:1";
-static const char status3[] = "+CEREG: 5";
-static const char status4[] = "+CEREG:5";
-
-#define AT_ACTIVATE_LTE     "AT+CFUN=21"
-#define AT_DEACTIVATE_LTE   "AT+CFUN=20"
-#define AT_CMD_SIZE(x) (sizeof(x) - 1)
-
-K_SEM_DEFINE(lte_ready, 0, 1);
-
-static void wait_for_lte(void *context, const char *response)
-{
-	if (!memcmp(status1, response, AT_CMD_SIZE(status1)) ||
-		!memcmp(status2, response, AT_CMD_SIZE(status2)) ||
-		!memcmp(status3, response, AT_CMD_SIZE(status3)) ||
-		!memcmp(status4, response, AT_CMD_SIZE(status4))) {
-		k_sem_give(&lte_ready);
-	}
-}
-
-static int activate_lte(bool activate)
-{
-	if (activate) {
-		if (at_cmd_write(AT_ACTIVATE_LTE, NULL, 0, NULL) != 0) {
-			return -1;
-		}
-
-		at_notif_register_handler(NULL, wait_for_lte);
-		if (at_cmd_write("AT+CEREG=2", NULL, 0, NULL) != 0) {
-			return -1;
-		}
-
-		k_sem_take(&lte_ready, K_FOREVER);
-
-		at_notif_deregister_handler(NULL, wait_for_lte);
-		if (at_cmd_write("AT+CEREG=0", NULL, 0, NULL) != 0) {
-			return -1;
-		}
-	} else {
-		if (at_cmd_write(AT_DEACTIVATE_LTE, NULL, 0, NULL) != 0) {
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
 void gps_event_handler(const struct device *dev, struct gps_event *event)
 {
-    LOG_INF("handling GPS event: %d", event->type);
+    switch (event->type) {
+        case GPS_EVT_PVT:
+            LOG_INF("latitude: %f, longitude: %f", event->pvt.latitude, event->pvt.longitude);
+            break;
+        default:
+            break;
+    }
 }
 
 static int gps_controller_init(void)
@@ -208,59 +163,15 @@ void main(void)
 {
     LOG_INF("Starting GPS Sample...");
 
-    activate_lte(false);
-    // lte_lc_normal();
-
-    if (at_cmd_write("AT+CFUN=31", NULL, 0, NULL) != 0) {
-        LOG_ERR("failed to activate GNSS");
-    }
-    
-    if (lte_lc_init_and_connect()) {
-        LOG_ERR("failed to initialize modem");
-    }
-
-    enum lte_lc_func_mode functional_mode;
-
-    if (lte_lc_func_mode_get(&functional_mode)) {
-        LOG_ERR("failed to get functional mode");
-    }
-
-    LOG_INF("lte_lc functional mode: %d", functional_mode);
-
     if (gps_controller_init()) {
         return;
     }
-
-    // activate_lte(true);
-    // activate_lte(true);
-
-    if (lte_lc_func_mode_get(&functional_mode)) {
-        LOG_ERR("failed to get functional mode");
-    }
-
-    LOG_INF("lte_lc functional mode: %d", functional_mode);
 
     gps_controller_start();
 
     // golioth_system_client_start();
 
     while (true) {
-        
-        // if (gps_get_data(&gps_data) != 0) {
-        //     // LOG_WRN("failed to get GPS data");
-        //     printk("failed to get gps data\n");
-        // }
-
-        // print_gps_satellite_stats(&gps_data);
-
-        // if (gps_has_fix()) {
-        //     print_gps_fix_data(&gps_data);
-        //     // upload_gps_fix_data(&gps_data);
-        // } else {
-        //     printk("No gps data available\n");
-        //     printk("Seconds since last GPS fix: %lld\n", gps_msec_since_last_fix() / 1000);
-        // }
-
         k_sleep(K_SECONDS(5));
     }
 }
