@@ -3,7 +3,7 @@
 
 mainmenu "Golioth application options"
 
-config GPS_DEV_NAME
+config GPS_DEVICE_NAME
 	string "GPS device name"
 	help
 		GPS device from which location data will be fetched

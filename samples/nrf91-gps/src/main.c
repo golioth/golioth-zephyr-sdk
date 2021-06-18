@@ -107,7 +107,7 @@ static int gps_controller_init(void)
 {
     int err;
 
-    gps_device = device_get_binding(CONFIG_GPS_DEV_NAME);
+    gps_device = device_get_binding(CONFIG_GPS_DEVICE_NAME);
     if (gps_device == NULL) {
         LOG_ERR("failed to retrieve GPS device");
         return -ENODEV;
