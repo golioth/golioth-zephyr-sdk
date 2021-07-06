@@ -1,9 +1,9 @@
-image: zephyrprojectrtos/ci:v0.11.15
+image: zephyrprojectrtos/ci:v0.17.4
 
 variables:
   GIT_STRATEGY: none
   ZEPHYR_TOOLCHAIN_VARIANT: zephyr
-  ZEPHYR_SDK_INSTALL_DIR: /opt/sdk/zephyr-sdk-0.12.3
+  ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.12.4
 
 .west-init-and-update: &west-init-and-update
   - rm -rf .west modules/lib/golioth
