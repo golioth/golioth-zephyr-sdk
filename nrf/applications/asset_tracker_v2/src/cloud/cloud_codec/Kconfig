@@ -20,7 +20,13 @@ config GOLIOTH_CODEC_CBOR
 
 config GOLIOTH_CODEC_JSON
 	bool "JSON"
+	select JSON_HELPERS
 	help
 	  This codec will use JSON as payload.
 
 endchoice # GOLIOTH_CODEC
+
+config JSON_HELPERS
+	bool
+	default y if AWS_IOT || AZURE_IOT_HUB || NRF_CLOUD
+	select CJSON_LIB

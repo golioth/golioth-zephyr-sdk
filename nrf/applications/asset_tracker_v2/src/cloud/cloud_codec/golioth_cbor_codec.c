@@ -861,3 +861,12 @@ free_buffer:
 
 	return err;
 }
+
+void cloud_codec_init(void)
+{
+}
+
+void cloud_codec_release_data(struct cloud_codec_data *output)
+{
+	k_free(output->buf);
+}

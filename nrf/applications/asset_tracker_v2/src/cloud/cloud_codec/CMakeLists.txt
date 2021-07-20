@@ -20,5 +20,6 @@ target_sources_ifdef(CONFIG_GOLIOTH_CODEC_JSON app
                      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/golioth_json_codec.c)
 
 target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cloud_codec_ringbuffer.c)
-target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/json_helpers.c)
-target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/json_common.c)
+
+target_sources_ifdef(CONFIG_JSON_HELPERS app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/json_helpers.c)
+target_sources_ifdef(CONFIG_JSON_HELPERS app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/json_common.c)
