@@ -1,0 +1,158 @@
+#
+# Copyright (c) 2021 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig DATA_MODULE
+	bool "Data module"
+	select DATE_TIME
+	default y
+
+if DATA_MODULE
+
+config PENDING_DATA_COUNT
+	int "Number of entries in pending data list"
+	default 10
+
+config FAILED_DATA_COUNT
+	int "Number of entries in failed data list"
+	default 10
+
+config DATA_SEND_ALL_DEVICE_CONFIGURATIONS
+	bool "Encode and send all device configurations regardless if they have changed or not"
+	help
+	  If this option is disabled the data module will only include device configuration values
+	  that have changed from the last configuration update. This is to save costs related to
+	  data transfers and to lower the device's overall current consumption due to less CPU and
+	  radio-activity.
+
+config DATA_THREAD_STACK_SIZE
+	int "Data module thread stack size"
+	default 2560
+
+config DATA_GPS_BUFFER_COUNT
+	int "Number of GPS data ringbuffer entries"
+	range 1 100
+	default 10
+	help
+	  Currently, the range for ringbuffer entries is limited to a minimum of 1 and a
+	  maximum of 100. A minimum of 1 is set to make sure that the application builds with the
+	  current implementation of the data module. The buffers are essentially arrays of a
+	  certain data type and arrays cannot be compiled with a count of 0.
+	  The Kconfig range statement requires that a maximum value is also set.
+	  The maximum value of 100 is an arbitrary number that can be increased if desired.
+	  Note that when increasing the maximum count of a buffer there is no guarantee beyond
+	  using the default values that there is enough heap memory to successfully encode
+	  enqueued entries into a JSON object string.
+
+config DATA_SENSOR_BUFFER_COUNT
+	int "Number of sensor data ringbuffer entries"
+	range 1 100
+	default 10
+
+config DATA_MODEM_DYNAMIC_BUFFER_COUNT
+	int "Number of dynamic modem data ringbuffer entries"
+	range 1 100
+	default 3
+
+config DATA_UI_BUFFER_COUNT
+	int "Number of UI data ringbuffer entries"
+	range 1 100
+	default 3
+
+config DATA_ACCELEROMETER_BUFFER_COUNT
+	int "Number of accelerometer data ringbuffer entries"
+	range 1 100
+	default 3
+
+config DATA_BATTERY_BUFFER_COUNT
+	int "Number of battery data ringbuffer entries"
+	range 1 100
+	default 3
+
+config DATA_GPS_BUFFER_STORE
+	bool "Store GPS data received from the GPS module"
+	default y
+
+config DATA_SENSOR_BUFFER_STORE
+	bool "Store environmental sensor data received from the sensor module"
+	default y
+
+config DATA_ACCELEROMETER_BUFFER_STORE
+	bool "Store accelerometer data received from the sensor module"
+
+config DATA_DYNAMIC_MODEM_BUFFER_STORE
+	bool "Store dynamic modem data received from the modem module"
+	default y
+
+config DATA_BATTERY_BUFFER_STORE
+	bool "Store battery data received from the modem module"
+	default y
+
+config DATA_UI_BUFFER_STORE
+	bool "Store UI data received from the UI module"
+	default y
+
+config DATA_DEVICE_MODE
+	bool "Default device mode"
+	default y
+	help
+	  Either active or passive mode. True evaluates to active mode. In active mode the device
+	  samples and publishes data at regular intervals. In passive mode the device samples and
+	  publishes data only if movement has been detected.
+
+config DATA_ACTIVE_TIMEOUT_SECONDS
+	int "Default active wait timeout in seconds"
+	default 120
+	help
+	  Number of seconds between sampling/publication in active mode.
+
+config DATA_MOVEMENT_RESOLUTION_SECONDS
+	int "Default movement resolution in seconds"
+	default 120
+	help
+	  Number of seconds between each time movement can trigger sampling/publication in passive
+	  mode.
+
+config DATA_MOVEMENT_TIMEOUT_SECONDS
+	int "Default movement timeout in seconds"
+	default 3600
+	help
+	  Number of seconds between each sampling/publication in passive mode regardless of
+	  movement. Used as a fail-safe to ensure updates even if the device is not moving for
+	  longer durations.
+
+config DATA_ACCELEROMETER_THRESHOLD
+	int "Default accelerometer threshold in m/s²"
+	default 10
+	help
+	  Minimum absolute value in m/s² that is considered movement in passive mode.
+
+config DATA_GPS_TIMEOUT_SECONDS
+	int "Default GPS timeout"
+	default 60
+	help
+	  Timeout for acquiring a GPS fix during sampling of data.
+
+config DATA_SAMPLE_GNSS_DEFAULT
+	bool "Include GNSS in sample requests"
+	default y
+	help
+	  If this configuration is enabled the application will by default include GNSS data in
+	  sample requests sent to other modules. This configuration can be overwritten by changing
+	  the application's real-time configuration using the cloud-side state.
+
+config DATA_SAMPLE_NEIGHBOR_CELLS_DEFAULT
+	bool "Include neighbor cells in sample requests"
+	default y
+	help
+	  If this configuration is enabled the application will by default include neighbor cell
+	  data in sample requests sent to other modules. This configuration can be overwritten by
+	  changing the application's real-time configuration using the cloud-side state.
+
+endif # DATA_MODULE
+
+module = DATA_MODULE
+module-str = Data module
+source "subsys/logging/Kconfig.template.log_config"
