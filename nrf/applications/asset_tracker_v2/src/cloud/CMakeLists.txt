@@ -14,3 +14,6 @@ target_sources_ifdef(CONFIG_AZURE_IOT_HUB app
 
 target_sources_ifdef(CONFIG_NRF_CLOUD app
                      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/nrf_cloud_integration.c)
+
+target_sources_ifdef(CONFIG_GOLIOTH_SYSTEM_CLIENT app
+                     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/golioth_integration.c)

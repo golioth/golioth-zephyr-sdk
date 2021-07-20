@@ -7,3 +7,20 @@
 module = CLOUD_CODEC
 module-str = Cloud codec
 source "subsys/logging/Kconfig.template.log_config"
+
+choice GOLIOTH_CODEC
+	prompt "Codec type"
+
+config GOLIOTH_CODEC_CBOR
+	bool "CBOR"
+	select TINYCBOR
+	select CBOR_FLOATING_POINT
+	help
+	  This codec will use CBOR as payload.
+
+config GOLIOTH_CODEC_JSON
+	bool "JSON"
+	help
+	  This codec will use JSON as payload.
+
+endchoice # GOLIOTH_CODEC
