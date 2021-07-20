@@ -7,6 +7,7 @@
 #include <zephyr.h>
 #include <cJSON.h>
 #include <date_time.h>
+#include "cJSON_os.h"
 
 #include "cloud_codec.h"
 #include "json_common.h"
@@ -1068,4 +1069,14 @@ int json_common_batch_data_add(cJSON *parent, enum json_common_buffer_type type,
 
 	json_add_obj(parent, object_label, array_obj);
 	return 0;
+}
+
+void cloud_codec_init(void)
+{
+	cJSON_Init();
+}
+
+void cloud_codec_release_data(struct cloud_codec_data *output)
+{
+	cJSON_FreeString(output->buf);
 }

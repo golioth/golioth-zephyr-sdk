@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "cJSON_os.h"
 #include <net/net_ip.h>
 #include <modem/lte_lc.h>
 
@@ -209,10 +208,7 @@ struct cloud_data_neighbor_cells {
 	bool queued : 1;
 };
 
-static inline void cloud_codec_init(void)
-{
-	cJSON_Init();
-}
+void cloud_codec_init(void);
 
 int cloud_codec_encode_neighbor_cells(struct cloud_codec_data *output,
 				      struct cloud_data_neighbor_cells *neighbor_cells);
@@ -283,10 +279,7 @@ void cloud_codec_populate_modem_dynamic_buffer(
 				int *head_modem_buf,
 				size_t buffer_count);
 
-static inline void cloud_codec_release_data(struct cloud_codec_data *output)
-{
-	cJSON_FreeString(output->buf);
-}
+void cloud_codec_release_data(struct cloud_codec_data *output);
 
 /**
  * @}

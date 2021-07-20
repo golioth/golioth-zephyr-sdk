@@ -6,8 +6,6 @@
 
 #include <cloud_codec.h>
 #include <zephyr.h>
-#include <cJSON.h>
-#include <cJSON_os.h>
 #include <math.h>
 
 #include <logging/log.h>
