@@ -69,6 +69,7 @@ static sec_tag_t sec_tag_list[] = {
 
 enum {
 	FLAG_RECONNECT,
+	FLAG_STOP_CLIENT,
 };
 
 static atomic_t flags;
@@ -214,6 +215,18 @@ static void client_disconnect(struct golioth_client *client)
 	}
 }
 
+K_SEM_DEFINE(sys_client_started, 0, 1);
+static struct k_poll_event sys_client_poll_start =
+	K_POLL_EVENT_STATIC_INITIALIZER(K_POLL_TYPE_SEM_AVAILABLE,
+					K_POLL_MODE_NOTIFY_ONLY,
+					&sys_client_started, 0);
+
+static void wait_for_client_start(void)
+{
+	k_poll(&sys_client_poll_start, 1, K_FOREVER);
+	sys_client_poll_start.state = K_POLL_STATE_NOT_READY;
+}
+
 static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 {
 	struct golioth_client *client = arg1;
@@ -227,6 +240,9 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 	while (true) {
 		if (client->sock < 0) {
+			LOG_DBG("Waiting for client to be started");
+			wait_for_client_start();
+
 			LOG_INF("Starting connect");
 			err = client_connect(client);
 			if (err) {
@@ -283,13 +299,16 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 		if (timeout_occurred) {
 			bool reconnect_request = atomic_test_and_clear_bit(&flags, FLAG_RECONNECT);
+			bool stop_request = atomic_test_and_clear_bit(&flags, FLAG_STOP_CLIENT);
 			bool receive_timeout = (recv_expiry <= k_uptime_get());
 
 			/*
-			 * Reconnect request is handled similar to recv timeout.
+			 * Reconnect and stop requests are handled similar to recv timeout.
 			 */
-			if (reconnect_request || receive_timeout) {
-				if (reconnect_request) {
+			if (reconnect_request || receive_timeout || stop_request) {
+				if (stop_request) {
+					LOG_INF("Stop request");
+				} else if (reconnect_request) {
 					LOG_INF("Reconnect per request");
 				} else {
 					LOG_WRN("Receive timeout");
@@ -322,11 +341,22 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 K_THREAD_DEFINE(golioth_system, 2048, golioth_system_client_main,
 		GOLIOTH_SYSTEM_CLIENT_GET(), NULL, NULL,
-		K_LOWEST_APPLICATION_THREAD_PRIO, 0, SYS_FOREVER_MS);
+		K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
 
 void golioth_system_client_start(void)
 {
-	k_thread_start(golioth_system);
+	k_sem_give(&sys_client_started);
+}
+
+void golioth_system_client_stop(void)
+{
+	k_sem_take(&sys_client_started, K_NO_WAIT);
+
+	if (!atomic_test_and_set_bit(&flags, FLAG_STOP_CLIENT)) {
+		if (USE_EVENTFD) {
+			eventfd_write(fds[POLLFD_EVENT].fd, 1);
+		}
+	}
 }
 
 #if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&	\
