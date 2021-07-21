@@ -227,6 +227,9 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 	while (true) {
 		if (client->sock < 0) {
+			LOG_DBG("Waiting for client to be started");
+			wait_for_client_start();
+
 			LOG_INF("Starting connect");
 			err = client_connect(client);
 			if (err) {
@@ -322,11 +325,20 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 K_THREAD_DEFINE(golioth_system, 2048, golioth_system_client_main,
 		GOLIOTH_SYSTEM_CLIENT_GET(), NULL, NULL,
-		K_LOWEST_APPLICATION_THREAD_PRIO, 0, SYS_FOREVER_MS);
+		K_LOWEST_APPLICATION_THREAD_PRIO, 0, 0);
 
 void golioth_system_client_start(void)
 {
-	k_thread_start(golioth_system);
+	k_sem_give(&sys_client_started);
+
+	if(CLIENT_START_BLOCKING) {
+		k_sem_take(&sys_client_conn_resolved,K_SECONDS(30));
+	}
+}
+
+void golioth_system_client_stop(void)
+{
+	k_sem_take(&sys_client_started,K_NO_WAIT);
 }
 
 #if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&	\

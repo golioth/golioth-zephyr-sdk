@@ -22,6 +22,11 @@ extern struct golioth_client _golioth_system_client;
  */
 void golioth_system_client_start(void);
 
+/** 
+ * @brief Stop Golioth system client
+ */
+void golioth_system_client_stop(void);
+
 /**
  * @brief Get pointer to Golioth system client instance
  */

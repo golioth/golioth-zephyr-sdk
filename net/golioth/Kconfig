@@ -138,6 +138,9 @@ config GOLIOTH_SYSTEM_SETTINGS
 	  When selected, Golioth credentials will be loaded from settings
 	  subsystem.
 
+config GOLIOTH_SYSTEM_CLIENT_START_BLOCKING
+	bool "Starting the client returns after getting connected"
+
 endif # GOLIOTH_SYSTEM_CLIENT
 
 endif # GOLIOTH
