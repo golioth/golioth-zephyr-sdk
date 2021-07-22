@@ -77,6 +77,13 @@ config GOLIOTH_SYSTEM_CLIENT_INIT_PRIORITY
 	help
 	  Initialization priority of Golioth system client.
 
+config GOLIOTH_SYSTEM_CLIENT_PING_INTERVAL_SEC
+	int "Ping interval (seconds)"
+	default 9
+	help
+	  Periodic interval between consecutive ping messages being sent to
+	  Golioth.
+
 config GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC
 	int "Receive timeout (seconds)"
 	default 30

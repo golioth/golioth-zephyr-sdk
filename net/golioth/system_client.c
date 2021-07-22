@@ -14,9 +14,7 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #include <net/tls_credentials.h>
 #include <posix/sys/eventfd.h>
 #include <settings/settings.h>
-
-#define RX_TIMEOUT							\
-	K_SECONDS(CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC)
+#include <sys/atomic.h>
 
 #define USE_EVENTFD							\
 	IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD)
@@ -37,8 +35,11 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 
 #define PSK_TAG			1
 
+#define PING_INTERVAL		(CONFIG_GOLIOTH_SYSTEM_CLIENT_PING_INTERVAL_SEC * 1000)
+#define RECV_TIMEOUT		(CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC * 1000)
+
 enum pollfd_type {
-	POLLFD_EVENT_RECONNECT,
+	POLLFD_EVENT,
 	POLLFD_SOCKET,
 	NUM_POLLFDS,
 };
@@ -55,21 +56,34 @@ static sec_tag_t sec_tag_list[] = {
 	PSK_TAG,
 };
 
+enum {
+	FLAG_RECONNECT,
+};
+
+static atomic_t flags;
+
 static inline void client_request_reconnect(void)
 {
-	if (USE_EVENTFD) {
-		eventfd_write(fds[POLLFD_EVENT_RECONNECT].fd, 1);
+	if (!atomic_test_and_set_bit(&flags, FLAG_RECONNECT)) {
+		if (USE_EVENTFD) {
+			eventfd_write(fds[POLLFD_EVENT].fd, 1);
+		}
 	}
 }
 
-static void client_rx_timeout(struct k_work *work)
+static inline void client_notify_timeout(void)
 {
-	LOG_ERR("RX client timeout!");
-
-	client_request_reconnect();
+	if (USE_EVENTFD) {
+		eventfd_write(fds[POLLFD_EVENT].fd, 1);
+	}
 }
 
-static K_WORK_DELAYABLE_DEFINE(rx_timeout, client_rx_timeout);
+static void eventfd_timeout_handle(struct k_work *work)
+{
+	client_notify_timeout();
+}
+
+static K_WORK_DELAYABLE_DEFINE(eventfd_timeout, eventfd_timeout_handle);
 
 static int init_tls(void)
 {
@@ -142,8 +156,8 @@ static int client_initialize(struct golioth_client *client)
 	}
 
 	if (USE_EVENTFD) {
-		fds[POLLFD_EVENT_RECONNECT].fd = eventfd(0, EFD_NONBLOCK);
-		fds[POLLFD_EVENT_RECONNECT].events = ZSOCK_POLLIN;
+		fds[POLLFD_EVENT].fd = eventfd(0, EFD_NONBLOCK);
+		fds[POLLFD_EVENT].events = ZSOCK_POLLIN;
 	}
 
 	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
@@ -200,9 +214,24 @@ static int client_connect(struct golioth_client *client)
 	return 0;
 }
 
+static void client_disconnect(struct golioth_client *client)
+{
+	(void)golioth_disconnect(client);
+
+	if (USE_EVENTFD) {
+		struct k_work_sync sync;
+
+		k_work_cancel_delayable_sync(&eventfd_timeout, &sync);
+	}
+}
+
 static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 {
 	struct golioth_client *client = arg1;
+	bool timeout_occurred;
+	int timeout;
+	int64_t recv_expiry = 0;
+	int64_t ping_expiry = 0;
 	eventfd_t eventfd_value;
 	int err;
 	int ret;
@@ -218,21 +247,32 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 			}
 
 			if (USE_EVENTFD) {
-				/* Add RX timeout */
-				k_work_reschedule(&rx_timeout, RX_TIMEOUT);
-
 				/* Flush reconnect requests */
-				(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
+				(void)eventfd_read(fds[POLLFD_EVENT].fd,
 						   &eventfd_value);
 			}
 
 			LOG_INF("Client connected!");
+
+			recv_expiry = k_uptime_get() + RECV_TIMEOUT;
+			ping_expiry = k_uptime_get() + PING_INTERVAL;
 		}
 
+		timeout_occurred = false;
+
+		timeout = MIN(recv_expiry, ping_expiry) - k_uptime_get();
+		if (timeout < 0) {
+			timeout = 0;
+		}
+
+		LOG_DBG("Next timeout: %d", timeout);
+
 		if (USE_EVENTFD) {
+			k_work_reschedule(&eventfd_timeout, K_MSEC(timeout));
+
 			ret = zsock_poll(fds, ARRAY_SIZE(fds), -1);
 		} else {
-			ret = zsock_poll(&fds[POLLFD_SOCKET], 1, 30 * 1000);
+			ret = zsock_poll(&fds[POLLFD_SOCKET], 1, timeout);
 		}
 
 		if (ret < 0) {
@@ -241,29 +281,51 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 		}
 
 		if (ret == 0) {
-			LOG_ERR("Timeout in poll");
-			golioth_disconnect(client);
-			continue;
+			LOG_DBG("Timeout in poll");
+			timeout_occurred = true;
 		}
 
-		if (USE_EVENTFD && fds[POLLFD_EVENT_RECONNECT].revents) {
-			(void)eventfd_read(fds[POLLFD_EVENT_RECONNECT].fd,
+		if (USE_EVENTFD && fds[POLLFD_EVENT].revents) {
+			(void)eventfd_read(fds[POLLFD_EVENT].fd,
 					   &eventfd_value);
-			LOG_INF("Reconnect request");
-			golioth_disconnect(client);
-			continue;
+			LOG_DBG("Timeout in eventfd");
+			timeout_occurred = true;
+		}
+
+		if (timeout_occurred) {
+			bool reconnect_request = atomic_test_and_clear_bit(&flags, FLAG_RECONNECT);
+			bool receive_timeout = (recv_expiry <= k_uptime_get());
+
+			/*
+			 * Reconnect request is handled similar to recv timeout.
+			 */
+			if (reconnect_request || receive_timeout) {
+				if (reconnect_request) {
+					LOG_INF("Reconnect per request");
+				} else {
+					LOG_WRN("Receive timeout");
+				}
+
+				client_disconnect(client);
+				continue;
+			}
+
+			if (ping_expiry <= k_uptime_get()) {
+				LOG_DBG("Sending PING");
+				(void)golioth_ping(client);
+
+				ping_expiry = k_uptime_get() + PING_INTERVAL;
+			}
 		}
 
 		if (fds[POLLFD_SOCKET].revents) {
-			if (USE_EVENTFD) {
-				/* Restart timer */
-				k_work_reschedule(&rx_timeout, RX_TIMEOUT);
-			}
+			recv_expiry = k_uptime_get() + RECV_TIMEOUT;
+			ping_expiry = k_uptime_get() + PING_INTERVAL;
 
 			err = golioth_process_rx(client);
 			if (err) {
 				LOG_ERR("Failed to receive: %d", err);
-				golioth_disconnect(client);
+				client_disconnect(client);
 			}
 		}
 	}
