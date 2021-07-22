@@ -338,6 +338,23 @@ int golioth_send_coap_payload(struct golioth_client *client,
 	return 0;
 }
 
+int golioth_ping(struct golioth_client *client)
+{
+	struct coap_packet packet;
+	uint8_t buffer[GOLIOTH_EMPTY_PACKET_LEN];
+	int err;
+
+	err = coap_packet_init(&packet, buffer, sizeof(buffer),
+			       COAP_VERSION_1, COAP_TYPE_CON,
+			       0, NULL,
+			       COAP_CODE_EMPTY, coap_next_id());
+	if (err) {
+		return err;
+	}
+
+	return golioth_send_coap(client, &packet);
+}
+
 int golioth_send_hello(struct golioth_client *client)
 {
 	struct coap_packet packet;

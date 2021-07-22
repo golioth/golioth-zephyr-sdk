@@ -202,6 +202,16 @@ int golioth_send_coap_payload(struct golioth_client *client,
 			      uint8_t *data, uint16_t data_len);
 
 /**
+ * @brief Send PING message to Golioth
+ *
+ * @param client Client instance
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_ping(struct golioth_client *client);
+
+/**
  * @brief Send Hello message to Golioth
  *
  * Sends Hello message to Golioth, which is mostly useful verifying Golioth
