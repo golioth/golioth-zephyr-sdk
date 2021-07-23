@@ -4,7 +4,18 @@ manifest:
       revision: v2.6.0
       url: https://github.com/zephyrproject-rtos/zephyr
       west-commands: scripts/west-commands.yml
-      import: true
+      import:
+        name-allowlist:
+          - cmsis
+          - hal_espressif
+          - hal_nordic
+          - mbedtls
+          - mcuboot
+          - mcumgr
+          - net-tools
+          - segger
+          - tinycbor
+          - tinycrypt
 
   self:
     path: modules/lib/golioth
