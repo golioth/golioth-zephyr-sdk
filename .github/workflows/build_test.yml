@@ -33,7 +33,7 @@ jobs:
           file = west.yml
           EOF
 
-          west update
+          west update -o=--depth=1 -n
           west patch --apply
 
       - name: Run twister

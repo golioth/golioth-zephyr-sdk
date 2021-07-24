@@ -1,16 +1,13 @@
 image: zephyrprojectrtos/ci:v0.17.4
 
 variables:
-  GIT_STRATEGY: none
   ZEPHYR_TOOLCHAIN_VARIANT: zephyr
   ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.12.4
 
-.west-init-and-update: &west-init-and-update
+.west-init: &west-init
   - rm -rf .west modules/lib/golioth
   - west init -m $CI_REPOSITORY_URL --mr $CI_COMMIT_SHA
   - west forall -c 'git clean -ffdx && git reset --hard'
-  - west update
-  - west patch --apply
 
 .cache-deps: &cache-deps
   key: west-modules
@@ -30,21 +27,21 @@ stages:
   stage: check
   needs: []
   allow_failure: true
-  before_script:
-    - git clone $CI_REPOSITORY_URL modules/lib/golioth
-    - cd modules/lib/golioth
-    - git checkout $CI_COMMIT_SHA
   except:
     - main
     - tags
 
 .west-prepare:
+  variables:
+    GIT_STRATEGY: none
   needs: []
   cache:
     <<: *cache-deps
     policy: pull
   before_script:
-    - *west-init-and-update
+    - *west-init
+    - west update -o=--depth=1 -n
+    - west patch --apply
 
 .west-build:
   extends: .west-prepare
@@ -65,8 +62,13 @@ cache-deps:
 
 checkpatch:
   extends: [.check, .west-prepare]
+  before_script:
+    - *west-init
+    - west update modules/lib/golioth
+    - west update zephyr -o=--depth=1 -n
   script:
     - cd modules/lib/golioth
+    - git fetch
     - CHECKPATCH="../../../zephyr/scripts/checkpatch.pl --color=always --quiet"
     - EXITCODE=0
     - $CHECKPATCH --git origin/main.. || EXITCODE=$?
@@ -74,12 +76,16 @@ checkpatch:
 
 gitlint:
   extends: .check
+  variables:
+    GIT_DEPTH: 0
   script:
     - pip3 install gitlint
     - gitlint --commits origin/main..
 
 pre-commit:
   extends: .check
+  variables:
+    GIT_DEPTH: 0
   script:
     - pip3 install pre-commit
     - |
