@@ -48,7 +48,6 @@ enum pollfd_type {
 struct golioth_client _golioth_system_client;
 
 static uint8_t rx_buffer[RX_BUFFER_SIZE];
-static struct sockaddr addr;
 
 static struct zsock_pollfd fds[NUM_POLLFDS];
 
@@ -131,30 +130,6 @@ static int client_initialize(struct golioth_client *client)
 		return err;
 	}
 
-	if (IS_ENABLED(CONFIG_NET_IPV4)) {
-		struct sockaddr_in *addr4 = (struct sockaddr_in *) &addr;
-
-		addr4->sin_family = AF_INET;
-		addr4->sin_port = htons(CONFIG_GOLIOTH_SYSTEM_SERVER_PORT);
-
-		zsock_inet_pton(addr4->sin_family,
-				CONFIG_GOLIOTH_SYSTEM_SERVER_IP_ADDR,
-				&addr4->sin_addr);
-
-		client->server = (struct sockaddr *)addr4;
-	} else if (IS_ENABLED(CONFIG_NET_IPV6)) {
-		struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &addr;
-
-		addr6->sin6_family = AF_INET6;
-		addr6->sin6_port = htons(CONFIG_GOLIOTH_SYSTEM_SERVER_PORT);
-
-		zsock_inet_pton(addr6->sin6_family,
-				CONFIG_GOLIOTH_SYSTEM_SERVER_IP_ADDR,
-				&addr6->sin6_addr);
-
-		client->server = (struct sockaddr *)addr6;
-	}
-
 	if (USE_EVENTFD) {
 		fds[POLLFD_EVENT].fd = eventfd(0, EFD_NONBLOCK);
 		fds[POLLFD_EVENT].events = ZSOCK_POLLIN;
@@ -202,7 +177,9 @@ static int client_connect(struct golioth_client *client)
 {
 	int err;
 
-	err = golioth_connect(client);
+	err = golioth_connect(client,
+			      CONFIG_GOLIOTH_SYSTEM_SERVER_HOST,
+			      CONFIG_GOLIOTH_SYSTEM_SERVER_PORT);
 	if (err) {
 		LOG_ERR("Failed to connect: %d", err);
 		return err;

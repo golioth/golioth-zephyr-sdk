@@ -7,6 +7,7 @@
 #include <net/coap.h>
 #include <net/golioth.h>
 #include <net/socket.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <logging/log.h>
@@ -41,25 +42,6 @@ static int golioth_setsockopt_dtls(struct golioth_client *client, int sock)
 	return 0;
 }
 
-static int golioth_connect_sock(struct golioth_client *client, int sock)
-{
-	size_t addr_size = sizeof(struct sockaddr_in6);
-	int ret;
-
-	if (client->server->sa_family == AF_INET) {
-		addr_size = sizeof(struct sockaddr_in);
-	} else if (client->server->sa_family == AF_INET6) {
-		addr_size = sizeof(struct sockaddr_in6);
-	}
-
-	ret = zsock_connect(sock, client->server, addr_size);
-	if (ret < 0) {
-		return -errno;
-	}
-
-	return 0;
-}
-
 static int __golioth_close(int sock)
 {
 	int ret;
@@ -77,12 +59,13 @@ static int __golioth_close(int sock)
 	return 0;
 }
 
-static int __golioth_connect(struct golioth_client *client, int *sock)
+static int golioth_connect_sockaddr(struct golioth_client *client, int *sock,
+				    struct sockaddr *addr, socklen_t addrlen)
 {
+	int ret;
 	int err;
 
-	*sock = zsock_socket(client->server->sa_family, SOCK_DGRAM,
-			     client->proto);
+	*sock = zsock_socket(addr->sa_family, SOCK_DGRAM, client->proto);
 	if (*sock < 0) {
 		return -errno;
 	}
@@ -94,8 +77,9 @@ static int __golioth_connect(struct golioth_client *client, int *sock)
 		}
 	}
 
-	err = golioth_connect_sock(client, *sock);
-	if (err) {
+	ret = zsock_connect(*sock, addr, addrlen);
+	if (ret < 0) {
+		err = -errno;
 		goto close_sock;
 	}
 
@@ -107,9 +91,67 @@ close_sock:
 	return err;
 }
 
-int golioth_connect(struct golioth_client *client)
+#if CONFIG_GOLIOTH_LOG_LEVEL >= LOG_LEVEL_DBG
+#define LOG_SOCKADDR(fmt, addr)						\
+	do {								\
+		char buf[NET_IPV6_ADDR_LEN];				\
+									\
+		if (addr->sa_family == AF_INET6) {			\
+			net_addr_ntop(AF_INET6, &net_sin6(addr)->sin6_addr, \
+				      buf, sizeof(buf));		\
+		} else if (addr->sa_family == AF_INET) {		\
+			net_addr_ntop(AF_INET, &net_sin(addr)->sin_addr, \
+				      buf, sizeof(buf));		\
+		}							\
+									\
+		LOG_DBG(fmt, log_strdup(buf));				\
+	} while (0)
+#else
+#define LOG_SOCKADDR(fmt, addr)
+#endif
+
+static int __golioth_connect(struct golioth_client *client, int *sock,
+			     const char *host, uint16_t port)
 {
-	int sock;
+	struct addrinfo hints = {
+		.ai_family = AF_UNSPEC,
+		.ai_socktype = SOCK_DGRAM,
+		.ai_protocol = IPPROTO_UDP,
+	};
+	struct addrinfo *addrs, *addr;
+	char port_str[8];
+	int ret;
+	int err = -ENOENT;
+
+	snprintf(port_str, sizeof(port_str), "%" PRIu16, port);
+
+	ret = zsock_getaddrinfo(host, port_str, &hints, &addrs);
+	if (ret < 0) {
+		LOG_ERR("Fail to get address (%s %s) %d", log_strdup(host),
+			log_strdup(port_str), ret);
+		return -EAGAIN;
+	}
+
+	for (addr = addrs; addr != NULL; addr = addr->ai_next) {
+		LOG_SOCKADDR("Trying addr '%s'", addr->ai_addr);
+
+		err = golioth_connect_sockaddr(client, sock, addr->ai_addr,
+					       addr->ai_addrlen);
+		if (!err) {
+			/* Ready to go */
+			break;
+		}
+	}
+
+	freeaddrinfo(addrs);
+
+	return err;
+}
+
+int golioth_connect(struct golioth_client *client, const char *host,
+		    uint16_t port)
+{
+	int sock = -1;
 	int err = 0;
 
 	if (client->sock >= 0) {
@@ -120,7 +162,7 @@ int golioth_connect(struct golioth_client *client)
 		return err;
 	}
 
-	err = __golioth_connect(client, &sock);
+	err = __golioth_connect(client, &sock, host, port);
 	if (!err) {
 		golioth_lock(client);
 		client->sock = sock;

@@ -47,7 +47,6 @@ struct golioth_tls {
  */
 struct golioth_client {
 	int proto;
-	const struct sockaddr *server;
 
 	union {
 		struct golioth_unsecure unsecure;
@@ -117,11 +116,14 @@ void golioth_init(struct golioth_client *client);
  * Attempt to connect to Golioth.
  *
  * @param client Client instance
+ * @param host Server hostname or IP address
+ * @param port Server port number
  *
  * @retval 0 On success
  * @retval <0 On failure
  */
-int golioth_connect(struct golioth_client *client);
+int golioth_connect(struct golioth_client *client, const char *host,
+		    uint16_t port);
 
 /**
  * @brief Disconnect from Golioth
