@@ -11,8 +11,6 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 #include <net/golioth/system_client.h>
 #include <net/golioth/wifi.h>
 
-#include <tinycbor/cbor.h>
-#include <tinycbor/cbor_buf_writer.h>
 #include <stdlib.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
