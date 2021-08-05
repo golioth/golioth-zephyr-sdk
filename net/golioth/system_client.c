@@ -330,10 +330,6 @@ K_THREAD_DEFINE(golioth_system, 2048, golioth_system_client_main,
 void golioth_system_client_start(void)
 {
 	k_sem_give(&sys_client_started);
-
-	if(CLIENT_START_BLOCKING) {
-		k_sem_take(&sys_client_conn_resolved,K_SECONDS(30));
-	}
 }
 
 void golioth_system_client_stop(void)
