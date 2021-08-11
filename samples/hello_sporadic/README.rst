@@ -154,31 +154,27 @@ This is the output from the serial console:
 .. code-block:: console
 
    [00:00:00.208,740] <inf> golioth_system: Initializing
-   [00:00:05.647,460] <dbg> golioth_hello.main: Start Hello Sporadic sample
-   [00:00:05.647,552] <inf> golioth_system: Starting connect
-   [00:00:06.152,130] <inf> golioth_system: Client connected!
-   [00:00:06.152,130] <inf> golioth_hello: Sending hello! 0
-   [00:00:11.310,302] <inf> golioth_system: Timeout in poll
-   [00:01:06.153,289] <inf> golioth_system: Starting connect
-   [00:01:06.876,251] <inf> golioth_system: Client connected!
-   [00:01:06.876,281] <inf> golioth_hello: Sending hello! 1
-   [00:01:12.034,423] <inf> golioth_system: Timeout in poll
-   [00:02:06.877,380] <inf> golioth_system: Starting connect
-   [00:02:07.677,368] <inf> golioth_system: Client connected!
-   [00:02:07.677,368] <inf> golioth_hello: Sending hello! 2
-   [00:02:12.837,585] <inf> golioth_system: Timeout in poll
-   [00:03:07.678,497] <inf> golioth_system: Starting connect
-   [00:03:08.478,485] <inf> golioth_system: Client connected!
-   [00:03:08.478,515] <inf> golioth_hello: Sending hello! 3
-   [00:03:13.637,817] <inf> golioth_system: Timeout in poll
-   [00:04:08.479,614] <inf> golioth_system: Starting connect
-   [00:04:09.296,386] <inf> golioth_system: Client connected!
-   [00:04:09.296,417] <inf> golioth_hello: Sending hello! 4
-   [00:04:14.444,122] <inf> golioth_system: Timeout in poll
-   [00:05:09.298,034] <inf> golioth_system: Starting connect
-   [00:05:10.001,739] <inf> golioth_system: Client connected!
-   [00:05:10.001,739] <inf> golioth_hello: Sending hello! 5
-   [00:05:15.160,308] <inf> golioth_system: Timeout in poll
+   [00:00:11.111,000] <dbg> golioth_hello.main: Start Hello Sporadic sample
+   [00:00:11.111,000] <inf> golioth_system: Starting connect
+   [00:00:11.112,000] <inf> golioth_hello: Sending hello! 0
+   [00:00:11.115,000] <inf> golioth_system: Client connected!
+   [00:00:11.803,000] <inf> golioth_system: Disconnect request
+   [00:01:11.803,000] <inf> golioth_system: Starting connect
+   [00:01:11.803,000] <inf> golioth_hello: Sending hello! 1
+   [00:01:11.808,000] <inf> golioth_system: Client connected!
+   [00:01:12.629,000] <inf> golioth_system: Disconnect request
+   [00:02:12.628,000] <inf> golioth_system: Starting connect
+   [00:02:12.629,000] <inf> golioth_hello: Sending hello! 2
+   [00:02:12.633,000] <inf> golioth_system: Client connected!
+   [00:02:13.350,000] <inf> golioth_system: Disconnect request
+   [00:03:13.349,000] <inf> golioth_system: Starting connect
+   [00:03:13.350,000] <inf> golioth_hello: Sending hello! 3
+   [00:03:13.354,000] <inf> golioth_system: Client connected!
+   [00:03:14.177,000] <inf> golioth_system: Disconnect request
+   [00:04:14.176,000] <inf> golioth_system: Starting connect
+   [00:04:14.177,000] <inf> golioth_hello: Sending hello! 4
+   [00:04:14.181,000] <inf> golioth_system: Client connected!
+   [00:04:14.898,000] <inf> golioth_system: Disconnect request
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
 .. _ESP32: https://docs.zephyrproject.org/latest/boards/xtensa/esp32/doc/index.html
