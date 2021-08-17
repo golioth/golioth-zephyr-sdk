@@ -8,153 +8,35 @@
 LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 
 #include <net/coap.h>
+#include <net/golioth/fw.h>
 #include <net/golioth/system_client.h>
 #include <net/golioth/wifi.h>
 
-#include <dfu/flash_img.h>
-#include <dfu/mcuboot.h>
 #include <logging/log_ctrl.h>
 #include <power/reboot.h>
 #include <stdlib.h>
-#include <storage/flash_map.h>
+#include <stdio.h>
+
+#include "flash.h"
 
 #define REBOOT_DELAY_SEC	1
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
-static struct coap_reply coap_replies[1];
+static struct coap_reply coap_replies[4];
 
 struct dfu_ctx {
-	struct golioth_blockwise_observe_ctx observe;
+	struct golioth_fw_download_ctx fw_ctx;
 	struct flash_img_context flash;
 };
 
 static struct dfu_ctx update_ctx;
 
-/**
- * Determines if the specified area of flash is completely unwritten.
- *
- * @note This is a copy of zephyr_img_mgmt_flash_check_empty() from mcumgr.
- */
-static int flash_area_check_empty(const struct flash_area *fa,
-				  bool *out_empty)
-{
-	uint32_t data[16];
-	off_t addr;
-	off_t end;
-	int bytes_to_read;
-	int rc;
-	int i;
-
-	__ASSERT_NO_MSG(fa->fa_size % 4 == 0);
-
-	end = fa->fa_size;
-	for (addr = 0; addr < end; addr += sizeof(data)) {
-		if (end - addr < sizeof(data)) {
-			bytes_to_read = end - addr;
-		} else {
-			bytes_to_read = sizeof(data);
-		}
-
-		rc = flash_area_read(fa, addr, data, bytes_to_read);
-		if (rc != 0) {
-			flash_area_close(fa);
-			return rc;
-		}
-
-		for (i = 0; i < bytes_to_read / 4; i++) {
-			if (data[i] != 0xffffffff) {
-				*out_empty = false;
-				flash_area_close(fa);
-				return 0;
-			}
-		}
-	}
-
-	*out_empty = true;
-
-	return 0;
-}
-
-static int flash_img_erase_if_needed(struct flash_img_context *ctx)
-{
-	bool empty;
-	int err;
-
-	if (IS_ENABLED(CONFIG_IMG_ERASE_PROGRESSIVELY)) {
-		return 0;
-	}
-
-	err = flash_area_check_empty(ctx->flash_area, &empty);
-	if (err) {
-		return err;
-	}
-
-	if (empty) {
-		return 0;
-	}
-
-	err = flash_area_erase(ctx->flash_area, 0, ctx->flash_area->fa_size);
-	if (err) {
-		return err;
-	}
-
-	return 0;
-}
-
-static const char *swap_type_str(int swap_type)
-{
-	switch (swap_type) {
-	case BOOT_SWAP_TYPE_NONE:
-		return "none";
-	case BOOT_SWAP_TYPE_TEST:
-		return "test";
-	case BOOT_SWAP_TYPE_PERM:
-		return "perm";
-	case BOOT_SWAP_TYPE_REVERT:
-		return "revert";
-	case BOOT_SWAP_TYPE_FAIL:
-		return "fail";
-	}
-
-	return "unknown";
-}
-
-static int flash_img_prepare(struct flash_img_context *flash)
-{
-	int swap_type;
-	int err;
-
-	swap_type = mcuboot_swap_type();
-	switch (swap_type) {
-	case BOOT_SWAP_TYPE_REVERT:
-		LOG_WRN("'revert' swap type detected, it is not safe to continue");
-		return -EBUSY;
-	default:
-		LOG_INF("swap type: %s", swap_type_str(swap_type));
-		break;
-	}
-
-	err = flash_img_init(flash);
-	if (err) {
-		LOG_ERR("failed to init: %d", err);
-		return err;
-	}
-
-	err = flash_img_erase_if_needed(flash);
-	if (err) {
-		LOG_ERR("failed to erase: %d", err);
-		return err;
-	}
-
-	return 0;
-}
-
-static int data_received(struct golioth_blockwise_observe_ctx *observe,
+static int data_received(struct golioth_blockwise_download_ctx *ctx,
 			 const uint8_t *data, size_t offset, size_t len,
 			 bool last)
 {
-	struct dfu_ctx *dfu = CONTAINER_OF(observe, struct dfu_ctx, observe);
+	struct dfu_ctx *dfu = CONTAINER_OF(ctx, struct dfu_ctx, fw_ctx);
 	int err;
 
 	LOG_DBG("Received %zu bytes at offset %zu%s", len, offset,
@@ -195,6 +77,71 @@ static int data_received(struct golioth_blockwise_observe_ctx *observe,
 	return 0;
 }
 
+static uint8_t *uri_strip_leading_slash(uint8_t *uri, size_t *uri_len)
+{
+	if (*uri_len > 0 && uri[0] == '/') {
+		(*uri_len)--;
+		return &uri[1];
+	}
+
+	return uri;
+}
+
+static int golioth_desired_update(const struct coap_packet *update,
+				  struct coap_reply *reply,
+				  const struct sockaddr *from)
+{
+	struct coap_reply *fw_reply;
+	const uint8_t *payload;
+	uint16_t payload_len;
+	uint8_t version[64];
+	size_t version_len = sizeof(version);
+	uint8_t uri[64];
+	uint8_t *uri_p;
+	size_t uri_len = sizeof(uri);
+	int err;
+
+	payload = coap_packet_get_payload(update, &payload_len);
+	if (!payload) {
+		LOG_ERR("No payload in CoAP!");
+		return -EIO;
+	}
+
+	LOG_HEXDUMP_DBG(payload, payload_len, "Desired");
+
+	err = golioth_fw_desired_parse(payload, payload_len,
+				       version, &version_len,
+				       uri, &uri_len);
+	if (err) {
+		LOG_ERR("Failed to parse desired version: %d", err);
+		return err;
+	}
+
+	if (version_len == strlen(current_version_str) &&
+	    !strncmp(current_version_str, version, version_len)) {
+		LOG_INF("Desired version (%s) matches current firmware version!",
+			log_strdup(current_version_str));
+		return -EALREADY;
+	}
+
+	fw_reply = coap_reply_next_unused(coap_replies, ARRAY_SIZE(coap_replies));
+	if (!reply) {
+		LOG_ERR("No more reply handlers");
+		return -ENOMEM;
+	}
+
+	uri_p = uri_strip_leading_slash(uri, &uri_len);
+
+	err = golioth_fw_download(client, &update_ctx.fw_ctx, uri_p, uri_len,
+				  fw_reply, data_received);
+	if (err) {
+		LOG_ERR("Failed to request firmware: %d", err);
+		return err;
+	}
+
+	return 0;
+}
+
 static void golioth_on_connect(struct golioth_client *client)
 {
 	struct coap_reply *reply;
@@ -210,8 +157,7 @@ static void golioth_on_connect(struct golioth_client *client)
 		LOG_ERR("No more reply handlers");
 	}
 
-	err = golioth_observe_blockwise(client, &update_ctx.observe, "update",
-					reply, data_received);
+	err = golioth_fw_observe_desired(client, reply, golioth_desired_update);
 	if (err) {
 		coap_reply_clear(reply);
 	}
