@@ -7,6 +7,7 @@
 #include <net/coap.h>
 #include <net/golioth.h>
 #include <net/socket.h>
+#include <random/rand32.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -891,6 +892,17 @@ int golioth_observe_blockwise(struct golioth_client *client,
 	reply->user_data = ctx;
 
 	return golioth_send_coap(client, &request);
+}
+
+void golioth_blockwise_download_init(struct golioth_client *client,
+				     struct golioth_blockwise_download_ctx *ctx)
+{
+	ctx->client = client;
+	coap_block_transfer_init(&ctx->block_ctx,
+				 golioth_estimated_block_size(client), 0);
+
+	sys_put_be32(sys_rand32_get(), &ctx->token[0]);
+	sys_put_be32(sys_rand32_get(), &ctx->token[4]);
 }
 
 int golioth_process_rx(struct golioth_client *client)

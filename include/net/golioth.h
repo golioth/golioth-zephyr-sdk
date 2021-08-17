@@ -90,6 +90,38 @@ struct golioth_blockwise_observe_ctx {
 	golioth_blockwise_observe_received_t received_cb;
 };
 
+struct golioth_blockwise_download_ctx;
+
+/**
+ * @typedef golioth_blockwise_download_received_t
+ * @brief Type of the callback being called when a single block of data is
+ *        received as part of CoAP response.
+ */
+typedef int (*golioth_blockwise_download_received_t)(struct golioth_blockwise_download_ctx *ctx,
+						     const uint8_t *data,
+						     size_t offset, size_t len,
+						     bool last);
+
+/**
+ * @brief Represents blockwise download transfer from Golioth.
+ */
+struct golioth_blockwise_download_ctx {
+	struct coap_block_context block_ctx;
+	struct golioth_client *client;
+	struct coap_reply *reply;
+	uint8_t token[COAP_TOKEN_MAX_LEN];
+	golioth_blockwise_download_received_t received_cb;
+};
+
+/**
+ * @brief Initialize blockwise download
+ *
+ * @param client Client instance
+ * @param ctx Blockwise download context
+ */
+void golioth_blockwise_download_init(struct golioth_client *client,
+				     struct golioth_blockwise_download_ctx *ctx);
+
 static inline void golioth_lock(struct golioth_client *client)
 {
 	k_mutex_lock(&client->lock, K_FOREVER);
