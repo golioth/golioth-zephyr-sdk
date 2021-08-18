@@ -31,6 +31,13 @@ config GOLIOTH_COAP_MAX_OPTIONS
 	help
 	  Maximum CoAP options supported by Golioth client.
 
+config GOLIOTH_FW
+	bool "Firmware management"
+	select TINYCBOR
+	help
+	  Enable Golioth firmware management, which allows to ask for newest
+	  desired firmware and issue firmware download process.
+
 config GOLIOTH_SYSTEM_CLIENT
 	bool "System client"
 	select EVENTFD
