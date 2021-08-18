@@ -250,13 +250,4 @@ void main(void)
 	client->on_connect = golioth_on_connect;
 	client->on_message = golioth_on_message;
 	golioth_system_client_start();
-
-	while (true) {
-		err = golioth_send_hello(client);
-		if (err) {
-			LOG_WRN("Failed to send hello: %d", err);
-		}
-
-		k_sleep(K_SECONDS(5));
-	}
 }
