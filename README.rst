@@ -1,15 +1,15 @@
-Getting Started
+Golioth Zephyr SDK
 ***************
 
-Using with Zephyr RTOS
+Getting Started
 ======================
 
-Most platforms are already supported with mainline `Zephyr RTOS`_. This
+Most hardware platforms are already supported with mainline `Zephyr RTOS`_. This
 repository can be added to any Zephyr based project as new `west`_ module.
 However, for making things simple, this repository can also serve as `west`_
 manifest repo.
 
-Using Golioth SDK as manifest repository
+Using Golioth Zephyr SDK as manifest repository
 ----------------------------------------
 
 Execute this command to download this repository together with all dependencies:
@@ -20,7 +20,7 @@ Execute this command to download this repository together with all dependencies:
    west update
    west patch
 
-Adding Golioth SDK to existing west project
+Adding Golioth Zephyr SDK to existing west project
 -------------------------------------------
 
 Alternatively add following entry to ``west.yml`` file in ``manifest/projects``
