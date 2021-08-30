@@ -62,7 +62,7 @@ Add following entry to ``west.yml`` file in ``manifest/projects`` subtree:
     - name: golioth
       path: modules/lib/golioth
       revision: main
-      url: git@github.com:golioth/zephyr.git
+      url: git@github.com:golioth/zephyr-sdk.git
 
 Now clone all repositories with:
 
