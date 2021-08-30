@@ -1,4 +1,4 @@
-Golioth Zephyr SDK
+Golioth SDK for Zephyr
 ***************
 
 Getting Started
@@ -9,7 +9,7 @@ repository can be added to any Zephyr based project as new `west`_ module.
 However, for making things simple, this repository can also serve as `west`_
 manifest repo.
 
-Using Golioth Zephyr SDK as manifest repository
+Using Golioth SDK for Zephyr as manifest repository
 ----------------------------------------
 
 Execute this command to download this repository together with all dependencies:
@@ -20,7 +20,7 @@ Execute this command to download this repository together with all dependencies:
    west update
    west patch
 
-Adding Golioth Zephyr SDK to existing west project
+Adding Golioth SDK for Zephyr to existing west project
 -------------------------------------------
 
 Alternatively add following entry to ``west.yml`` file in ``manifest/projects``
