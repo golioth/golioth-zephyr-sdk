@@ -147,6 +147,31 @@ static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
 	cbor_encode_text_stringz(&cbor->map, level_str(msg->hdr.ids.level));
 }
 
+static void log2_cbor_append_headers(struct golioth_log_ctx *ctx,
+				     struct log_msg2 *msg)
+{
+	struct golioth_cbor_ctx *cbor = &ctx->cbor;
+	void *source = (void *)log_msg2_get_source(msg);
+
+	cbor_encode_text_stringz(&cbor->map, "uptime");
+	cbor_encode_uint(&cbor->map,
+			log_output_timestamp_to_us(log_msg2_get_timestamp(msg)));
+
+	if (source) {
+		int16_t source_id =
+			(IS_ENABLED(CONFIG_LOG_RUNTIME_FILTERING) ?
+				log_dynamic_source_id(source) :
+				log_const_source_id(source));
+
+		cbor_encode_text_stringz(&cbor->map, "module");
+		cbor_encode_text_stringz(&cbor->map,
+					 log_name_get(source_id));
+	}
+
+	cbor_encode_text_stringz(&cbor->map, "level");
+	cbor_encode_text_stringz(&cbor->map, level_str(log_msg2_get_level(msg)));
+}
+
 static void log_cbor_append_func(struct golioth_log_ctx *ctx, const char *func)
 {
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
@@ -212,12 +237,15 @@ static void log_cbor_close_map(struct golioth_log_ctx *ctx)
 	cbor_encoder_close_container(&cbor->encoder, &cbor->map);
 }
 
-static int log_pdu_prepare(struct golioth_pdu_ctx *pdu,
-			   struct golioth_cbor_ctx *cbor)
+static int log_pdu_prepare_ext(struct golioth_pdu_ctx *pdu,
+			       struct golioth_cbor_ctx *cbor,
+			       size_t elements, size_t additional_reserved)
 {
 	size_t offset;
 
-	offset = cbor->encoder.writer->bytes_written + CBOR_SPACE_RESERVED;
+	offset = cbor->encoder.writer->bytes_written +
+		CBOR_SPACE_RESERVED * elements +
+		additional_reserved;
 
 	pdu->begin = pdu->ptr = cbor->buf + offset;
 	pdu->end = &cbor->buf[cbor->buf_len];
@@ -227,6 +255,12 @@ static int log_pdu_prepare(struct golioth_pdu_ctx *pdu,
 	}
 
 	return 0;
+}
+
+static inline int log_pdu_prepare(struct golioth_pdu_ctx *pdu,
+				  struct golioth_cbor_ctx *cbor)
+{
+	return log_pdu_prepare_ext(pdu, cbor, 1, 0);
 }
 
 static void log_pdu_text_finish(struct golioth_pdu_ctx *pdu,
@@ -545,6 +579,124 @@ static void send_output(const struct log_backend *const backend,
 	log_msg_process(ctx, msg);
 }
 
+static const uint8_t *find_colon(const uint8_t *begin, const uint8_t *end)
+{
+	const uint8_t *p;
+
+	for (p = begin; p < end; p++) {
+		if (*p == ':') {
+			return p;
+		}
+	}
+
+	return NULL;
+}
+
+static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
+{
+	struct golioth_cbor_ctx *cbor = &ctx->cbor;
+	struct golioth_pdu_ctx *pdu = &ctx->pdu;
+	uint8_t level = log_msg2_get_level(msg);
+	bool raw_string = (level == LOG_LEVEL_INTERNAL_RAW_STRING);
+	bool has_func = (BIT(level) & LOG_FUNCTION_PREFIX_MASK);
+	int err;
+
+	ctx->msg_part = 0;
+
+	err = log_packet_prepare(ctx);
+	if (err) {
+		return err;
+	}
+
+	log_cbor_create_map(ctx, CborIndefiniteLength);
+
+	if (!raw_string) {
+		log2_cbor_append_headers(ctx, msg);
+	}
+
+	size_t len;
+	uint8_t *data = log_msg2_get_package(msg, &len);
+
+	if (len) {
+		const uint8_t *colon;
+
+		if (has_func) {
+			err = log_pdu_prepare_ext(pdu, cbor, 2, sizeof("func") + 1);
+			colon = find_colon(pdu->begin, pdu->ptr);
+		} else {
+			err = log_pdu_prepare(pdu, cbor);
+		}
+
+		if (err) {
+			return err;
+		}
+
+		err = cbpprintf(cbprintf_out_func, ctx, data);
+
+		(void)err;
+		__ASSERT_NO_MSG(err >= 0);
+
+		if (has_func && colon) {
+			const uint8_t *post_colon = colon + sizeof(": ") - 1;
+
+			cbor_encode_text_stringz(&cbor->map, "func");
+			cbor_encode_text_string(&cbor->map, pdu->begin,
+						colon - pdu->begin);
+
+			cbor_encode_text_stringz(&cbor->map, "msg");
+			cbor_encode_text_string(&cbor->map, post_colon,
+						pdu->ptr - post_colon);
+		} else {
+			cbor_encode_text_stringz(&cbor->map, "msg");
+			log_pdu_text_finish(pdu, cbor);
+		}
+	}
+
+	data = log_msg2_get_data(msg, &len);
+	if (len) {
+		cbor_encode_text_stringz(&cbor->map, "hexdump");
+
+		err = log_pdu_prepare(pdu, cbor);
+		if (err) {
+			return err;
+		}
+
+		if (len > pdu->end - pdu->begin) {
+			len = pdu->end - pdu->begin;
+		}
+
+		memcpy(pdu->begin, data, len);
+		pdu->ptr += len;
+
+		log_pdu_bytes_finish(pdu, cbor);
+	}
+
+	log_cbor_close_map(ctx);
+
+	err = log_packet_finish(ctx);
+	if (err) {
+		return err;
+	}
+
+	golioth_send_coap(ctx->client, &ctx->coap_packet);
+
+	ctx->msg_index++;
+
+	return 0;
+}
+
+static void process(const struct log_backend *const backend,
+		    union log_msg2_generic *msg)
+{
+	struct golioth_log_ctx *ctx = backend->cb->ctx;
+
+	if (ctx->panic_mode) {
+		return;
+	}
+
+	log_msg2_process(ctx, &msg->log);
+}
+
 static const struct log_backend log_backend_golioth;
 
 static void init_golioth(const struct log_backend *const backend)
@@ -569,7 +721,8 @@ static void dropped(const struct log_backend *const backend, uint32_t cnt)
 static const struct log_backend_api log_backend_golioth_api = {
 	.panic = panic,
 	.init = init_golioth,
-	.put = send_output,
+	.process = IS_ENABLED(CONFIG_LOG2) ? process : NULL,
+	.put = IS_ENABLED(CONFIG_LOG_MODE_DEFERRED) ? send_output : NULL,
 	.dropped = dropped,
 };
 
