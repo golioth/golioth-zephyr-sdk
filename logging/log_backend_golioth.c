@@ -137,11 +137,11 @@ static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
 
 	cbor_encode_text_stringz(&cbor->map, "uptime");
 	cbor_encode_uint(&cbor->map,
-			 log_output_timestamp_to_us(msg->hdr.timestamp));
+			 log_output_timestamp_to_us(log_msg_timestamp_get(msg)));
 
 	cbor_encode_text_stringz(&cbor->map, "module");
 	cbor_encode_text_stringz(&cbor->map,
-				 log_name_get(msg->hdr.ids.source_id));
+				 log_name_get(log_msg_source_id_get(msg)));
 
 	cbor_encode_text_stringz(&cbor->map, "level");
 	cbor_encode_text_stringz(&cbor->map, level_str(msg->hdr.ids.level));
