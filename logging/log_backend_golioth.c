@@ -569,8 +569,8 @@ static void dropped(const struct log_backend *const backend, uint32_t cnt)
 static const struct log_backend_api log_backend_golioth_api = {
 	.panic = panic,
 	.init = init_golioth,
-	.put = IS_ENABLED(CONFIG_LOG_IMMEDIATE) ? NULL : send_output,
-	.dropped = IS_ENABLED(CONFIG_LOG_IMMEDIATE) ? NULL : dropped,
+	.put = send_output,
+	.dropped = dropped,
 };
 
 /* Note that the backend can be activated only after we have networking
