@@ -16,10 +16,4 @@ github:
     addBadge: false
     # add a label once the prebuild is ready to pull requests (defaults to false)
     addLabel: prebuilt-in-gitpod
-
-vscode:
-  extensions:
-    - marus25.cortex-debug
-    - https://marketplace.visualstudio.com/_apis/public/gallery/publishers/trond-snekvik/vsextensions/devicetree/2.3.1/vspackage
-    - https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-vscode/vsextensions/cpptools/1.6.0/vspackage
-    - https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-python/vsextensions/python/2021.9.1191016588/vspackage
+    
