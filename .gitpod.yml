@@ -2,14 +2,9 @@ image: zephyrprojectrtos/zephyr-build
 
 tasks:
   - init: |
-      mkdir -p .west
-      cat <<EOF > .west/config
-      [manifest]
-      path = modules/lib/golioth
-      file = west.yml
-      EOF
-      west update -o=--depth=1 -n
-      west patch --apply
+      cd ..
+      west init -l zephyr-sdk
+      west update
 
 github:
   prebuilds:
