@@ -1,5 +1,16 @@
 image: zephyrprojectrtos/zephyr-build
 
+tasks:
+  - init: |
+      mkdir -p .west
+      cat <<EOF > .west/config
+      [manifest]
+      path = modules/lib/golioth
+      file = west.yml
+      EOF
+      west update -o=--depth=1 -n
+      west patch --apply
+
 github:
   prebuilds:
     # enable for the master/default branch (defaults to true)
