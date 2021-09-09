@@ -43,7 +43,7 @@ if GOLIOTH_SYSTEM_CLIENT
 config GOLIOTH_SYSTEM_SERVER_HOST
 	string "Server Host"
 	default "coap.golioth.io" if (NET_IPV4 && DNS_RESOLVER)
-	default "104.197.107.212" if NET_IPV4
+	default NET_CONFIG_PEER_IPV4_ADDR if (NET_CONFIG_SETTINGS && NET_IPV4)
 	default NET_CONFIG_PEER_IPV6_ADDR if (NET_CONFIG_SETTINGS && NET_IPV6)
 	help
 	  Defines hostname or IP address of Golioth server.
