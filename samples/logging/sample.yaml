@@ -6,4 +6,7 @@ common:
   platform_allow: esp32 qemu_cortex_m3 qemu_x86 nrf52840dk_nrf52840
   tags: golioth logger net socket
 tests:
-  sample.golioth.logging: {}
+  sample.golioth.logging.v1: {}
+  sample.golioth.logging.v2:
+    extra_configs:
+      - CONFIG_LOG2_MODE_DEFERRED=y
