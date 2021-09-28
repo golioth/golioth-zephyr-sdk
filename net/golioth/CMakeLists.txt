@@ -1,2 +1,3 @@
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH golioth.c)
+zephyr_library_sources_ifdef(CONFIG_GOLIOTH_FW fw.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_SYSTEM_CLIENT system_client.c)
