@@ -34,6 +34,12 @@ subtree of existing `west`_ based project (e.g. Zephyr RTOS):
       revision: main
       url: https://github.com/golioth/zephyr-sdk.git
 
+    # Golioth dependencies.
+    - name: qcbor
+      revision: 17b5607b8c49b835d22dec3effa97b25c89267b3
+      url: https://github.com/golioth/QCBOR.git
+      path: modules/lib/qcbor
+
 and clone all repositories including that one by running:
 
 .. code-block:: console
@@ -63,6 +69,12 @@ Add following entry to ``west.yml`` file in ``manifest/projects`` subtree:
       path: modules/lib/golioth
       revision: main
       url: https://github.com/golioth/zephyr-sdk.git
+
+    # Golioth dependencies.
+    - name: qcbor
+      revision: 17b5607b8c49b835d22dec3effa97b25c89267b3
+      url: https://github.com/golioth/QCBOR.git
+      path: modules/lib/qcbor
 
 Now clone all repositories with:
 
