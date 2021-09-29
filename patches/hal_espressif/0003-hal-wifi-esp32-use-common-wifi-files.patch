@@ -1,0 +1,255 @@
+From 1ec23e01c93f665e9e2830f8bbf972f753660756 Mon Sep 17 00:00:00 2001
+From: Glauber Maroto Ferreira <glauber.ferreira@espressif.com>
+Date: Wed, 15 Sep 2021 10:23:34 -0300
+Subject: [PATCH] hal: wifi: esp32: use common wifi files
+
+use some of common wifi driver support files.
+
+Signed-off-by: Glauber Maroto Ferreira <glauber.ferreira@espressif.com>
+---
+ zephyr/esp32/CMakeLists.txt                   |  5 +-
+ zephyr/esp32/include/stubs.h                  | 17 ----
+ zephyr/esp32/include/wifi/esp_event.h         | 17 ----
+ .../esp32/include/wifi/esp_networking_priv.h  | 33 -------
+ zephyr/esp32/src/common/esp_system_api.c      | 99 -------------------
+ zephyr/esp_shared/src/common/esp_system_api.c |  5 +
+ 6 files changed, 8 insertions(+), 168 deletions(-)
+ delete mode 100644 zephyr/esp32/include/stubs.h
+ delete mode 100644 zephyr/esp32/include/wifi/esp_event.h
+ delete mode 100644 zephyr/esp32/include/wifi/esp_networking_priv.h
+ delete mode 100644 zephyr/esp32/src/common/esp_system_api.c
+
+diff --git a/zephyr/esp32/CMakeLists.txt b/zephyr/esp32/CMakeLists.txt
+index 6d4b1d54c..fe1df4001 100644
+--- a/zephyr/esp32/CMakeLists.txt
++++ b/zephyr/esp32/CMakeLists.txt
+@@ -11,7 +11,8 @@ if(CONFIG_SOC_ESP32)
+     include
+     include/bt
+     include/crypto
+-    include/wifi
++    ../esp_shared/include
++    ../esp_shared/include/wifi
+     ../../components/hal/include
+     ../../components/hal/esp32/include
+     ../../components/esp_hw_support/include
+@@ -115,7 +116,7 @@ if(CONFIG_SOC_ESP32)
+     ../../components/log/log.c
+     ../../components/hal/interrupt_controller_hal.c
+     ../../components/hal/esp32/interrupt_descriptor_table.c
+-    src/common/esp_system_api.c
++    ../esp_shared/src/common/esp_system_api.c
+     src/common/dport_access.c
+     src/stubs.c
+     src/heap_caps.c
+diff --git a/zephyr/esp32/include/stubs.h b/zephyr/esp32/include/stubs.h
+deleted file mode 100644
+index d0db169ae..000000000
+--- a/zephyr/esp32/include/stubs.h
++++ /dev/null
+@@ -1,17 +0,0 @@
+-/*
+- * Copyright (c) 2020 Espressif Systems (Shanghai) Co., Ltd.
+- *
+- * SPDX-License-Identifier: Apache-2.0
+- */
+-
+-#ifndef _STUBS_H_
+-#define _STUBS_H_
+-
+-/* Required for C99 compilation (required for GCC-8.x version,               
+- * where typeof is used instead of __typeof__)
+- */
+-#ifndef typeof
+-#define typeof  __typeof__
+-#endif
+-
+-#endif /* _STUBS_H_ */
+diff --git a/zephyr/esp32/include/wifi/esp_event.h b/zephyr/esp32/include/wifi/esp_event.h
+deleted file mode 100644
+index 2355a3b71..000000000
+--- a/zephyr/esp32/include/wifi/esp_event.h
++++ /dev/null
+@@ -1,17 +0,0 @@
+-/*
+- * Copyright (c) 2020 Espressif Systems (Shanghai) Co., Ltd.
+- *
+- * SPDX-License-Identifier: Apache-2.0
+- */
+-#pragma once
+-
+-#include "esp_err.h"
+-#include "esp_event_legacy.h"
+-
+-esp_err_t esp_event_send_internal(esp_event_base_t event_base,
+-				  int32_t event_id,
+-				  void *event_data,
+-				  size_t event_data_size,
+-				  TickType_t ticks_to_wait);
+-
+-esp_err_t esp_event_init(void);
+diff --git a/zephyr/esp32/include/wifi/esp_networking_priv.h b/zephyr/esp32/include/wifi/esp_networking_priv.h
+deleted file mode 100644
+index 6ed538557..000000000
+--- a/zephyr/esp32/include/wifi/esp_networking_priv.h
++++ /dev/null
+@@ -1,33 +0,0 @@
+-/*
+- * Copyright (c) 2020 Espressif Systems (Shanghai) Co., Ltd.
+- *
+- * SPDX-License-Identifier: Apache-2.0
+- */
+-
+-#pragma once
+-
+-#include "esp_wifi_types.h"
+-
+-typedef enum {
+-    ESP32_WIFI_EVENT_WIFI_READY = WIFI_EVENT_WIFI_READY,
+-    ESP32_WIFI_EVENT_SCAN_DONE = WIFI_EVENT_SCAN_DONE,
+-    ESP32_WIFI_EVENT_STA_START = WIFI_EVENT_STA_START,
+-    ESP32_WIFI_EVENT_STA_STOP = WIFI_EVENT_STA_STOP,
+-    ESP32_WIFI_EVENT_STA_CONNECTED = WIFI_EVENT_STA_CONNECTED,
+-    ESP32_WIFI_EVENT_STA_DISCONNECTED = WIFI_EVENT_STA_DISCONNECTED,
+-    ESP32_WIFI_EVENT_STA_AUTHMODE_CHANGE = WIFI_EVENT_STA_AUTHMODE_CHANGE,
+-
+-    ESP32_WIFI_EVENT_STA_WPS_ER_SUCCESS = WIFI_EVENT_STA_WPS_ER_SUCCESS,
+-    ESP32_WIFI_EVENT_STA_WPS_ER_FAILED = WIFI_EVENT_STA_WPS_ER_FAILED,
+-    ESP32_WIFI_EVENT_STA_WPS_ER_TIMEOUT = WIFI_EVENT_STA_WPS_ER_TIMEOUT,
+-    ESP32_WIFI_EVENT_STA_WPS_ER_PIN = WIFI_EVENT_STA_WPS_ER_PIN,
+-    ESP32_WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP = WIFI_EVENT_STA_WPS_ER_PBC_OVERLAP,
+-
+-    ESP32_WIFI_EVENT_AP_START = WIFI_EVENT_AP_START,
+-    ESP32_WIFI_EVENT_AP_STOP = WIFI_EVENT_AP_STOP,
+-    ESP32_WIFI_EVENT_AP_STACONNECTED = WIFI_EVENT_AP_STACONNECTED,
+-    ESP32_WIFI_EVENT_AP_STADISCONNECTED = WIFI_EVENT_AP_STADISCONNECTED,
+-    ESP32_WIFI_EVENT_AP_PROBEREQRECVED = WIFI_EVENT_AP_PROBEREQRECVED,
+-
+-    ESP32_WIFI_EVENT_MAX = WIFI_EVENT_MAX
+-} esp_wifi_event_t;
+diff --git a/zephyr/esp32/src/common/esp_system_api.c b/zephyr/esp32/src/common/esp_system_api.c
+deleted file mode 100644
+index d49ca9bfa..000000000
+--- a/zephyr/esp32/src/common/esp_system_api.c
++++ /dev/null
+@@ -1,99 +0,0 @@
+-/*
+- * Copyright (c) 2020 Espressif Systems (Shanghai) Co., Ltd.
+- *
+- * SPDX-License-Identifier: Apache-2.0
+- */
+-
+-#include <zephyr.h>
+-#include <logging/log.h>
+-#include "string.h"
+-#include "soc/efuse_reg.h"
+-#include "esp_log.h"
+-#include "esp_system.h"
+-#include "esp_private/system_internal.h"
+-#include "soc/cpu.h"
+-#include "soc/rtc.h"
+-#include "soc/rtc_cntl_reg.h"
+-#include "esp_rom_uart.h"
+-
+-static unsigned int lock_key;
+-
+-static const char *TAG = "system_api";
+-
+-#define SHUTDOWN_HANDLERS_NO 4
+-static shutdown_handler_t shutdown_handlers[SHUTDOWN_HANDLERS_NO];
+-
+-esp_err_t esp_register_shutdown_handler(shutdown_handler_t handler)
+-{
+-	for (int i = 0; i < SHUTDOWN_HANDLERS_NO; i++) {
+-		if (shutdown_handlers[i] == handler) {
+-			return ESP_ERR_INVALID_STATE;
+-		} else if (shutdown_handlers[i] == NULL) {
+-			shutdown_handlers[i] = handler;
+-			return ESP_OK;
+-		}
+-	}
+-	return ESP_ERR_NO_MEM;
+-}
+-
+-esp_err_t esp_unregister_shutdown_handler(shutdown_handler_t handler)
+-{
+-	for (int i = 0; i < SHUTDOWN_HANDLERS_NO; i++) {
+-		if (shutdown_handlers[i] == handler) {
+-			shutdown_handlers[i] = NULL;
+-			return ESP_OK;
+-		}
+-	}
+-	return ESP_ERR_INVALID_STATE;
+-}
+-
+-esp_err_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
+-{
+-	uint8_t efuse_mac[6] = { 0 };
+-
+-	if (mac == NULL) {
+-		ESP_LOGE(TAG, "mac address param is NULL");
+-		return ESP_ERR_INVALID_ARG;
+-	}
+-
+-	if (type < ESP_MAC_WIFI_STA || type > ESP_MAC_ETH) {
+-		ESP_LOGE(TAG, "mac type is incorrect");
+-		return ESP_ERR_INVALID_ARG;
+-	}
+-
+-	lock_key = irq_lock();
+-	uint32_t high = REG_READ(EFUSE_BLK0_RDATA2_REG);
+-	uint32_t low = REG_READ(EFUSE_BLK0_RDATA1_REG);
+-
+-	irq_unlock(lock_key);
+-
+-	for (int i = 4; i > 0; i--) {
+-		efuse_mac[2 + (4 - i)] = (low >> ((i - 1) * 8)) & 0xff;
+-	}
+-
+-	efuse_mac[1] = high & 0xff;
+-	efuse_mac[0] = (high >> 8) & 0xff;
+-
+-	switch (type) {
+-	case ESP_MAC_WIFI_STA:
+-		memcpy(mac, efuse_mac, 6);
+-		break;
+-	case ESP_MAC_WIFI_SOFTAP:
+-		if (UNIVERSAL_MAC_ADDR_NUM == FOUR_UNIVERSAL_MAC_ADDR) {
+-			memcpy(mac, efuse_mac, 6);
+-			mac[5] += 1;
+-		}
+-		break;
+-	case ESP_MAC_BT:
+-#if CONFIG_ESP_MAC_ADDR_UNIVERSE_BT
+-		memcpy(mac, efuse_mac, 6);
+-		mac[5] += CONFIG_ESP_MAC_ADDR_UNIVERSE_BT_OFFSET;
+-#endif
+-		break;
+-	default:
+-		ESP_LOGW(TAG, "incorrect mac type");
+-		break;
+-	}
+-
+-	return ESP_OK;
+-}
+diff --git a/zephyr/esp_shared/src/common/esp_system_api.c b/zephyr/esp_shared/src/common/esp_system_api.c
+index a71fee241..8046fcf92 100644
+--- a/zephyr/esp_shared/src/common/esp_system_api.c
++++ b/zephyr/esp_shared/src/common/esp_system_api.c
+@@ -62,8 +62,13 @@ esp_err_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
+ 	}
+ 
+ 	lock_key = irq_lock();
++#if CONFIG_IDF_TARGET_ESP32
++	uint32_t high = REG_READ(EFUSE_BLK0_RDATA2_REG);
++	uint32_t low = REG_READ(EFUSE_BLK0_RDATA1_REG);
++#elif CONFIG_IDF_TARGET_ESP32S2
+ 	uint32_t high = REG_READ(EFUSE_RD_MAC_SPI_SYS_1_REG);
+ 	uint32_t low = REG_READ(EFUSE_RD_MAC_SPI_SYS_0_REG);
++#endif
+ 
+ 	irq_unlock(lock_key);
+ 
+-- 
+2.33.0
+

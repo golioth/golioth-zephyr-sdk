@@ -1,0 +1,68 @@
+From ad60d0c1a4d0776bd7bcdf710af17a11df16072b Mon Sep 17 00:00:00 2001
+From: Sylvio Alves <sylvio.alves@espressif.com>
+Date: Wed, 29 Sep 2021 08:45:37 -0300
+Subject: [PATCH] west.yml: esp32: update clock configuration calls
+
+Update west to use hal_espressif clock configurations.
+Removed duplicated calls in clock subsystems.
+
+Signed-off-by: Sylvio Alves <sylvio.alves@espressif.com>
+---
+ drivers/clock_control/clock_control_esp32.c   | 9 ---------
+ drivers/clock_control/clock_control_esp32s2.c | 6 ------
+ west.yml                                      | 2 +-
+ 3 files changed, 1 insertion(+), 16 deletions(-)
+
+diff --git a/drivers/clock_control/clock_control_esp32.c b/drivers/clock_control/clock_control_esp32.c
+index d895de803a..09cdeaddf6 100644
+--- a/drivers/clock_control/clock_control_esp32.c
++++ b/drivers/clock_control/clock_control_esp32.c
+@@ -84,15 +84,6 @@ static void esp_clk_bbpll_enable(void)
+ 	REGI2C_WRITE(I2C_BBPLL, I2C_BBPLL_BBADC_CAL_7_0, BBPLL_BBADC_CAL_7_0_VAL);
+ }
+ 
+-void IRAM_ATTR ets_update_cpu_frequency(uint32_t ticks_per_us)
+-{
+-	/* Update scale factors used by ets_delay_us */
+-	esp_rom_g_ticks_per_us_pro = ticks_per_us;
+-#if defined(CONFIG_SMP)
+-	esp_rom_g_ticks_per_us_app = ticks_per_us;
+-#endif
+-}
+-
+ static void esp_clk_wait_for_slow_cycle(void)
+ {
+ 	REG_CLR_BIT(TIMG_RTCCALICFG_REG(0), TIMG_RTC_CALI_START_CYCLING | TIMG_RTC_CALI_START);
+diff --git a/drivers/clock_control/clock_control_esp32s2.c b/drivers/clock_control/clock_control_esp32s2.c
+index d61e674ccc..5b8c765409 100644
+--- a/drivers/clock_control/clock_control_esp32s2.c
++++ b/drivers/clock_control/clock_control_esp32s2.c
+@@ -60,12 +60,6 @@ static void esp_clk_bbpll_enable(void)
+ 				RTC_CNTL_BBPLL_FORCE_PD | RTC_CNTL_BBPLL_I2C_FORCE_PD);
+ }
+ 
+-void IRAM_ATTR ets_update_cpu_frequency(uint32_t ticks_per_us)
+-{
+-	/* Update scale factors used by ets_delay_us */
+-	esp_rom_g_ticks_per_us_pro = ticks_per_us;
+-}
+-
+ static int esp_clk_cpu_freq_to_pll_mhz(int cpu_freq_mhz)
+ {
+ 	int dbias = DIG_DBIAS_80M_160M;
+diff --git a/west.yml b/west.yml
+index 2db90413ad..a256acc523 100644
+--- a/west.yml
++++ b/west.yml
+@@ -62,7 +62,7 @@ manifest:
+       groups:
+         - hal
+     - name: hal_espressif
+-      revision: 6cb37487b6ee42f96b4ba0d4719bb5759b098822
++      revision: fceb635c03a90297155ec056fa3dfd72c651cb10
+       path: modules/hal/espressif
+       west-commands: west/west-commands.yml
+       groups:
+-- 
+2.33.0
+

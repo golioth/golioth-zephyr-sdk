@@ -1,0 +1,180 @@
+From fceb635c03a90297155ec056fa3dfd72c651cb10 Mon Sep 17 00:00:00 2001
+From: Sylvio Alves <sylvio.alves@espressif.com>
+Date: Wed, 29 Sep 2021 00:48:49 -0300
+Subject: [PATCH] clock: add soc specific clock functions
+
+This enabled proper soc clock settings defintions.
+
+Signed-off-by: Sylvio Alves <sylvio.alves@espressif.com>
+---
+ components/esp32/clk.c        | 14 ++++++--------
+ components/esp32s2/clk.c      |  9 ++++-----
+ components/esp32s3/clk.c      |  8 +++-----
+ zephyr/esp32/CMakeLists.txt   |  1 +
+ zephyr/esp32c3/CMakeLists.txt |  1 +
+ zephyr/esp32s2/CMakeLists.txt |  1 +
+ 6 files changed, 16 insertions(+), 18 deletions(-)
+
+diff --git a/components/esp32/clk.c b/components/esp32/clk.c
+index b0c9caa53..a9543fb15 100644
+--- a/components/esp32/clk.c
++++ b/components/esp32/clk.c
+@@ -12,41 +12,39 @@
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
+ 
++#include <zephyr.h>
+ #include <stdint.h>
+ #include <sys/param.h>
+-
+ #include "esp_attr.h"
+ #include "soc/rtc.h"
+ #include "esp32/clk.h"
+ 
+-#define MHZ (1000000)
+-
+ // g_ticks_us defined in ROMs for PRO and APP CPU
+ extern uint32_t g_ticks_per_us_pro;
+-#ifndef CONFIG_FREERTOS_UNICORE
++#ifndef CONFIG_SMP
+ extern uint32_t g_ticks_per_us_app;
+ #endif
+ 
+ int IRAM_ATTR esp_clk_cpu_freq(void)
+ {
+-    return g_ticks_per_us_pro * MHZ;
++    return MHZ(g_ticks_per_us_pro);
+ }
+ 
+ int IRAM_ATTR esp_clk_apb_freq(void)
+ {
+-    return MIN(g_ticks_per_us_pro, 80) * MHZ;
++    return MHZ(MIN(g_ticks_per_us_pro, 80));
+ }
+ 
+ int IRAM_ATTR esp_clk_xtal_freq(void)
+ {
+-    return rtc_clk_xtal_freq_get() * MHZ;
++    return MHZ(rtc_clk_xtal_freq_get());
+ }
+ 
+ void IRAM_ATTR ets_update_cpu_frequency(uint32_t ticks_per_us)
+ {
+     /* Update scale factors used by esp_rom_delay_us */
+     g_ticks_per_us_pro = ticks_per_us;
+-#ifndef CONFIG_FREERTOS_UNICORE
++#ifndef CONFIG_SMP
+     g_ticks_per_us_app = ticks_per_us;
+ #endif
+ }
+diff --git a/components/esp32s2/clk.c b/components/esp32s2/clk.c
+index 59a61ed58..cdfe72d69 100644
+--- a/components/esp32s2/clk.c
++++ b/components/esp32s2/clk.c
+@@ -12,6 +12,7 @@
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
+ 
++#include <zephyr.h>
+ #include <stdint.h>
+ #include <sys/param.h>
+ 
+@@ -19,24 +20,22 @@
+ #include "soc/rtc.h"
+ #include "esp32s2/clk.h"
+ 
+-#define MHZ (1000000)
+-
+ // g_ticks_us defined in ROMs
+ extern uint32_t g_ticks_per_us_pro;
+ 
+ int IRAM_ATTR esp_clk_cpu_freq(void)
+ {
+-    return g_ticks_per_us_pro * MHZ;
++    return MHZ(g_ticks_per_us_pro);
+ }
+ 
+ int IRAM_ATTR esp_clk_apb_freq(void)
+ {
+-    return MIN(g_ticks_per_us_pro, 80) * MHZ;
++    return MHZ(MIN(g_ticks_per_us_pro, 80));
+ }
+ 
+ int IRAM_ATTR esp_clk_xtal_freq(void)
+ {
+-    return rtc_clk_xtal_freq_get() * MHZ;
++    return MHZ(rtc_clk_xtal_freq_get());
+ }
+ 
+ void IRAM_ATTR ets_update_cpu_frequency(uint32_t ticks_per_us)
+diff --git a/components/esp32s3/clk.c b/components/esp32s3/clk.c
+index d508a2afd..749d2464f 100644
+--- a/components/esp32s3/clk.c
++++ b/components/esp32s3/clk.c
+@@ -19,24 +19,22 @@
+ #include "esp32s3/clk.h"
+ #include "soc/rtc.h"
+ 
+-#define MHZ (1000000)
+-
+ // g_ticks_us defined in ROMs for PRO and APP CPU
+ extern uint32_t g_ticks_per_us_pro;
+ 
+ int IRAM_ATTR esp_clk_cpu_freq(void)
+ {
+-    return g_ticks_per_us_pro * MHZ;
++    return MHZ(g_ticks_per_us_pro);
+ }
+ 
+ int IRAM_ATTR esp_clk_apb_freq(void)
+ {
+-    return MIN(g_ticks_per_us_pro, 80) * MHZ;
++    return MHZ(MIN(g_ticks_per_us_pro, 80));
+ }
+ 
+ int IRAM_ATTR esp_clk_xtal_freq(void)
+ {
+-    return rtc_clk_xtal_freq_get() * MHZ;
++    return MHZ(rtc_clk_xtal_freq_get());
+ }
+ 
+ void IRAM_ATTR ets_update_cpu_frequency(uint32_t ticks_per_us)
+diff --git a/zephyr/esp32/CMakeLists.txt b/zephyr/esp32/CMakeLists.txt
+index fe1df4001..46909fa7e 100644
+--- a/zephyr/esp32/CMakeLists.txt
++++ b/zephyr/esp32/CMakeLists.txt
+@@ -108,6 +108,7 @@ if(CONFIG_SOC_ESP32)
+   zephyr_sources(
+     ../../components/soc/esp32/gpio_periph.c
+     ../../components/soc/src/esp32/rtc_clk.c
++    ../../components/esp32/clk.c
+     ../../components/esp_timer/src/ets_timer_legacy.c
+     ../../components/esp_timer/src/esp_timer.c
+     ../../components/esp_timer/src/esp_timer_impl_lac.c
+diff --git a/zephyr/esp32c3/CMakeLists.txt b/zephyr/esp32c3/CMakeLists.txt
+index fe9cdd13a..993d9df70 100644
+--- a/zephyr/esp32c3/CMakeLists.txt
++++ b/zephyr/esp32c3/CMakeLists.txt
+@@ -63,6 +63,7 @@ if(CONFIG_SOC_ESP32C3)
+     ../../components/hal/esp32c3/systimer_hal.c
+     ../../components/esp_hw_support/port/esp32c3/rtc_clk.c
+     ../../components/driver/periph_ctrl.c
++    ../../components/esp32c3/clk.c
+     ../../components/log/log_noos.c
+     ../../components/log/log.c
+     )
+diff --git a/zephyr/esp32s2/CMakeLists.txt b/zephyr/esp32s2/CMakeLists.txt
+index b6798d55b..8f7d574c9 100644
+--- a/zephyr/esp32s2/CMakeLists.txt
++++ b/zephyr/esp32s2/CMakeLists.txt
+@@ -52,6 +52,7 @@ if(CONFIG_SOC_ESP32S2)
+   zephyr_sources(
+     ../../components/soc/esp32s2/gpio_periph.c
+     ../../components/esp_hw_support/port/esp32s2/rtc_clk.c
++    ../../components/esp32s2/clk.c
+     ../../components/esp_hw_support/port/esp32s2/regi2c_ctrl.c
+     ../../components/driver/periph_ctrl.c
+     ../../components/hal/interrupt_controller_hal.c
+-- 
+2.33.0
+
