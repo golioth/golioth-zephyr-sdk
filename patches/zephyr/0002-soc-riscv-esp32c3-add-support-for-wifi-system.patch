@@ -1,0 +1,154 @@
+From a3fc467124998bde82da55d1c61c3cdceff1b1da Mon Sep 17 00:00:00 2001
+From: Felipe Neves <felipe.neves@espressif.com>
+Date: Tue, 10 Aug 2021 12:55:34 -0300
+Subject: [PATCH] soc: riscv: esp32c3: add support for wifi system
+
+using custom ethernet driver built on top of esp32
+wifi component.
+
+Signed-off-by: Felipe Neves <felipe.neves@espressif.com>
+---
+ boards/riscv/esp32c3_devkitm/Kconfig.defconfig   |  5 ++++-
+ boards/riscv/esp32c3_devkitm/esp32c3_devkitm.dts |  4 ++++
+ drivers/entropy/Kconfig.esp32                    |  2 +-
+ drivers/entropy/entropy_esp32.c                  | 15 +++++++++------
+ dts/riscv/espressif/esp32c3.dtsi                 | 10 ++++++++++
+ soc/riscv/esp32c3/linker.ld                      |  6 ++++++
+ 6 files changed, 34 insertions(+), 8 deletions(-)
+
+diff --git a/boards/riscv/esp32c3_devkitm/Kconfig.defconfig b/boards/riscv/esp32c3_devkitm/Kconfig.defconfig
+index 3276547dba..2dd649dbcd 100644
+--- a/boards/riscv/esp32c3_devkitm/Kconfig.defconfig
++++ b/boards/riscv/esp32c3_devkitm/Kconfig.defconfig
+@@ -7,6 +7,9 @@ config BOARD
+ 	default "esp32c3"
+ 	depends on BOARD_ESP32C3_DEVKITM
+ 
++config ENTROPY_ESP32_RNG
++	default y if ENTROPY_GENERATOR
++
+ if BT
+ 
+ config HEAP_MEM_POOL_SIZE
+@@ -16,4 +19,4 @@ choice BT_HCI_BUS_TYPE
+ 	default BT_ESP32
+ endchoice
+ 
+-endif # BT
++endif # BT
+\ No newline at end of file
+diff --git a/boards/riscv/esp32c3_devkitm/esp32c3_devkitm.dts b/boards/riscv/esp32c3_devkitm/esp32c3_devkitm.dts
+index c58fa003ce..d04f374aed 100644
+--- a/boards/riscv/esp32c3_devkitm/esp32c3_devkitm.dts
++++ b/boards/riscv/esp32c3_devkitm/esp32c3_devkitm.dts
+@@ -23,3 +23,7 @@
+ 	status = "okay";
+ 	current-speed = <115200>;
+ };
++
++&trng0 {
++	status = "okay";
++};
+diff --git a/drivers/entropy/Kconfig.esp32 b/drivers/entropy/Kconfig.esp32
+index 21d4cacadf..07bd7bb0aa 100644
+--- a/drivers/entropy/Kconfig.esp32
++++ b/drivers/entropy/Kconfig.esp32
+@@ -5,7 +5,7 @@
+ 
+ config ENTROPY_ESP32_RNG
+ 	bool "ESP32 entropy number generator driver"
+-	depends on SOC_ESP32
++	depends on SOC_ESP32 || SOC_ESP32C3
+ 	select ENTROPY_HAS_DRIVER
+ 	default y
+ 	help
+diff --git a/drivers/entropy/entropy_esp32.c b/drivers/entropy/entropy_esp32.c
+index ff56a8cd27..ebbd9cc775 100644
+--- a/drivers/entropy/entropy_esp32.c
++++ b/drivers/entropy/entropy_esp32.c
+@@ -7,18 +7,20 @@
+ #define DT_DRV_COMPAT espressif_esp32_trng
+ 
+ #include <string.h>
+-#include <drivers/entropy.h>
+-#include <soc/dport_reg.h>
++#include <hal/cpu_hal.h>
++#include <esp_clk.h>
+ #include <soc/rtc.h>
+ #include <soc/wdev_reg.h>
+ #include <soc/rtc_cntl_reg.h>
+ #include <soc/apb_ctrl_reg.h>
+ #include <esp_system.h>
+ #include <soc.h>
+-#include <xtensa/core-macros.h>
++#include <drivers/entropy.h>
+ 
+-extern int esp_clk_cpu_freq(void);
+-extern int esp_clk_apb_freq(void);
++#ifdef CONFIG_SOC_ESP32
++#include <xtensa/core-macros.h>
++#include <soc/dport_reg.h>
++#endif
+ 
+ static inline uint32_t entropy_esp32_get_u32(void)
+ {
+@@ -37,9 +39,10 @@ static inline uint32_t entropy_esp32_get_u32(void)
+ 	uint32_t ccount;
+ 
+ 	do {
+-		ccount = XTHAL_GET_CCOUNT();
++		ccount = cpu_hal_get_cycle_count();
+ 	} while (ccount - last_ccount < cpu_to_apb_freq_ratio * 16);
+ 	last_ccount = ccount;
++
+ 	return REG_READ(WDEV_RND_REG);
+ }
+ 
+diff --git a/dts/riscv/espressif/esp32c3.dtsi b/dts/riscv/espressif/esp32c3.dtsi
+index 38c492527b..e44574bd96 100644
+--- a/dts/riscv/espressif/esp32c3.dtsi
++++ b/dts/riscv/espressif/esp32c3.dtsi
+@@ -8,6 +8,9 @@
+ / {
+ 	#address-cells = <1>;
+ 	#size-cells = <1>;
++	chosen {
++		zephyr,entropy = &trng0;
++	};
+ 
+ 	cpus {
+ 		#address-cells = <1>;
+@@ -37,6 +40,13 @@
+ 			label = "UART_0";
+ 			status = "disabled";
+ 		};
++
++		trng0: trng@3ff700b0 {
++			compatible = "espressif,esp32-trng";
++			reg = <0x3FF700B0 0x4>;
++			label = "TRNG_0";
++			status = "disabled";
++		};
+ 	};
+ 
+ };
+diff --git a/soc/riscv/esp32c3/linker.ld b/soc/riscv/esp32c3/linker.ld
+index 8966b7a332..14d6fe7309 100644
+--- a/soc/riscv/esp32c3/linker.ld
++++ b/soc/riscv/esp32c3/linker.ld
+@@ -130,6 +130,12 @@ SECTIONS
+     *libzephyr.a:log_backend_uart.*(.literal .text .literal.* .text.*)
+     *liblib__libc__minimal.a:string.*(.literal .text .literal.* .text.*)
+     *libgcov.a:(.literal .text .literal.* .text.*)
++
++    *libnet80211.a:( .wifi0iram  .wifi0iram.* .wifislpiram .wifislpiram.*)
++    *libpp.a:( .wifi0iram  .wifi0iram.* .wifislpiram .wifislpiram.*)
++    *libnet80211.a:( .wifirxiram  .wifirxiram.* .wifislprxiram .wifislprxiram.*)
++    *libpp.a:( .wifirxiram  .wifirxiram.* .wifislprxiram .wifislprxiram.*)
++
+     . = ALIGN(4);
+     _init_end = ABSOLUTE(.);
+     _iram_text_end = ABSOLUTE(.);   *(.srodata)
+-- 
+2.33.0
+

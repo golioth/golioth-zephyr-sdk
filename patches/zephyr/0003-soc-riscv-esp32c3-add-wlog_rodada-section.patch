@@ -1,0 +1,42 @@
+From aae54fd3e5d9b88e81542d87b5b2e99d1498c34b Mon Sep 17 00:00:00 2001
+From: Felipe Neves <felipe.neves@espressif.com>
+Date: Tue, 7 Sep 2021 14:44:52 -0300
+Subject: [PATCH] soc: riscv: esp32c3: add wlog_rodada section
+
+to make it compatible with latest wifi driver
+
+To enable proper wifi operation.
+
+Signed-off-by: Felipe Neves <felipe.neves@espressif.com>
+---
+ boards/riscv/esp32c3_devkitm/Kconfig.defconfig | 2 +-
+ soc/riscv/esp32c3/linker.ld                    | 2 ++
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/boards/riscv/esp32c3_devkitm/Kconfig.defconfig b/boards/riscv/esp32c3_devkitm/Kconfig.defconfig
+index 2dd649dbcd..da2110aee5 100644
+--- a/boards/riscv/esp32c3_devkitm/Kconfig.defconfig
++++ b/boards/riscv/esp32c3_devkitm/Kconfig.defconfig
+@@ -19,4 +19,4 @@ choice BT_HCI_BUS_TYPE
+ 	default BT_ESP32
+ endchoice
+ 
+-endif # BT
+\ No newline at end of file
++endif # BT
+diff --git a/soc/riscv/esp32c3/linker.ld b/soc/riscv/esp32c3/linker.ld
+index 14d6fe7309..2bea020a1d 100644
+--- a/soc/riscv/esp32c3/linker.ld
++++ b/soc/riscv/esp32c3/linker.ld
+@@ -309,6 +309,8 @@ SECTIONS
+     *(".srodata.*")
+     *(.rodata)
+     *(.rodata.*)
++    *(.rodata_wlog)
++    *(.rodata_wlog*)
+     _thread_local_end = ABSOLUTE(.);
+     _rodata_reserved_end = ABSOLUTE(.);
+     . = ALIGN(4);
+-- 
+2.33.0
+

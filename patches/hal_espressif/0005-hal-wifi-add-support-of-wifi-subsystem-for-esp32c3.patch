@@ -1,0 +1,1556 @@
+From 975e52b71b2ca81382dc64ef5394bf68f6f0baf2 Mon Sep 17 00:00:00 2001
+From: Felipe Neves <felipe.neves@espressif.com>
+Date: Thu, 5 Aug 2021 18:42:34 -0300
+Subject: [PATCH] hal: wifi: add support of wifi subsystem for esp32c3
+
+By adding wifi adapter and wpa_supplicant files.
+
+Signed-off-by: Felipe Neves <felipe.neves@espressif.com>
+---
+ components/esp_timer/src/esp_timer.c          |    8 +-
+ .../esp_timer/src/esp_timer_impl_systimer.c   |   68 +-
+ zephyr/esp32c3/CMakeLists.txt                 |  109 +-
+ zephyr/esp32c3/include/crypto/esp_config.h    |   20 +
+ zephyr/esp32c3/src/common/esp_read_mac.c      |   35 +
+ zephyr/esp32c3/src/heap_adapter.c             |   15 +
+ zephyr/esp32c3/src/stubs.c                    |    8 +
+ zephyr/esp32c3/src/wifi/esp_wifi_adapter.c    | 1002 +++++++++++++++++
+ .../src/wpa_supplicant/port/os_riscv.c        |   55 +
+ 9 files changed, 1270 insertions(+), 50 deletions(-)
+ create mode 100644 zephyr/esp32c3/include/crypto/esp_config.h
+ create mode 100644 zephyr/esp32c3/src/common/esp_read_mac.c
+ create mode 100644 zephyr/esp32c3/src/heap_adapter.c
+ create mode 100644 zephyr/esp32c3/src/stubs.c
+ create mode 100644 zephyr/esp32c3/src/wifi/esp_wifi_adapter.c
+ create mode 100644 zephyr/esp32c3/src/wpa_supplicant/port/os_riscv.c
+
+diff --git a/components/esp_timer/src/esp_timer.c b/components/esp_timer/src/esp_timer.c
+index 7e5073790..2a1b46d61 100644
+--- a/components/esp_timer/src/esp_timer.c
++++ b/components/esp_timer/src/esp_timer.c
+@@ -11,8 +11,6 @@
+ // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
+-
+-#include <zephyr.h>
+ #include <sys/param.h>
+ #include <string.h>
+ #include "soc/soc.h"
+@@ -34,6 +32,8 @@
+ #include "esp_timer_impl.h"
+ #include "sdkconfig.h"
+ 
++#include <zephyr.h>
++
+ #include "esp_private/startup_internal.h"
+ #include "esp_private/esp_timer_private.h"
+ #include "esp_private/system_internal.h"
+@@ -43,12 +43,16 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+ 
+ 
+ #if CONFIG_IDF_TARGET_ESP32
++#include "esp32/rom/ets_sys.h"
+ #include "esp32/rtc.h"
+ #elif CONFIG_IDF_TARGET_ESP32S2
++#include "esp32s2/rom/ets_sys.h"
+ #include "esp32s2/rtc.h"
+ #elif CONFIG_IDF_TARGET_ESP32S3
++#include "esp32s3/rom/ets_sys.h"
+ #include "esp32s3/rtc.h"
+ #elif CONFIG_IDF_TARGET_ESP32C3
++#include "esp32c3/rom/ets_sys.h"
+ #include "esp32c3/rtc.h"
+ #endif
+ 
+diff --git a/components/esp_timer/src/esp_timer_impl_systimer.c b/components/esp_timer/src/esp_timer_impl_systimer.c
+index 3272fad34..128ffce63 100644
+--- a/components/esp_timer/src/esp_timer_impl_systimer.c
++++ b/components/esp_timer/src/esp_timer_impl_systimer.c
+@@ -23,6 +23,7 @@
+ #include "hal/systimer_ll.h"
+ #include "hal/systimer_types.h"
+ #include "hal/systimer_hal.h"
++#include <zephyr.h>
+ 
+ /**
+  * @file esp_timer_systimer.c
+@@ -35,27 +36,24 @@
+  * @note systimer counter0 and alarm2 are adopted to implemented esp_timer
+  */
+ 
+-static const char *TAG = "esp_timer_systimer";
+-
+-/* Interrupt handle returned by the interrupt allocator */
+-static intr_handle_t s_timer_interrupt_handle;
+-
+ /* Function from the upper layer to be called when the interrupt happens.
+  * Registered in esp_timer_impl_init.
+  */
+ static intr_handler_t s_alarm_handler = NULL;
+ 
+ /* Spinlock used to protect access to the hardware registers. */
+-portMUX_TYPE s_time_update_lock = portMUX_INITIALIZER_UNLOCKED;
++static unsigned int s_time_update_lock;
++
++#define SYS_TIMER_ESP_IRQ  17
+ 
+ void esp_timer_impl_lock(void)
+ {
+-    portENTER_CRITICAL(&s_time_update_lock);
++    s_time_update_lock = irq_lock();
+ }
+ 
+ void esp_timer_impl_unlock(void)
+ {
+-    portEXIT_CRITICAL(&s_time_update_lock);
++    irq_unlock(s_time_update_lock);
+ }
+ 
+ uint64_t IRAM_ATTR esp_timer_impl_get_counter_reg(void)
+@@ -75,12 +73,12 @@ int64_t esp_timer_get_time(void) __attribute__((alias("esp_timer_impl_get_time")
+ 
+ void IRAM_ATTR esp_timer_impl_set_alarm(uint64_t timestamp)
+ {
+-    portENTER_CRITICAL_SAFE(&s_time_update_lock);
++    systimer_hal_select_alarm_mode(SYSTIMER_ALARM_2, SYSTIMER_ALARM_MODE_ONESHOT);
+     systimer_hal_set_alarm_target(SYSTIMER_ALARM_2, timestamp);
+-    portEXIT_CRITICAL_SAFE(&s_time_update_lock);
++    systimer_hal_enable_alarm_int(SYSTIMER_ALARM_2);
+ }
+ 
+-static void IRAM_ATTR timer_alarm_isr(void *arg)
++static void IRAM_ATTR esp_timer_alarm_isr(void *arg)
+ {
+     // clear the interrupt
+     systimer_ll_clear_alarm_int(SYSTIMER_ALARM_2);
+@@ -95,64 +93,40 @@ void IRAM_ATTR esp_timer_impl_update_apb_freq(uint32_t apb_ticks_per_us)
+ 
+ void esp_timer_impl_advance(int64_t time_us)
+ {
+-    portENTER_CRITICAL_SAFE(&s_time_update_lock);
++    esp_timer_impl_lock();
+     systimer_hal_counter_value_advance(SYSTIMER_COUNTER_0, time_us);
+-    portEXIT_CRITICAL_SAFE(&s_time_update_lock);
++    esp_timer_impl_unlock();
+ }
+ 
+ esp_err_t esp_timer_impl_init(intr_handler_t alarm_handler)
+ {
+     s_alarm_handler = alarm_handler;
+-#if SOC_SYSTIMER_INT_LEVEL
+-    int int_type = 0;
+-#else
+-    int int_type = ESP_INTR_FLAG_EDGE;
+-#endif // SOC_SYSTIMER_INT_LEVEL
+-    esp_err_t err = esp_intr_alloc(ETS_SYSTIMER_TARGET2_EDGE_INTR_SOURCE,
+-                                   ESP_INTR_FLAG_INTRDISABLED | ESP_INTR_FLAG_IRAM | int_type,
+-                                   &timer_alarm_isr, NULL, &s_timer_interrupt_handle);
+-
+-    if (err != ESP_OK) {
+-        ESP_EARLY_LOGE(TAG, "esp_intr_alloc failed (%#x)", err);
+-        goto err_intr_alloc;
+-    }
+ 
+-    systimer_hal_init();
++    esp_rom_intr_matrix_set(0,
++        ETS_SYSTIMER_TARGET2_EDGE_INTR_SOURCE,
++        SYS_TIMER_ESP_IRQ);
++    IRQ_CONNECT(SYS_TIMER_ESP_IRQ, 0, esp_timer_alarm_isr, NULL, 0);
++
++    systimer_hal_connect_alarm_counter(SYSTIMER_ALARM_2, SYSTIMER_COUNTER_0);
+     systimer_hal_enable_counter(SYSTIMER_COUNTER_0);
+     systimer_hal_select_alarm_mode(SYSTIMER_ALARM_2, SYSTIMER_ALARM_MODE_ONESHOT);
+-    systimer_hal_connect_alarm_counter(SYSTIMER_ALARM_2, SYSTIMER_COUNTER_0);
++    systimer_hal_counter_can_stall_by_cpu(SYSTIMER_COUNTER_0, 0, true);
+ 
+     /* TODO: if SYSTIMER is used for anything else, access to SYSTIMER_INT_ENA_REG has to be
+     * protected by a shared spinlock. Since this code runs as part of early startup, this
+     * is practically not an issue.
+     */
+     systimer_hal_enable_alarm_int(SYSTIMER_ALARM_2);
++    irq_enable(SYS_TIMER_ESP_IRQ);
+ 
+-    err = esp_intr_enable(s_timer_interrupt_handle);
+-    if (err != ESP_OK) {
+-        ESP_EARLY_LOGE(TAG, "esp_intr_enable failed (%#x)", err);
+-        goto err_intr_en;
+-    }
+     return ESP_OK;
+-
+-err_intr_en:
+-    systimer_ll_disable_alarm(SYSTIMER_ALARM_2);
+-    /* TODO: may need a spinlock, see the note related to SYSTIMER_INT_ENA_REG in systimer_hal_init */
+-    systimer_ll_disable_alarm_int(SYSTIMER_ALARM_2);
+-    esp_intr_free(s_timer_interrupt_handle);
+-err_intr_alloc:
+-    s_alarm_handler = NULL;
+-    return err;
+ }
+ 
+ void esp_timer_impl_deinit(void)
+ {
+-    esp_intr_disable(s_timer_interrupt_handle);
+     systimer_ll_disable_alarm(SYSTIMER_ALARM_2);
+     /* TODO: may need a spinlock, see the note related to SYSTIMER_INT_ENA_REG in systimer_hal_init */
+     systimer_ll_disable_alarm_int(SYSTIMER_ALARM_2);
+-    esp_intr_free(s_timer_interrupt_handle);
+-    s_timer_interrupt_handle = NULL;
+     s_alarm_handler = NULL;
+ }
+ 
+@@ -163,9 +137,9 @@ uint64_t IRAM_ATTR esp_timer_impl_get_min_period_us(void)
+ 
+ uint64_t esp_timer_impl_get_alarm_reg(void)
+ {
+-    portENTER_CRITICAL_SAFE(&s_time_update_lock);
++    esp_timer_impl_lock();
+     uint64_t val = systimer_hal_get_alarm_value(SYSTIMER_ALARM_2);
+-    portEXIT_CRITICAL_SAFE(&s_time_update_lock);
++    esp_timer_impl_unlock();
+     return val;
+ }
+ 
+diff --git a/zephyr/esp32c3/CMakeLists.txt b/zephyr/esp32c3/CMakeLists.txt
+index 993d9df70..a47d2d194 100644
+--- a/zephyr/esp32c3/CMakeLists.txt
++++ b/zephyr/esp32c3/CMakeLists.txt
+@@ -5,6 +5,7 @@ if(CONFIG_SOC_ESP32C3)
+     include
+     include/bt
+     include/wifi
++    include/crypto
+ 
+     ../../components/esp_common/include
+     ../../components/esp_rom/include
+@@ -15,9 +16,9 @@ if(CONFIG_SOC_ESP32C3)
+     ../../components/esp_hw_support/include
+ 
+     ../../components/riscv/include
+-    ../../components/hal/esp32c3/include
+   
+     ../../components/hal/include 
++    ../../components/hal/esp32c3/include
+     
+     ../../components/soc/esp32c3/include
+     ../../components/soc/src/esp32c3/include
+@@ -41,6 +42,12 @@ if(CONFIG_SOC_ESP32C3)
+ 
+     ../../components/esp_wifi/include/
+     ../../components/esp_wifi/esp32c3/include
++
++    ../../components/wpa_supplicant/include
++    ../../components/wpa_supplicant/port/include
++    ../../components/wpa_supplicant/src
++    ../../components/wpa_supplicant/include/esp_supplicant
++    ../../components/wpa_supplicant/src/crypto
+ 	)
+ 
+   zephyr_link_libraries(
+@@ -60,6 +67,10 @@ if(CONFIG_SOC_ESP32C3)
+ 
+   zephyr_sources(
+     ../../components/soc/esp32c3/gpio_periph.c
++    ../../components/esp_timer/src/ets_timer_legacy.c
++    ../../components/esp32c3/clk.c
++    ../../components/esp_timer/src/esp_timer.c
++    ../../components/esp_timer/src/esp_timer_impl_systimer.c
+     ../../components/hal/esp32c3/systimer_hal.c
+     ../../components/esp_hw_support/port/esp32c3/rtc_clk.c
+     ../../components/driver/periph_ctrl.c
+@@ -72,6 +83,7 @@ if(CONFIG_SOC_ESP32C3)
+   if (CONFIG_BT OR CONFIG_WIFI_ESP32)
+     zephyr_sources( 
+       ../../components/esp_wifi/src/phy_init.c
++      src/common/esp_read_mac.c
+       )
+ 
+     zephyr_link_libraries(
+@@ -80,6 +92,7 @@ if(CONFIG_SOC_ESP32C3)
+       pp
+       coexist
+       phy
++      mesh
+       ## esp-idf wifi libs refer gcc libs symbols, so linked in libgcc
+       gcc
+         -L${CMAKE_CURRENT_SOURCE_DIR}/../../components/esp32c3
+@@ -87,6 +100,7 @@ if(CONFIG_SOC_ESP32C3)
+         -Wl,--defsym,phy_printf=printf
+         -Wl,--defsym,net80211_printf=printf
+         -Wl,--defsym,coexist_printf=printf
++        -Wl,--defsym,pp_printf=printf
+       )
+ 
+   endif()
+@@ -112,4 +126,97 @@ if(CONFIG_SOC_ESP32C3)
+ 
+   endif()
+ 
++  ## WIFI definitions
++  if (CONFIG_WIFI_ESP32)
++
++    #TODO: Additional WPA supplicant feature like Enterprise mode etc. are yet to be supported.
++    set(WPA_SUPPLICANT_SRCS "src/wpa_supplicant/port/os_riscv.c"
++                        "../../components/wpa_supplicant/src/ap/ap_config.c"
++                        "../../components/wpa_supplicant/src/ap/ieee802_1x.c"
++                        "../../components/wpa_supplicant/src/ap/wpa_auth.c"
++                        "../../components/wpa_supplicant/src/ap/wpa_auth_ie.c"
++                        "../../components/wpa_supplicant/src/common/sae.c"
++                        "../../components/wpa_supplicant/src/common/wpa_common.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-ctr.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-siv.c"
++                        "../../components/wpa_supplicant/src/crypto/sha256-kdf.c"
++                        "../../components/wpa_supplicant/src/crypto/sha256-prf.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-cbc.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-ccm.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-internal-dec.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-internal-enc.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-internal.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-omac1.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-unwrap.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-wrap.c"
++                        "../../components/wpa_supplicant/src/crypto/aes-omac1.c"
++                        "../../components/wpa_supplicant/src/crypto/sha256-tlsprf.c"
++                        "../../components/wpa_supplicant/src/crypto/bignum.c"
++                        "../../components/wpa_supplicant/src/crypto/ccmp.c"
++                        "../../components/wpa_supplicant/src/crypto/crypto_mbedtls-bignum.c"
++                        "../../components/wpa_supplicant/src/crypto/crypto_mbedtls-ec.c"
++                        "../../components/wpa_supplicant/src/crypto/crypto_ops.c"
++                        "../../components/wpa_supplicant/src/crypto/crypto_internal-cipher.c"
++                        "../../components/wpa_supplicant/src/crypto/crypto_internal-modexp.c"
++                        "../../components/wpa_supplicant/src/crypto/crypto_internal-rsa.c"
++                        "../../components/wpa_supplicant/src/crypto/crypto_internal.c"
++                        "../../components/wpa_supplicant/src/crypto/des-internal.c"
++                        "../../components/wpa_supplicant/src/crypto/dh_group5.c"
++                        "../../components/wpa_supplicant/src/crypto/dh_groups.c"
++                        "../../components/wpa_supplicant/src/crypto/md4-internal.c"
++                        "../../components/wpa_supplicant/src/crypto/md5-internal.c"
++                        "../../components/wpa_supplicant/src/crypto/md5.c"
++                        "../../components/wpa_supplicant/src/crypto/ms_funcs.c"
++                        "../../components/wpa_supplicant/src/crypto/rc4.c"
++                        "../../components/wpa_supplicant/src/crypto/sha1-internal.c"
++                        "../../components/wpa_supplicant/src/crypto/sha1-pbkdf2.c"
++                        "../../components/wpa_supplicant/src/crypto/sha1.c"
++                        "../../components/wpa_supplicant/src/crypto/sha256-internal.c"
++                        "../../components/wpa_supplicant/src/crypto/sha256.c"
++                        "../../components/wpa_supplicant/src/esp_supplicant/esp_hostap.c"
++                        "../../components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c"
++                        "../../components/wpa_supplicant/src/esp_supplicant/esp_wpas_glue.c"
++                        "../../components/wpa_supplicant/src/esp_supplicant/esp_wpa3.c"
++                        "../../components/wpa_supplicant/src/rsn_supp/pmksa_cache.c"
++                        "../../components/wpa_supplicant/src/rsn_supp/wpa.c"
++                        "../../components/wpa_supplicant/src/rsn_supp/wpa_ie.c"
++                        "../../components/wpa_supplicant/src/utils/base64.c"
++                        "../../components/wpa_supplicant/src/utils/common.c"
++                        "../../components/wpa_supplicant/src/utils/ext_password.c"
++                        "../../components/wpa_supplicant/src/utils/uuid.c"
++                        "../../components/wpa_supplicant/src/utils/wpabuf.c"
++                        "../../components/wpa_supplicant/src/utils/wpa_debug.c"
++                        "../../components/wpa_supplicant/src/utils/json.c"
++                        )
++
++    zephyr_sources(
++      src/wifi/esp_wifi_adapter.c
++      ${WPA_SUPPLICANT_SRCS}
++      )
++
++    zephyr_compile_definitions(
++      __ets__
++      ESP_PLATFORM
++      ESP_SUPPLICANT
++      IEEE8021X_EAPOL
++      EAP_PEER_METHOD
++      EAP_MSCHAPv2
++      EAP_PEAP
++      USE_WPA2_TASK
++      ESPRESSIF_USE
++      ESP32_WORKAROUND
++      CONFIG_ECC
++      CONFIG_IEEE80211W
++      CONFIG_WPA3_SAE
++      CONFIG_SHA256
++      CONFIG_DPP
++      )
++
++    zephyr_link_libraries(
++      ## wifi
++      mbedTLS
++      )
++
++  endif()
++
+ endif()
+diff --git a/zephyr/esp32c3/include/crypto/esp_config.h b/zephyr/esp32c3/include/crypto/esp_config.h
+new file mode 100644
+index 000000000..382f7b801
+--- /dev/null
++++ b/zephyr/esp32c3/include/crypto/esp_config.h
+@@ -0,0 +1,20 @@
++/*
++ * Copyright (c) 2020 Espressif Systems (Shanghai) Co., Ltd.
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#pragma once
++
++/**
++ * \def MBEDTLS_PK_WRITE_C
++ *
++ * Enable the generic public (asymetric) key writer.
++ * Module:  library/pkwrite.c
++ * Caller:  library/x509write.c
++ *
++ * Requires: MBEDTLS_PK_C
++ *
++ * Uncomment to enable generic public key write functions.
++ */
++#define MBEDTLS_PK_WRITE_C
+diff --git a/zephyr/esp32c3/src/common/esp_read_mac.c b/zephyr/esp32c3/src/common/esp_read_mac.c
+new file mode 100644
+index 000000000..f2649e01e
+--- /dev/null
++++ b/zephyr/esp32c3/src/common/esp_read_mac.c
+@@ -0,0 +1,35 @@
++/*
++ * Copyright (c) 2021 Espressif Systems (Shanghai) Co., Ltd.
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include "esp_system.h"
++#include <rom/efuse.h>
++#include <zephyr.h>
++
++esp_err_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
++{
++	ARG_UNUSED(type);
++
++	/* obtains the factory mac address by reading corresponding
++	 * efuse
++	 */
++	ets_efuse_read();
++	uint32_t mac_word_0;
++	uint32_t mac_word_1;
++	volatile uint32_t *efuse_register;
++
++	efuse_register = (volatile uint32_t *)ets_efuse_get_read_register_address(ETS_EFUSE_MAC_SPI_SYS_0);
++	mac_word_0 = (uint32_t)*efuse_register;
++	mac_word_1 = (uint32_t)*(efuse_register + 4);
++
++	mac[5] = (mac_word_0 & 0xFF);
++	mac[4] = (mac_word_0 & 0xFF00) >> 8;
++	mac[3] = (mac_word_0 & 0xFF000) >> 16;
++	mac[2] = (mac_word_0 & 0xFF000000) >> 24;
++	mac[1] = (mac_word_1 & 0xFF);
++	mac[0] = (mac_word_1 & 0xFF00) >> 8;
++
++	return ESP_OK;
++}
+diff --git a/zephyr/esp32c3/src/heap_adapter.c b/zephyr/esp32c3/src/heap_adapter.c
+new file mode 100644
+index 000000000..1bd3819b2
+--- /dev/null
++++ b/zephyr/esp32c3/src/heap_adapter.c
+@@ -0,0 +1,15 @@
++/*
++ * Copyright (c) 2021 Espressif Systems (Shanghai) Co., Ltd.
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <zephyr.h>
++#include <esp_heap_caps_adapter.h>
++#include "esp_log.h"
++#include "esp_attr.h"
++
++IRAM_ATTR void *heap_caps_malloc(size_t size, uint32_t caps)
++{
++    return k_malloc(size);
++}
+diff --git a/zephyr/esp32c3/src/stubs.c b/zephyr/esp32c3/src/stubs.c
+new file mode 100644
+index 000000000..84e285d70
+--- /dev/null
++++ b/zephyr/esp32c3/src/stubs.c
+@@ -0,0 +1,8 @@
++/*
++ * Copyright (c) 2020 Espressif Systems (Shanghai) Co., Ltd.
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include "stubs.h"
++
+diff --git a/zephyr/esp32c3/src/wifi/esp_wifi_adapter.c b/zephyr/esp32c3/src/wifi/esp_wifi_adapter.c
+new file mode 100644
+index 000000000..4ae62e5e3
+--- /dev/null
++++ b/zephyr/esp32c3/src/wifi/esp_wifi_adapter.c
+@@ -0,0 +1,1002 @@
++/*
++ * Copyright (c) 2021 Espressif Systems (Shanghai) Co., Ltd.
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++#define CONFIG_POSIX_FS
++
++#include "esp_wifi.h"
++#include "stdlib.h"
++#include "string.h"
++#include "esp_private/wifi.h"
++#include "soc/soc.h"
++#include "soc/dport_access.h"
++#include "soc/wdev_reg.h"
++#include "soc/soc_caps.h"
++#include "soc/rtc.h"
++#include "esp_log.h"
++#include "esp_attr.h"
++#include "esp_private/wifi_os_adapter.h"
++#include "esp_system.h"
++#include "esp_timer.h"
++#include "os.h"
++#include "esp_event.h"
++#include "driver/periph_ctrl.h"
++#include "esp_phy_init.h"
++#include <soc/syscon_reg.h>
++#include <rom/efuse.h>
++#include <rom/rtc.h>
++#include <rom/ets_sys.h>
++#include <riscv/interrupt.h>
++
++#include <soc.h>
++#include <zephyr.h>
++#include <sys/printk.h>
++#include <random/rand32.h>
++#include <logging/log.h>
++LOG_MODULE_REGISTER(esp32_wifi_adapter, CONFIG_LOG_DEFAULT_LEVEL);
++
++
++#define portTICK_PERIOD_MS (1000 / 100)
++
++K_THREAD_STACK_DEFINE(wifi_stack, 4096);
++
++ESP_EVENT_DEFINE_BASE(WIFI_EVENT);
++
++static void *wifi_msgq_buffer;
++
++static struct k_thread wifi_task_handle;
++
++#if CONFIG_IDF_TARGET_ESP32
++extern wifi_mac_time_update_cb_t s_wifi_mac_time_update_cb;
++#endif
++
++struct wifi_spin_lock {
++	struct k_spinlock spinlock;
++	k_spinlock_key_t key;
++};
++
++uint64_t g_wifi_feature_caps;
++
++static void IRAM_ATTR s_esp_dport_access_stall_other_cpu_start(void)
++{
++
++}
++
++static void IRAM_ATTR s_esp_dport_access_stall_other_cpu_end(void)
++{
++
++}
++
++IRAM_ATTR void *wifi_malloc(size_t size)
++{
++	void *ptr = k_malloc(size);
++
++	if (ptr == NULL) {
++		LOG_ERR("memory allocation failed");
++	}
++
++	return ptr;
++}
++
++IRAM_ATTR void *wifi_realloc(void *ptr, size_t size)
++{
++	ARG_UNUSED(ptr);
++	ARG_UNUSED(size);
++
++	LOG_ERR("%s not yet supported", __func__);
++	return NULL;
++}
++
++IRAM_ATTR void *wifi_calloc(size_t n, size_t size)
++{
++	return k_calloc(n, size);
++}
++
++static void *IRAM_ATTR wifi_zalloc_wrapper(size_t size)
++{
++	void *ptr = wifi_calloc(1, size);
++
++	if (ptr) {
++		memset(ptr, 0, size);
++	}
++
++	return ptr;
++}
++
++wifi_static_queue_t *wifi_create_queue(int queue_len, int item_size)
++{
++	wifi_static_queue_t *queue = NULL;
++
++	queue = (wifi_static_queue_t *)k_malloc(sizeof(wifi_static_queue_t));
++	if (!queue) {
++		return NULL;
++	}
++
++	wifi_msgq_buffer = k_malloc(queue_len * item_size);
++	if (wifi_msgq_buffer == NULL) {
++		LOG_ERR("msg buffer allocation failed");
++		return NULL;
++	}
++
++	queue->handle = k_malloc(sizeof(struct k_msgq));
++	if (queue->handle == NULL) {
++		k_free(wifi_msgq_buffer);
++		LOG_ERR("queue handle allocation failed");
++		return NULL;
++	}
++
++	k_msgq_init((struct k_msgq *)queue->handle, wifi_msgq_buffer, item_size, queue_len);
++
++	return queue;
++}
++
++void wifi_delete_queue(wifi_static_queue_t *queue)
++{
++	if (queue) {
++		k_free(queue->handle);
++		k_free(queue);
++	}
++}
++
++static void *wifi_create_queue_wrapper(int queue_len, int item_size)
++{
++	return wifi_create_queue(queue_len, item_size);
++}
++
++static void wifi_delete_queue_wrapper(void *queue)
++{
++	wifi_delete_queue(queue);
++}
++
++static bool IRAM_ATTR env_is_chip_wrapper(void)
++{
++#ifdef CONFIG_IDF_ENV_FPGA
++	return false;
++#else
++	return true;
++#endif
++}
++
++static void *spin_lock_create_wrapper(void)
++{
++	struct k_spinlock *wifi_spin_lock = (struct k_spinlock *) k_malloc(sizeof(struct k_spinlock));
++
++	return (void *)wifi_spin_lock;
++}
++
++static uint32_t IRAM_ATTR wifi_int_disable_wrapper(void *wifi_int_mux)
++{
++	unsigned int *int_mux = (unsigned int *) wifi_int_mux;
++
++	*int_mux = irq_lock();
++	return 0;
++}
++
++static void IRAM_ATTR wifi_int_restore_wrapper(void *wifi_int_mux, uint32_t tmp)
++{
++	unsigned int *key = (unsigned int *) wifi_int_mux;
++
++	irq_unlock(*key);
++}
++
++static void IRAM_ATTR task_yield_from_isr_wrapper(void)
++{
++	k_yield();
++}
++
++static void *semphr_create_wrapper(uint32_t max, uint32_t init)
++{
++	struct k_sem *sem = (struct k_sem *) k_malloc(sizeof(struct k_sem));
++
++	k_sem_init(sem, init, max);
++	return (void *) sem;
++}
++
++static void semphr_delete_wrapper(void *semphr)
++{
++	k_free(semphr);
++}
++
++static void *wifi_thread_semphr_get_wrapper(void)
++{
++	struct k_sem *sem = NULL;
++
++	sem = k_thread_custom_data_get();
++	if (!sem) {
++		sem = (struct k_sem *) k_malloc(sizeof(struct k_sem));
++		k_sem_init(sem, 0, 1);
++		if (sem) {
++			k_thread_custom_data_set(sem);
++		}
++	}
++	return (void *)sem;
++}
++
++static int32_t semphr_take_wrapper(void *semphr, uint32_t block_time_tick)
++{
++	if (block_time_tick == OSI_FUNCS_TIME_BLOCKING) {
++		int ret = k_sem_take((struct k_sem *)semphr, K_FOREVER);
++
++		if (ret == 0) {
++			return 1;
++		}
++	} else {
++		int ms = block_time_tick * portTICK_PERIOD_MS;
++		int ret = k_sem_take((struct k_sem *)semphr, K_MSEC(ms));
++
++		if (ret == 0) {
++			return 1;
++		}
++	}
++	return 0;
++}
++
++static int32_t semphr_give_wrapper(void *semphr)
++{
++	k_sem_give((struct k_sem *) semphr);
++	return 1;
++}
++
++static void *recursive_mutex_create_wrapper(void)
++{
++	struct k_mutex *my_mutex = (struct k_mutex *) k_malloc(sizeof(struct k_mutex));
++
++	k_mutex_init(my_mutex);
++	return (void *)my_mutex;
++}
++
++static void *mutex_create_wrapper(void)
++{
++	struct k_mutex *my_mutex = (struct k_mutex *) k_malloc(sizeof(struct k_mutex));
++
++	k_mutex_init(my_mutex);
++	return (void *)my_mutex;
++}
++
++static void mutex_delete_wrapper(void *mutex)
++{
++	k_free(mutex);
++}
++
++static int32_t IRAM_ATTR mutex_lock_wrapper(void *mutex)
++{
++	struct k_mutex *my_mutex = (struct k_mutex *) mutex;
++
++	k_mutex_lock(my_mutex, K_FOREVER);
++	return 0;
++}
++
++static int32_t IRAM_ATTR mutex_unlock_wrapper(void *mutex)
++{
++	struct k_mutex *my_mutex = (struct k_mutex *) mutex;
++
++	k_mutex_unlock(my_mutex);
++	return 0;
++}
++
++static void *queue_create_wrapper(uint32_t queue_len, uint32_t item_size)
++{
++	struct k_queue *queue = (struct k_queue *)k_malloc(sizeof(struct k_queue));
++
++	if (queue == NULL) {
++		LOG_ERR("queue malloc failed");
++		return NULL;
++	}
++
++	k_msgq_init((struct k_msgq *)queue, wifi_msgq_buffer, item_size, queue_len);
++	return (void *)queue;
++}
++
++static void delete_wrapper(void *handle)
++{
++	k_free(handle);
++}
++
++static int32_t queue_send_wrapper(void *queue, void *item, uint32_t block_time_tick)
++{
++	if (block_time_tick == OSI_FUNCS_TIME_BLOCKING) {
++		k_msgq_put((struct k_msgq *)queue, item, K_FOREVER);
++	} else {
++		int ms = block_time_tick * portTICK_PERIOD_MS;
++
++		k_msgq_put((struct k_msgq *)queue, item, K_MSEC(ms));
++	}
++	return 1;
++}
++
++static int32_t IRAM_ATTR queue_send_from_isr_wrapper(void *queue, void *item, void *hptw)
++{
++	int *hpt = (int *) hptw;
++
++	k_msgq_put((struct k_msgq *)queue, item, K_NO_WAIT);
++	*hpt = 0;
++	return 1;
++}
++
++int32_t queue_send_to_back_wrapper(void *queue, void *item, uint32_t block_time_tick)
++{
++	ARG_UNUSED(queue);
++	ARG_UNUSED(item);
++	ARG_UNUSED(block_time_tick);
++
++	return 0;
++}
++
++int32_t queue_send_to_front_wrapper(void *queue, void *item, uint32_t block_time_tick)
++{
++	ARG_UNUSED(queue);
++	ARG_UNUSED(item);
++	ARG_UNUSED(block_time_tick);
++
++	return 0;
++}
++
++static int32_t queue_recv_wrapper(void *queue, void *item, uint32_t block_time_tick)
++{
++	if (block_time_tick == OSI_FUNCS_TIME_BLOCKING) {
++		k_msgq_get((struct k_msgq *)queue, item, K_FOREVER);
++	} else {
++		int ms = block_time_tick * portTICK_PERIOD_MS;
++
++		k_msgq_get((struct k_msgq *)queue, item, K_MSEC(ms));
++	}
++	return 1;
++}
++
++static uint32_t event_group_wait_bits_wrapper(void *event, uint32_t bits_to_wait_for, int clear_on_exit, int wait_for_all_bits, uint32_t block_time_tick)
++{
++	ARG_UNUSED(event);
++	ARG_UNUSED(bits_to_wait_for);
++	ARG_UNUSED(clear_on_exit);
++	ARG_UNUSED(wait_for_all_bits);
++	ARG_UNUSED(block_time_tick);
++
++	return 0;
++}
++
++static int32_t task_create_pinned_to_core_wrapper(void *task_func, const char *name, uint32_t stack_depth, void *param, uint32_t prio, void *task_handle, uint32_t core_id)
++{
++	k_tid_t tid = k_thread_create(&wifi_task_handle, wifi_stack, stack_depth,
++				      (k_thread_entry_t)task_func, param, NULL, NULL,
++				      prio, K_INHERIT_PERMS, K_NO_WAIT);
++
++	k_thread_name_set(tid, name);
++
++	*(int32_t *)task_handle = (int32_t) tid;
++	return 1;
++}
++
++static int32_t task_create_wrapper(void *task_func, const char *name, uint32_t stack_depth, void *param, uint32_t prio, void *task_handle)
++{
++	k_tid_t tid = k_thread_create(&wifi_task_handle, wifi_stack, stack_depth,
++				      (k_thread_entry_t)task_func, param, NULL, NULL,
++				      prio, K_INHERIT_PERMS, K_NO_WAIT);
++
++	k_thread_name_set(tid, name);
++
++	*(int32_t *)task_handle = (int32_t) tid;
++	return 1;
++}
++
++static int32_t IRAM_ATTR task_ms_to_tick_wrapper(uint32_t ms)
++{
++	return (int32_t) K_MSEC(ms).ticks;
++}
++
++static int32_t task_get_max_priority_wrapper(void)
++{
++	return (int32_t)(4);
++}
++
++static int32_t esp_event_post_wrapper(const char* event_base, int32_t event_id, void* event_data, size_t event_data_size, uint32_t ticks_to_wait)
++{
++	ARG_UNUSED(event_base);
++	ARG_UNUSED(event_id);
++	ARG_UNUSED(event_data);
++	ARG_UNUSED(event_data_size);
++	ARG_UNUSED(ticks_to_wait);
++
++	LOG_ERR("%s not yet supported", __func__);
++	return 0;
++}
++
++static void IRAM_ATTR wifi_apb80m_request_wrapper(void)
++{
++#ifdef CONFIG_PM_ENABLE
++	wifi_apb80m_request();
++#endif
++}
++
++static void IRAM_ATTR wifi_apb80m_release_wrapper(void)
++{
++#ifdef CONFIG_PM_ENABLE
++	wifi_apb80m_release();
++#endif
++}
++
++static void IRAM_ATTR timer_arm_wrapper(void *timer, uint32_t tmout, bool repeat)
++{
++	ets_timer_arm(timer, tmout, repeat);
++}
++
++static void IRAM_ATTR timer_disarm_wrapper(void *timer)
++{
++	ets_timer_disarm(timer);
++}
++
++static void timer_done_wrapper(void *ptimer)
++{
++	ets_timer_done(ptimer);
++}
++
++static void timer_setfn_wrapper(void *ptimer, void *pfunction, void *parg)
++{
++	ets_timer_setfn(ptimer, pfunction, parg);
++}
++
++static void IRAM_ATTR timer_arm_us_wrapper(void *ptimer, uint32_t us, bool repeat)
++{
++	ets_timer_arm_us(ptimer, us, repeat);
++}
++
++static int get_time_wrapper(void *t)
++{
++	return os_get_time(t);
++}
++
++static void *IRAM_ATTR malloc_internal_wrapper(size_t size)
++{
++	void *ptr = k_malloc(size);
++
++	if (ptr == NULL) {
++		LOG_ERR("malloc failed");
++	}
++	return ptr;
++}
++
++static void *IRAM_ATTR realloc_internal_wrapper(void *ptr, size_t size)
++{
++	ARG_UNUSED(ptr);
++	ARG_UNUSED(size);
++
++	LOG_ERR("%s not yet supported", __func__);
++	return NULL;
++}
++
++static void *IRAM_ATTR calloc_internal_wrapper(size_t n, size_t size)
++{
++	return k_calloc(n, size);
++}
++
++static void *IRAM_ATTR zalloc_internal_wrapper(size_t size)
++{
++	void *ptr = calloc_internal_wrapper(1, size);
++
++	if (ptr) {
++		memset(ptr, 0, size);
++	}
++	return ptr;
++}
++
++uint32_t uxQueueMessagesWaiting(void *queue)
++{
++	ARG_UNUSED(queue);
++
++	return 0;
++}
++
++void *xEventGroupCreate(void)
++{
++	LOG_ERR("EventGroup not supported!");
++	return NULL;
++}
++
++void vEventGroupDelete(void *grp)
++{
++	ARG_UNUSED(grp);
++}
++
++uint32_t xEventGroupSetBits(void *ptr, uint32_t data)
++{
++	ARG_UNUSED(ptr);
++	ARG_UNUSED(data);
++
++	return 0;
++}
++
++uint32_t xEventGroupClearBits(void *ptr, uint32_t data)
++{
++	ARG_UNUSED(ptr);
++	ARG_UNUSED(data);
++
++	return 0;
++}
++
++void *xTaskGetCurrentTaskHandle(void)
++{
++	return (void *)k_current_get();
++}
++
++void vTaskDelay(uint32_t ticks)
++{
++	int ms = ticks * portTICK_PERIOD_MS;
++
++	k_sleep(K_MSEC(ms));
++}
++
++static void set_intr_wrapper(int32_t cpu_no, uint32_t intr_source, uint32_t intr_num, int32_t intr_prio)
++{
++	ARG_UNUSED(cpu_no);
++
++	intr_matrix_set(0,intr_source, intr_num);
++	esprv_intc_int_set_priority(intr_num, intr_prio);
++	esprv_intc_int_set_type(intr_num, 0);
++}
++
++static void clear_intr_wrapper(uint32_t intr_source, uint32_t intr_num)
++{
++	ARG_UNUSED(intr_source);
++	ARG_UNUSED(intr_num);
++}
++
++static void set_isr_wrapper(int32_t n, void *f, void *arg)
++{
++	irq_disable(n);
++	irq_connect_dynamic(n, 2 ,f, arg, 0);
++}
++
++static void intr_on(unsigned int mask)
++{
++	esprv_intc_int_enable(mask);
++}
++
++static void intr_off(unsigned int mask)
++{
++	esprv_intc_int_disable(mask);
++}
++
++uint32_t esp_get_free_heap_size(void)
++{
++	/* FIXME: API to get free heap size is not available in Zephyr. */
++	/* It is only used by ESP-MESH feature (not supported yet) */
++	return 10000;
++}
++
++static unsigned long random(void)
++{
++	return sys_rand32_get(); 
++}
++
++static void wifi_clock_enable_wrapper(void)
++{
++	wifi_module_enable();
++}
++
++static void wifi_clock_disable_wrapper(void)
++{
++	wifi_module_disable();
++}
++
++static void wifi_reset_mac_wrapper(void)
++{
++	SET_PERI_REG_MASK(SYSCON_WIFI_RST_EN_REG, SYSTEM_MAC_RST);
++	CLEAR_PERI_REG_MASK(SYSCON_WIFI_RST_EN_REG, SYSTEM_MAC_RST);
++}
++
++int32_t nvs_set_i8(uint32_t handle, const char *key, int8_t value)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(value);
++
++	return 0;
++}
++
++int32_t nvs_get_i8(uint32_t handle, const char *key, int8_t *out_value)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(out_value);
++
++	return 0;
++}
++
++int32_t nvs_set_u8(uint32_t handle, const char *key, uint8_t value)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(value);
++
++	return 0;
++}
++
++int32_t nvs_get_u8(uint32_t handle, const char *key, uint8_t *out_value)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(out_value);
++
++	return 0;
++}
++
++int32_t nvs_set_u16(uint32_t handle, const char *key, uint16_t value)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(value);
++
++	return 0;
++}
++
++int32_t nvs_get_u16(uint32_t handle, const char *key, uint16_t *out_value)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(out_value);
++
++	return 0;
++}
++
++int32_t nvs_open(const char *name, uint32_t open_mode, uint32_t *out_handle)
++{
++	ARG_UNUSED(name);
++	ARG_UNUSED(open_mode);
++	ARG_UNUSED(out_handle);
++
++	return 0;
++}
++
++void nvs_close(uint32_t handle)
++{
++	ARG_UNUSED(handle);
++
++	return;
++}
++
++int32_t nvs_commit(uint32_t handle)
++{
++	ARG_UNUSED(handle);
++
++	return 0;
++}
++
++int32_t nvs_set_blob(uint32_t handle, const char *key, const void *value,
++		     size_t length)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(value);
++	ARG_UNUSED(length);
++
++	return 0;
++}
++
++int32_t nvs_get_blob(uint32_t handle, const char *key, void *out_value,
++		     size_t *length)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++	ARG_UNUSED(out_value);
++	ARG_UNUSED(length);
++
++	return 0;
++}
++
++int32_t nvs_erase_key(uint32_t handle, const char *key)
++{
++	ARG_UNUSED(handle);
++	ARG_UNUSED(key);
++
++	return 0;
++}
++
++static int coex_init_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_init();
++#else
++	return 0;
++#endif
++}
++
++static void coex_deinit_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	coex_deinit();
++#endif
++}
++
++static int coex_enable_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_enable();
++#else
++	return 0;
++#endif
++}
++
++static void coex_disable_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	coex_disable();
++#endif
++}
++
++static IRAM_ATTR uint32_t coex_status_get_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_status_get();
++#else
++	return 0;
++#endif
++}
++
++static void coex_condition_set_wrapper(uint32_t type, bool dissatisfy)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	coex_condition_set(type, dissatisfy);
++#endif
++}
++
++static int coex_wifi_request_wrapper(uint32_t event, uint32_t latency, uint32_t duration)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_wifi_request(event, latency, duration);
++#else
++	return 0;
++#endif
++}
++
++static IRAM_ATTR int coex_wifi_release_wrapper(uint32_t event)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_wifi_release(event);
++#else
++	return 0;
++#endif
++}
++
++static int coex_wifi_channel_set_wrapper(uint8_t primary, uint8_t secondary)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_wifi_channel_set(primary, secondary);
++#else
++	return 0;
++#endif
++}
++
++static IRAM_ATTR int coex_event_duration_get_wrapper(uint32_t event, uint32_t *duration)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_event_duration_get(event, duration);
++#else
++	return 0;
++#endif
++}
++
++static int coex_pti_get_wrapper(uint32_t event, uint8_t *pti)
++{
++	ARG_UNUSED(event);
++	ARG_UNUSED(pti);
++
++	return 0;
++}
++
++static void coex_schm_status_bit_clear_wrapper(uint32_t type, uint32_t status)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	coex_schm_status_bit_clear(type, status);
++#endif
++}
++
++static void coex_schm_status_bit_set_wrapper(uint32_t type, uint32_t status)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	coex_schm_status_bit_set(type, status);
++#endif
++}
++
++static IRAM_ATTR int coex_schm_interval_set_wrapper(uint32_t interval)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_schm_interval_set(interval);
++#else
++	return 0;
++#endif
++}
++
++static uint32_t coex_schm_interval_get_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_schm_interval_get();
++#else
++	return 0;
++#endif
++}
++
++static uint8_t coex_schm_curr_period_get_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_schm_curr_period_get();
++#else
++	return 0;
++#endif
++}
++
++static void * coex_schm_curr_phase_get_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_schm_curr_phase_get();
++#else
++	return NULL;
++#endif
++}
++
++static int coex_schm_curr_phase_idx_set_wrapper(int idx)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_schm_curr_phase_idx_set(idx);
++#else
++	return 0;
++#endif
++}
++
++static int coex_schm_curr_phase_idx_get_wrapper(void)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	return coex_schm_curr_phase_idx_get();
++#else
++	return 0;
++#endif
++}
++
++static void IRAM_ATTR esp_empty_wrapper(void)
++{
++
++}
++
++int32_t IRAM_ATTR coex_is_in_isr_wrapper(void)
++{
++	return !k_is_in_isr();
++}
++
++static uint32_t esp_clk_slowclk_cal_get_wrapper(void)
++{
++	/* The bit width of WiFi light sleep clock calibration is 12 while the one of
++	 * system is 19. It should shift 19 - 12 = 7.
++	 */
++	return (REG_READ(RTC_SLOW_CLK_CAL_REG) >> (RTC_CLK_CAL_FRACT - SOC_WIFI_LIGHT_SLEEP_CLK_WIDTH));
++}
++
++wifi_osi_funcs_t g_wifi_osi_funcs = {
++	._version = ESP_WIFI_OS_ADAPTER_VERSION,
++	._env_is_chip = env_is_chip_wrapper,
++	._set_intr = set_intr_wrapper,
++	._clear_intr = clear_intr_wrapper,
++	._set_isr = set_isr_wrapper,
++	._ints_on = intr_on,
++	._ints_off = intr_off,
++	._is_from_isr = k_is_in_isr,
++	._spin_lock_create = spin_lock_create_wrapper,
++	._spin_lock_delete = k_free,
++	._wifi_int_disable = wifi_int_disable_wrapper,
++	._wifi_int_restore = wifi_int_restore_wrapper,
++	._task_yield_from_isr = task_yield_from_isr_wrapper,
++	._semphr_create = semphr_create_wrapper,
++	._semphr_delete = semphr_delete_wrapper,
++	._semphr_take = semphr_take_wrapper,
++	._semphr_give = semphr_give_wrapper,
++	._wifi_thread_semphr_get = wifi_thread_semphr_get_wrapper,
++	._mutex_create = mutex_create_wrapper,
++	._recursive_mutex_create = recursive_mutex_create_wrapper,
++	._mutex_delete = mutex_delete_wrapper,
++	._mutex_lock = mutex_lock_wrapper,
++	._mutex_unlock = mutex_unlock_wrapper,
++	._queue_create = queue_create_wrapper,
++	._queue_delete = delete_wrapper,
++	._queue_send = queue_send_wrapper,
++	._queue_send_from_isr = queue_send_from_isr_wrapper,
++	._queue_send_to_back = queue_send_to_back_wrapper,
++	._queue_send_to_front = queue_send_to_front_wrapper,
++	._queue_recv = queue_recv_wrapper,
++	._queue_msg_waiting = uxQueueMessagesWaiting,
++	._event_group_create = (void *(*)(void))xEventGroupCreate,
++	._event_group_delete = (void (*)(void *))vEventGroupDelete,
++	._event_group_set_bits = xEventGroupSetBits,
++	._event_group_clear_bits = xEventGroupClearBits,
++	._event_group_wait_bits = event_group_wait_bits_wrapper,
++	._task_create_pinned_to_core = task_create_pinned_to_core_wrapper,
++	._task_create = task_create_wrapper,
++	._task_delete = delete_wrapper,
++	._task_delay = vTaskDelay,
++	._task_ms_to_tick = task_ms_to_tick_wrapper,
++	._task_get_current_task = (void *(*)(void))xTaskGetCurrentTaskHandle,
++	._task_get_max_priority = task_get_max_priority_wrapper,
++	._malloc = k_malloc,
++	._free = k_free,
++	._event_post = esp_event_post_wrapper,
++	._get_free_heap_size = esp_get_free_heap_size,
++	._rand = sys_rand32_get,
++	._dport_access_stall_other_cpu_start_wrap = s_esp_dport_access_stall_other_cpu_start,
++	._dport_access_stall_other_cpu_end_wrap = s_esp_dport_access_stall_other_cpu_end,
++	._wifi_apb80m_request = wifi_apb80m_request_wrapper,
++	._wifi_apb80m_release = wifi_apb80m_release_wrapper,
++	._phy_disable = esp_phy_disable,
++	._phy_enable = esp_phy_enable,
++	._phy_update_country_info = esp_phy_update_country_info,
++	._read_mac = esp_read_mac,
++	._timer_arm = timer_arm_wrapper,
++	._timer_disarm = timer_disarm_wrapper,
++	._timer_done = timer_done_wrapper,
++	._timer_setfn = timer_setfn_wrapper,
++	._timer_arm_us = timer_arm_us_wrapper,
++	._wifi_reset_mac = wifi_reset_mac_wrapper,
++	._wifi_clock_enable = wifi_clock_enable_wrapper,
++	._wifi_clock_disable = wifi_clock_disable_wrapper,
++	._wifi_rtc_enable_iso = esp_empty_wrapper,
++	._wifi_rtc_disable_iso = esp_empty_wrapper,
++	._esp_timer_get_time = esp_timer_get_time,
++	._nvs_set_i8 = nvs_set_i8,
++	._nvs_get_i8 = nvs_get_i8,
++	._nvs_set_u8 = nvs_set_u8,
++	._nvs_get_u8 = nvs_get_u8,
++	._nvs_set_u16 = nvs_set_u16,
++	._nvs_get_u16 = nvs_get_u16,
++	._nvs_open = nvs_open,
++	._nvs_close = nvs_close,
++	._nvs_commit = nvs_commit,
++	._nvs_set_blob = nvs_set_blob,
++	._nvs_get_blob = nvs_get_blob,
++	._nvs_erase_key = nvs_erase_key,
++	._get_random = os_get_random,
++	._get_time = get_time_wrapper,
++	._random = random,
++	._slowclk_cal_get = esp_clk_slowclk_cal_get_wrapper,
++	._log_write = esp_log_write,
++	._log_writev = esp_log_writev,
++	._log_timestamp = k_uptime_get_32,
++	._malloc_internal =  malloc_internal_wrapper,
++	._realloc_internal = realloc_internal_wrapper,
++	._calloc_internal = calloc_internal_wrapper,
++	._zalloc_internal = zalloc_internal_wrapper,
++	._wifi_malloc = wifi_malloc,
++	._wifi_realloc = wifi_realloc,
++	._wifi_calloc = wifi_calloc,
++	._wifi_zalloc = wifi_zalloc_wrapper,
++	._wifi_create_queue = wifi_create_queue_wrapper,
++	._wifi_delete_queue = wifi_delete_queue_wrapper,
++	._coex_init = coex_init_wrapper,
++	._coex_deinit = coex_deinit_wrapper,
++	._coex_enable = coex_enable_wrapper,
++	._coex_disable = coex_disable_wrapper,
++	._coex_status_get = coex_status_get_wrapper,
++	._coex_condition_set = coex_condition_set_wrapper,
++	._coex_wifi_request = coex_wifi_request_wrapper,
++	._coex_wifi_release = coex_wifi_release_wrapper,
++	._coex_wifi_channel_set = coex_wifi_channel_set_wrapper,
++	._coex_event_duration_get = coex_event_duration_get_wrapper,
++	._coex_pti_get = coex_pti_get_wrapper,
++	._coex_schm_status_bit_clear = coex_schm_status_bit_clear_wrapper,
++	._coex_schm_status_bit_set = coex_schm_status_bit_set_wrapper,
++	._coex_schm_interval_set = coex_schm_interval_set_wrapper,
++	._coex_schm_interval_get = coex_schm_interval_get_wrapper,
++	._coex_schm_curr_period_get = coex_schm_curr_period_get_wrapper,
++	._coex_schm_curr_phase_get = coex_schm_curr_phase_get_wrapper,
++	._coex_schm_curr_phase_idx_set = coex_schm_curr_phase_idx_set_wrapper,
++	._coex_schm_curr_phase_idx_get = coex_schm_curr_phase_idx_get_wrapper,
++	._magic = ESP_WIFI_OS_ADAPTER_MAGIC,
++};
++
++esp_err_t esp_wifi_init(const wifi_init_config_t *config)
++{
++#if CONFIG_ESP32_WIFI_SW_COEXIST_ENABLE
++	coex_init();
++#endif
++
++#if CONFIG_IDF_TARGET_ESP32
++	s_wifi_mac_time_update_cb = esp_wifi_internal_update_mac_time;
++#endif
++
++	return esp_wifi_init_internal(config);
++}
+diff --git a/zephyr/esp32c3/src/wpa_supplicant/port/os_riscv.c b/zephyr/esp32c3/src/wpa_supplicant/port/os_riscv.c
+new file mode 100644
+index 000000000..2dc14b714
+--- /dev/null
++++ b/zephyr/esp32c3/src/wpa_supplicant/port/os_riscv.c
+@@ -0,0 +1,55 @@
++/*
++ * wpa_supplicant/hostapd / Internal implementation of OS specific functions
++ * Copyright (c) 2005-2006, Jouni Malinen <j@w1.fi>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ * Alternatively, this software may be distributed under the terms of BSD
++ * license.
++ *
++ * See README and COPYING for more details.
++ *
++ * This file is an example of operating system specific  wrapper functions.
++ * This version implements many of the functions internally, so it can be used
++ * to fill in missing functions from the target system C libraries.
++ *
++ * Some of the functions are using standard C library calls in order to keep
++ * this file in working condition to allow the functions to be tested on a
++ * Linux target. Please note that OS_NO_C_LIB_DEFINES needs to be defined for
++ * this file to work correctly. Note that these implementations are only
++ * examples and are not optimized for speed.
++ */
++
++#include "os.h"
++#include <stdlib.h>
++#include <string.h>
++#include "esp_system.h"
++#include "utils/common.h"
++#include <random/rand32.h>
++#include <zephyr.h>
++
++int os_get_time(struct os_time *t)
++{
++	if (t == NULL) {
++		return -1;
++	}
++
++	int64_t now = k_uptime_ticks();
++	t->sec = now / CONFIG_SYS_CLOCK_TICKS_PER_SEC;
++	t->usec = k_ticks_to_us_floor64(now);
++
++	return 0;
++}
++
++unsigned long os_random(void)
++{
++	return sys_rand32_get();
++}
++
++int os_get_random(unsigned char *buf, size_t len)
++{
++	sys_rand_get((void *)buf, len);
++	return 0;
++}
+-- 
+2.33.0
+
