@@ -7,6 +7,7 @@
 #include <irq.h>
 #include <logging/log_backend.h>
 #include <logging/log_core.h>
+#include <logging/log_ctrl.h>
 #include <logging/log_msg.h>
 #include <logging/log_output.h>
 #include <net/golioth.h>
@@ -141,7 +142,8 @@ static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
 
 	cbor_encode_text_stringz(&cbor->map, "module");
 	cbor_encode_text_stringz(&cbor->map,
-				 log_name_get(log_msg_source_id_get(msg)));
+				 log_source_name_get(log_msg_domain_id_get(msg),
+						     log_msg_source_id_get(msg)));
 
 	cbor_encode_text_stringz(&cbor->map, "level");
 	cbor_encode_text_stringz(&cbor->map, level_str(msg->hdr.ids.level));
@@ -152,6 +154,7 @@ static void log2_cbor_append_headers(struct golioth_log_ctx *ctx,
 {
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
 	void *source = (void *)log_msg2_get_source(msg);
+	uint8_t domain_id = log_msg2_get_domain(msg);
 
 	cbor_encode_text_stringz(&cbor->map, "uptime");
 	cbor_encode_uint(&cbor->map,
@@ -165,7 +168,7 @@ static void log2_cbor_append_headers(struct golioth_log_ctx *ctx,
 
 		cbor_encode_text_stringz(&cbor->map, "module");
 		cbor_encode_text_stringz(&cbor->map,
-					 log_name_get(source_id));
+					 log_source_name_get(domain_id, source_id));
 	}
 
 	cbor_encode_text_stringz(&cbor->map, "level");
