@@ -1,8 +1,8 @@
-image: zephyrprojectrtos/ci:v0.18.3
+image: zephyrprojectrtos/ci:v0.19.0
 
 variables:
   ZEPHYR_TOOLCHAIN_VARIANT: zephyr
-  ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.13.0
+  ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.13.1
 
 .west-init: &west-init
   - rm -rf .west modules/lib/golioth
