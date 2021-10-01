@@ -23,4 +23,4 @@ RUN apt install goliothctl
 RUN apt install coap
 
 # west completion
-RUN west completion bash > /etc/bash_completion.d/
+RUN west completion bash > /etc/bash_completion.d/west-completion.bash
