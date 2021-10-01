@@ -12,6 +12,7 @@ tasks:
       file = west.yml
       EOF
       west update
+      west completion bash > /etc/bash_completion.d/west-completion.bash
     command: |
       export ZEPHYR_BASE=/workspace/zephyr
 
