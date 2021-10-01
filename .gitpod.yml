@@ -9,7 +9,7 @@ tasks:
       printf '[manifest] \npath = modules/lib/golioth \nfile = west.yml' >> /workspace/.west/config
       west update
       west completion bash > ~/west-completion.bash
-      echo "source west-completion.bash" >> ~/.bashrc
+      echo "source ~/west-completion.bash" >> ~/.bashrc
     command: |
       export ZEPHYR_BASE=/workspace/zephyr
 
