@@ -21,3 +21,7 @@ RUN echo "deb [trusted=yes] https://apt.fury.io/golioth/ /" | tee /etc/apt/sourc
 RUN apt update
 RUN apt install goliothctl
 RUN apt install coap
+RUN mkdir -p /workspace/.west
+RUN printf '[manifest] \npath = modules/lib/golioth \nfile = west.yml' >> /workspace/.west/config
+RUN west update
+RUN west completion bash > /etc/bash_completion.d/west-completion.bash
