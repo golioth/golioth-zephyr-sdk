@@ -4,7 +4,8 @@ image:
 checkoutLocation: modules/lib/golioth
 
 tasks:
-  - command: |
+  - init: west update
+    command: |
       export ZEPHYR_BASE=/workspace/zephyr
 
 github:
