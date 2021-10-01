@@ -17,7 +17,7 @@ ENV ZEPHYR_TOOLCHAIN_VARIANT zephyr
 ENV ZEPHYR_SDK_INSTALL_DIR /opt/toolchains/zephyr-sdk-0.13.0
 
 # Install goliothctl
-RUN echo "deb [trusted=yes] https://repos.golioth.io/apt/ /" | sudo tee /etc/apt/sources.list.d/golioth.list
+RUN echo "deb [trusted=yes] https://apt.fury.io/golioth/ /" | tee /etc/apt/sources.list.d/golioth.list
 RUN apt update
 RUN apt install goliothctl
 RUN apt install coap
