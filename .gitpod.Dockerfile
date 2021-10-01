@@ -21,4 +21,3 @@ RUN echo "deb [trusted=yes] https://apt.fury.io/golioth/ /" | tee /etc/apt/sourc
 RUN apt update
 RUN apt install goliothctl
 RUN apt install coap
-RUN mkdir -p /workspace/.west
