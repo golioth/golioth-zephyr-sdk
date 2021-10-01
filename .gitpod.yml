@@ -5,8 +5,8 @@ checkoutLocation: modules/lib/golioth
 
 tasks:
   - init: |
-      west update
       printf '[manifest] \npath = modules/lib/golioth \nfile = west.yml' >> /workspace/.west/config
+      west update
       sudo west completion bash > /etc/bash_completion.d/west-completion.bash
     command: |
       export ZEPHYR_BASE=/workspace/zephyr
