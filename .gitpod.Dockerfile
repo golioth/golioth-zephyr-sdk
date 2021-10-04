@@ -1,4 +1,4 @@
-FROM zephyrprojectrtos/zephyr-build:v0.18.5
+FROM zephyrprojectrtos/zephyr-build:v0.19.0
 
 MAINTAINER m.niestroj@golioth.io
 
