@@ -32,7 +32,7 @@ subtree of existing `west`_ based project (e.g. Zephyr RTOS):
     - name: golioth
       path: modules/lib/golioth
       revision: main
-      url: git@github.com:golioth/zephyr.git
+      url: https://github.com/golioth/zephyr-sdk.git
 
 and clone all repositories including that one by running:
 
@@ -62,7 +62,7 @@ Add following entry to ``west.yml`` file in ``manifest/projects`` subtree:
     - name: golioth
       path: modules/lib/golioth
       revision: main
-      url: git@github.com:golioth/zephyr.git
+      url: https://github.com/golioth/zephyr-sdk.git
 
 Now clone all repositories with:
 
