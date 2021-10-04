@@ -9,6 +9,8 @@ manifest:
           - cmsis
           - hal_espressif
           - hal_nordic
+          - hal_st
+          - hal_stm32
           - mbedtls
           - mcuboot
           - mcumgr

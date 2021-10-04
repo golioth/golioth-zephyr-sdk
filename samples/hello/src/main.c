@@ -8,8 +8,10 @@
 LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 #include <net/coap.h>
+#include <net/dhcpv4.h>
 #include <net/golioth/system_client.h>
 #include <net/golioth/wifi.h>
+#include <net/net_if.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
@@ -38,6 +40,11 @@ void main(void)
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");
 		wifi_connect();
+	}
+
+	if (IS_ENABLED(CONFIG_NET_L2_ETHERNET) && IS_ENABLED(CONFIG_NET_DHCPV4)) {
+		LOG_INF("Starting DHCPv4");
+		net_dhcpv4_start(net_if_get_default());
 	}
 
 	client->on_message = golioth_on_message;
