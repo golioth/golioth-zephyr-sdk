@@ -1,0 +1,17 @@
+&spi1 {
+  // W5500 connected over SPI
+  pinctrl-0 = <&spi1_sck_pa5 &spi1_nss_pa4
+  &spi1_miso_pa6 &spi1_mosi_pa7>;
+  status = "okay";
+  cs-gpios = <&gpiob 5 GPIO_ACTIVE_LOW>; // PB5
+
+  w5500: w5500@0 {
+    compatible = "wiznet,w5500";
+    label = "w5500";
+    status = "okay";
+    reg = <0x0>;
+    spi-max-frequency = <8000000>;
+    int-gpios = <&gpiob 3 GPIO_ACTIVE_LOW>;  // PB3
+    reset-gpios = <&gpiob 4 GPIO_ACTIVE_LOW>; // PB4
+  };
+};

@@ -11,6 +11,10 @@ LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 #include <net/golioth/system_client.h>
 #include <net/golioth/wifi.h>
 
+#ifdef IS_ENABLED(CONFIG_NET_L2_ETHERNET))
+#include <net/net_if.h>
+#endif
+
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
 static void golioth_on_message(struct golioth_client *client,
@@ -47,6 +51,14 @@ void main(void)
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");
 		wifi_connect();
+	}
+
+	if (IS_ENABLED(CONFIG_NET_L2_ETHERNET))
+	{
+		LOG_INF("Connecting to Ethernet");
+		struct net_if *iface;
+		iface = net_if_get_default();
+		net_dhcpv4_start(iface);
 	}
 
 	client->on_message = golioth_on_message;
