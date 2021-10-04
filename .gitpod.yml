@@ -2,7 +2,6 @@ image:
   file: .gitpod.Dockerfile
 
 checkoutLocation: modules/lib/golioth
-workspaceLocation: /workspace
 
 tasks:
   - name: West Init 
