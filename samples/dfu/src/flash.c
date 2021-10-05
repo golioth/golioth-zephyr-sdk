@@ -54,6 +54,11 @@ static int current_version_init(const struct device *dev)
 
 SYS_INIT(current_version_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
+/*
+ * @note This is a copy of ERASED_VAL_32() from mcumgr.
+ */
+#define ERASED_VAL_32(x) (((x) << 24) | ((x) << 16) | ((x) << 8) | (x))
+
 /**
  * Determines if the specified area of flash is completely unwritten.
  *
@@ -68,8 +73,13 @@ static int flash_area_check_empty(const struct flash_area *fa,
 	int bytes_to_read;
 	int rc;
 	int i;
+	uint8_t erased_val;
+	uint32_t erased_val_32;
 
 	__ASSERT_NO_MSG(fa->fa_size % 4 == 0);
+
+	erased_val = flash_area_erased_val(fa);
+	erased_val_32 = ERASED_VAL_32(erased_val);
 
 	end = fa->fa_size;
 	for (addr = 0; addr < end; addr += sizeof(data)) {
@@ -86,7 +96,7 @@ static int flash_area_check_empty(const struct flash_area *fa,
 		}
 
 		for (i = 0; i < bytes_to_read / 4; i++) {
-			if (data[i] != 0xffffffff) {
+			if (data[i] != erased_val_32) {
 				*out_empty = false;
 				flash_area_close(fa);
 				return 0;
