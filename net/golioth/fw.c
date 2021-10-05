@@ -30,16 +30,21 @@ enum {
 	COMPONENT_KEY_URI = 5,
 };
 
-static int parse_component(QCBORDecodeContext *decode_ctx,
+static int parse_component(QCBORDecodeContext *decode_ctx, const char *package,
 			   uint8_t *version, size_t *version_len,
 			   uint8_t *uri, size_t *uri_len)
 {
 	QCBORError qerr;
+	UsefulBufC package_requested = UsefulBuf_FromSZ(package);
+	UsefulBufC package_parsed;
 	UsefulBufC version_bufc;
 	UsefulBufC uri_bufc;
 	int err = 0;
 
 	QCBORDecode_EnterMap(decode_ctx, NULL);
+
+	QCBORDecode_GetTextStringInMapN(decode_ctx, COMPONENT_KEY_PACKAGE,
+					&package_parsed);
 
 	QCBORDecode_GetTextStringInMapN(decode_ctx, COMPONENT_KEY_VERSION,
 					&version_bufc);
@@ -48,10 +53,18 @@ static int parse_component(QCBORDecodeContext *decode_ctx,
 					&uri_bufc);
 
 	qerr = QCBORDecode_GetError(decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("Failed to get version and URI: %d (%s)", qerr, qcbor_err_to_str(qerr));
+	if (qerr == QCBOR_ERR_NO_MORE_ITEMS) {
+		err = -ENODATA;
+		goto exit_map;
+	} else if (qerr != QCBOR_SUCCESS) {
+		LOG_ERR("Failed to get package, version and URI: %d (%s)",
+			qerr, qcbor_err_to_str(qerr));
 		err = -EINVAL;
 		goto exit_map;
+	}
+
+	if (UsefulBuf_Compare(package_requested, package_parsed) != 0) {
+		return -EAGAIN;
 	}
 
 	if (version_bufc.len > *version_len) {
@@ -102,7 +115,13 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
 
 	QCBORDecode_EnterArrayFromMapN(&decode_ctx, MANIFEST_KEY_COMPONENTS);
 
-	err = parse_component(&decode_ctx, version, version_len, uri, uri_len);
+	do {
+		err = parse_component(&decode_ctx, "main", version, version_len, uri, uri_len);
+	} while (err == -EAGAIN);
+
+	if (err == -ENODATA) {
+		LOG_WRN("No 'main' component found");
+	}
 
 	QCBORDecode_ExitArray(&decode_ctx);
 
