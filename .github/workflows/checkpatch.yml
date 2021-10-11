@@ -1,0 +1,36 @@
+name: checkpatch
+
+on:
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  checkpatch:
+    runs-on: ubuntu-latest
+
+    container:
+      image: zephyrprojectrtos/ci:v0.18.3
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: modules/lib/golioth
+          fetch-depth: 0
+
+      - name: Init and update west
+        run: |
+          mkdir -p .west
+          cat <<EOF > .west/config
+          [manifest]
+          path = modules/lib/golioth
+          file = west.yml
+          EOF
+
+          west update -o=--depth=1 -n zephyr
+
+      - name: Run checkpatch
+        run: |
+          cd modules/lib/golioth
+          ../../../zephyr/scripts/checkpatch.pl --color=always --quiet --git origin/main..
