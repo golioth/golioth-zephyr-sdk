@@ -10,6 +10,32 @@
 #include <net/golioth.h>
 
 /**
+ * @brief State of downloading or updating the firmware.
+ */
+enum golioth_fw_state {
+	GOLIOTH_FW_STATE_IDLE = 0,
+	GOLIOTH_FW_STATE_DOWNLOADING = 1,
+	GOLIOTH_FW_STATE_DOWNLOADED = 2,
+	GOLIOTH_FW_STATE_UPDATING = 3,
+};
+
+/**
+ * @brief Result of downloading or updating the firmware.
+ */
+enum golioth_dfu_result {
+	GOLIOTH_DFU_RESULT_INITIAL = 0,
+	GOLIOTH_DFU_RESULT_FIRMWARE_UPDATED_SUCCESSFULLY,
+	GOLIOTH_DFU_RESULT_NOT_ENOUGH_FLASH_MEMORY,
+	GOLIOTH_DFU_RESULT_OUT_OF_RAM,
+	GOLIOTH_DFU_RESULT_CONNECTION_LOST,
+	GOLIOTH_DFU_RESULT_INTEGRITY_CHECK_FAILURE,
+	GOLIOTH_DFU_RESULT_UNSUPPORTED_PACKAGE_TYPE,
+	GOLIOTH_DFU_RESULT_INVALID_URI,
+	GOLIOTH_DFU_RESULT_FIRMWARE_UPDATE_FAILED,
+	GOLIOTH_DFU_RESULT_UNSUPPORTED_PROTOCOL,
+};
+
+/**
  * @brief Represents incoming firmware from Golioth.
  */
 struct golioth_fw_download_ctx {
@@ -74,5 +100,21 @@ int golioth_fw_download(struct golioth_client *client,
 			const char *uri, size_t uri_len,
 			struct coap_reply *reply,
 			golioth_blockwise_download_received_t received_cb);
+
+/**
+ * @brief Report state of firmware
+ *
+ * @param client Client instance
+ * @param package_name Package name of firmware
+ * @param state State of firmware
+ * @param result Result of downloading or updating firmware
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_fw_report_state(struct golioth_client *client,
+			    const char *package_name,
+			    enum golioth_fw_state state,
+			    enum golioth_dfu_result result);
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_FW_H_ */

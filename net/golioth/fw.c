@@ -16,6 +16,8 @@ LOG_MODULE_DECLARE(golioth);
 #define GOLIOTH_FW_DOWNLOAD	".u"
 #define GOLIOTH_FW_DESIRED	".u/desired"
 
+#define GOLIOTH_FW_REPORT_STATE_URI_BASE	".u/c/"
+
 enum {
 	MANIFEST_KEY_SEQUENCE_NUMBER = 1,
 	MANIFEST_KEY_HASH = 2,
@@ -293,4 +295,89 @@ int golioth_fw_download(struct golioth_client *client,
 	ctx->blockwise_ctx.received_cb = received_cb;
 
 	return golioth_fw_download_next(ctx);
+}
+
+int golioth_fw_report_state(struct golioth_client *client,
+			    const char *package_name,
+			    enum golioth_fw_state state,
+			    enum golioth_dfu_result result)
+{
+	struct coap_packet packet;
+	uint8_t uri[sizeof(GOLIOTH_FW_REPORT_STATE_URI_BASE) +
+		    CONFIG_GOLIOTH_FW_PACKAGE_NAME_MAX_LEN];
+	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN + 32 + sizeof(uri)];
+	QCBOREncodeContext encode_ctx;
+	UsefulBuf encode_bufc;
+	size_t encoded_len;
+	int written;
+	int err;
+	QCBORError qerr;
+
+	err = coap_packet_init(&packet, buffer, sizeof(buffer),
+			       COAP_VERSION_1, COAP_TYPE_CON,
+			       COAP_TOKEN_MAX_LEN, coap_next_token(),
+			       COAP_METHOD_POST, coap_next_id());
+	if (err) {
+		return err;
+	}
+
+	written = snprintf(uri, sizeof(uri), GOLIOTH_FW_REPORT_STATE_URI_BASE "%s",
+			   package_name);
+	if (written >= sizeof(uri)) {
+		LOG_ERR("not enough space in URI buffer");
+		return -ENOMEM;
+	}
+
+	err = coap_packet_append_option(&packet, COAP_OPTION_URI_PATH,
+					uri, written);
+	if (err) {
+		LOG_ERR("failed to append logs uri path: %d", err);
+		return err;
+	}
+
+	err = coap_append_option_int(&packet, COAP_OPTION_CONTENT_FORMAT,
+				     COAP_CONTENT_FORMAT_APP_CBOR);
+	if (err) {
+		LOG_ERR("failed to append logs content format: %d", err);
+		return err;
+	}
+
+	err = coap_packet_append_payload_marker(&packet);
+	if (err) {
+		LOG_ERR("failed to append logs payload marker: %d", err);
+		return err;
+	}
+
+	encode_bufc.ptr = &buffer[packet.offset];
+	encode_bufc.len = sizeof(buffer) - packet.offset;
+
+	QCBOREncode_Init(&encode_ctx, encode_bufc);
+
+	QCBOREncode_OpenMap(&encode_ctx);
+
+	QCBOREncode_AddUInt64ToMap(&encode_ctx, "s", state);
+	QCBOREncode_AddUInt64ToMap(&encode_ctx, "r", result);
+
+	QCBOREncode_CloseMap(&encode_ctx);
+
+	qerr = QCBOREncode_FinishGetSize(&encode_ctx, &encoded_len);
+	if (qerr != QCBOR_SUCCESS) {
+		/* TODO: better error mapping */
+		return -EINVAL;
+	}
+
+	/*
+	 * Add CBOR payload into CoAP payload. In fact CBOR is already in good
+	 * place in memory, so the only thing that is needed is moving forward
+	 * CoAP offset.
+	 *
+	 * TODO: add CoAP API that will prevent internal memcpy()
+	 */
+	err = coap_packet_append_payload(&packet, &buffer[packet.offset],
+					 encoded_len);
+	if (err) {
+		return err;
+	}
+
+	return golioth_send_coap(client, &packet);
 }

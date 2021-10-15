@@ -39,6 +39,12 @@ config GOLIOTH_FW
 	  Enable Golioth firmware management, which allows to ask for newest
 	  desired firmware and issue firmware download process.
 
+config GOLIOTH_FW_PACKAGE_NAME_MAX_LEN
+	int "Maximum length of package name"
+	default 32
+	help
+	  Defines maximum supported firmware package name.
+
 config GOLIOTH_SYSTEM_CLIENT
 	bool "System client"
 	select EVENTFD
