@@ -56,6 +56,20 @@ static int data_received(struct golioth_blockwise_download_ctx *ctx,
 	}
 
 	if (offset > 0 && last) {
+		err = golioth_fw_report_state(client, "main",
+					      GOLIOTH_FW_STATE_DOWNLOADED,
+					      GOLIOTH_DFU_RESULT_INITIAL);
+		if (err) {
+			LOG_ERR("Failed to update to '%s' state: %d", "downloaded", err);
+		}
+
+		err = golioth_fw_report_state(client, "main",
+					      GOLIOTH_FW_STATE_UPDATING,
+					      GOLIOTH_DFU_RESULT_INITIAL);
+		if (err) {
+			LOG_ERR("Failed to update to '%s' state: %d", "updating", err);
+		}
+
 		LOG_INF("Requesting upgrade");
 
 		err = boot_request_upgrade(BOOT_UPGRADE_TEST);
@@ -132,6 +146,13 @@ static int golioth_desired_update(const struct coap_packet *update,
 
 	uri_p = uri_strip_leading_slash(uri, &uri_len);
 
+	err = golioth_fw_report_state(client, "main",
+				      GOLIOTH_FW_STATE_DOWNLOADING,
+				      GOLIOTH_DFU_RESULT_INITIAL);
+	if (err) {
+		LOG_ERR("Failed to update to '%s' state: %d", "downloading", err);
+	}
+
 	err = golioth_fw_download(client, &update_ctx.fw_ctx, uri_p, uri_len,
 				  fw_reply, data_received);
 	if (err) {
@@ -147,6 +168,13 @@ static void golioth_on_connect(struct golioth_client *client)
 	struct coap_reply *reply;
 	int err;
 	int i;
+
+	err = golioth_fw_report_state(client, "main",
+				      GOLIOTH_FW_STATE_IDLE,
+				      GOLIOTH_DFU_RESULT_INITIAL);
+	if (err) {
+		LOG_ERR("Failed to report firmware state: %d", err);
+	}
 
 	for (i = 0; i < ARRAY_SIZE(coap_replies); i++) {
 		coap_reply_clear(&coap_replies[i]);
