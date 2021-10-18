@@ -32,6 +32,7 @@ struct dfu_ctx {
 };
 
 static struct dfu_ctx update_ctx;
+static enum golioth_dfu_result dfu_initial_result = GOLIOTH_DFU_RESULT_INITIAL;
 
 static int data_received(struct golioth_blockwise_download_ctx *ctx,
 			 const uint8_t *data, size_t offset, size_t len,
@@ -182,7 +183,7 @@ static void golioth_on_connect(struct golioth_client *client)
 				      current_version_str,
 				      NULL,
 				      GOLIOTH_FW_STATE_IDLE,
-				      GOLIOTH_DFU_RESULT_INITIAL);
+				      dfu_initial_result);
 	if (err) {
 		LOG_ERR("Failed to report firmware state: %d", err);
 	}
@@ -222,9 +223,19 @@ void main(void)
 
 	LOG_DBG("Start DFU sample");
 
-	err = boot_write_img_confirmed();
-	if (err) {
-		LOG_ERR("Failed to confirm image: %d", err);
+	if (!boot_is_img_confirmed()) {
+		/*
+		 * There is no shared context between previous update request
+		 * and current boot, so treat current image 'confirmed' flag as
+		 * an indication whether previous update process was successful
+		 * or not.
+		 */
+		dfu_initial_result = GOLIOTH_DFU_RESULT_FIRMWARE_UPDATED_SUCCESSFULLY;
+
+		err = boot_write_img_confirmed();
+		if (err) {
+			LOG_ERR("Failed to confirm image: %d", err);
+		}
 	}
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
