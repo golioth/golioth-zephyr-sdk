@@ -106,6 +106,8 @@ int golioth_fw_download(struct golioth_client *client,
  *
  * @param client Client instance
  * @param package_name Package name of firmware
+ * @param current_version Current firmware version
+ * @param target_version Target firmware version
  * @param state State of firmware
  * @param result Result of downloading or updating firmware
  *
@@ -114,6 +116,8 @@ int golioth_fw_download(struct golioth_client *client,
  */
 int golioth_fw_report_state(struct golioth_client *client,
 			    const char *package_name,
+			    const char *current_version,
+			    const char *target_version,
 			    enum golioth_fw_state state,
 			    enum golioth_dfu_result result);
 

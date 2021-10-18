@@ -56,14 +56,14 @@ static int data_received(struct golioth_blockwise_download_ctx *ctx,
 	}
 
 	if (offset > 0 && last) {
-		err = golioth_fw_report_state(client, "main",
+		err = golioth_fw_report_state(client, "main", NULL, NULL,
 					      GOLIOTH_FW_STATE_DOWNLOADED,
 					      GOLIOTH_DFU_RESULT_INITIAL);
 		if (err) {
 			LOG_ERR("Failed to update to '%s' state: %d", "downloaded", err);
 		}
 
-		err = golioth_fw_report_state(client, "main",
+		err = golioth_fw_report_state(client, "main", NULL, NULL,
 					      GOLIOTH_FW_STATE_UPDATING,
 					      GOLIOTH_DFU_RESULT_INITIAL);
 		if (err) {
@@ -146,7 +146,7 @@ static int golioth_desired_update(const struct coap_packet *update,
 
 	uri_p = uri_strip_leading_slash(uri, &uri_len);
 
-	err = golioth_fw_report_state(client, "main",
+	err = golioth_fw_report_state(client, "main", NULL, NULL,
 				      GOLIOTH_FW_STATE_DOWNLOADING,
 				      GOLIOTH_DFU_RESULT_INITIAL);
 	if (err) {
@@ -169,7 +169,7 @@ static void golioth_on_connect(struct golioth_client *client)
 	int err;
 	int i;
 
-	err = golioth_fw_report_state(client, "main",
+	err = golioth_fw_report_state(client, "main", NULL, NULL,
 				      GOLIOTH_FW_STATE_IDLE,
 				      GOLIOTH_DFU_RESULT_INITIAL);
 	if (err) {

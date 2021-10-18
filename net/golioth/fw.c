@@ -299,6 +299,8 @@ int golioth_fw_download(struct golioth_client *client,
 
 int golioth_fw_report_state(struct golioth_client *client,
 			    const char *package_name,
+			    const char *current_version,
+			    const char *target_version,
 			    enum golioth_fw_state state,
 			    enum golioth_dfu_result result)
 {
@@ -357,6 +359,14 @@ int golioth_fw_report_state(struct golioth_client *client,
 
 	QCBOREncode_AddUInt64ToMap(&encode_ctx, "s", state);
 	QCBOREncode_AddUInt64ToMap(&encode_ctx, "r", result);
+
+	if (current_version && current_version[0] != '\0') {
+		QCBOREncode_AddSZStringToMap(&encode_ctx, "v", current_version);
+	}
+
+	if (target_version && target_version[0] != '\0') {
+		QCBOREncode_AddSZStringToMap(&encode_ctx, "t", target_version);
+	}
 
 	QCBOREncode_CloseMap(&encode_ctx);
 
