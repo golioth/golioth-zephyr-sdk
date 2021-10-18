@@ -28,6 +28,7 @@ static struct coap_reply coap_replies[4];
 struct dfu_ctx {
 	struct golioth_fw_download_ctx fw_ctx;
 	struct flash_img_context flash;
+	char version[65];
 };
 
 static struct dfu_ctx update_ctx;
@@ -56,14 +57,18 @@ static int data_received(struct golioth_blockwise_download_ctx *ctx,
 	}
 
 	if (offset > 0 && last) {
-		err = golioth_fw_report_state(client, "main", NULL, NULL,
+		err = golioth_fw_report_state(client, "main",
+					      current_version_str,
+					      dfu->version,
 					      GOLIOTH_FW_STATE_DOWNLOADED,
 					      GOLIOTH_DFU_RESULT_INITIAL);
 		if (err) {
 			LOG_ERR("Failed to update to '%s' state: %d", "downloaded", err);
 		}
 
-		err = golioth_fw_report_state(client, "main", NULL, NULL,
+		err = golioth_fw_report_state(client, "main",
+					      current_version_str,
+					      dfu->version,
 					      GOLIOTH_FW_STATE_UPDATING,
 					      GOLIOTH_DFU_RESULT_INITIAL);
 		if (err) {
@@ -105,11 +110,11 @@ static int golioth_desired_update(const struct coap_packet *update,
 				  struct coap_reply *reply,
 				  const struct sockaddr *from)
 {
+	struct dfu_ctx *dfu = &update_ctx;
 	struct coap_reply *fw_reply;
 	const uint8_t *payload;
 	uint16_t payload_len;
-	uint8_t version[64];
-	size_t version_len = sizeof(version);
+	size_t version_len = sizeof(dfu->version) - 1;
 	uint8_t uri[64];
 	uint8_t *uri_p;
 	size_t uri_len = sizeof(uri);
@@ -124,15 +129,17 @@ static int golioth_desired_update(const struct coap_packet *update,
 	LOG_HEXDUMP_DBG(payload, payload_len, "Desired");
 
 	err = golioth_fw_desired_parse(payload, payload_len,
-				       version, &version_len,
+				       dfu->version, &version_len,
 				       uri, &uri_len);
 	if (err) {
 		LOG_ERR("Failed to parse desired version: %d", err);
 		return err;
 	}
 
+	dfu->version[version_len] = '\0';
+
 	if (version_len == strlen(current_version_str) &&
-	    !strncmp(current_version_str, version, version_len)) {
+	    !strncmp(current_version_str, dfu->version, version_len)) {
 		LOG_INF("Desired version (%s) matches current firmware version!",
 			log_strdup(current_version_str));
 		return -EALREADY;
@@ -146,14 +153,16 @@ static int golioth_desired_update(const struct coap_packet *update,
 
 	uri_p = uri_strip_leading_slash(uri, &uri_len);
 
-	err = golioth_fw_report_state(client, "main", NULL, NULL,
+	err = golioth_fw_report_state(client, "main",
+				      current_version_str,
+				      dfu->version,
 				      GOLIOTH_FW_STATE_DOWNLOADING,
 				      GOLIOTH_DFU_RESULT_INITIAL);
 	if (err) {
 		LOG_ERR("Failed to update to '%s' state: %d", "downloading", err);
 	}
 
-	err = golioth_fw_download(client, &update_ctx.fw_ctx, uri_p, uri_len,
+	err = golioth_fw_download(client, &dfu->fw_ctx, uri_p, uri_len,
 				  fw_reply, data_received);
 	if (err) {
 		LOG_ERR("Failed to request firmware: %d", err);
@@ -169,7 +178,9 @@ static void golioth_on_connect(struct golioth_client *client)
 	int err;
 	int i;
 
-	err = golioth_fw_report_state(client, "main", NULL, NULL,
+	err = golioth_fw_report_state(client, "main",
+				      current_version_str,
+				      NULL,
 				      GOLIOTH_FW_STATE_IDLE,
 				      GOLIOTH_DFU_RESULT_INITIAL);
 	if (err) {
