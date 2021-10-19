@@ -24,7 +24,7 @@ Adding Golioth SDK to existing west project
 -------------------------------------------
 
 Alternatively add following entry to ``manifest/projects``
-subtree of existing `west`_ based project in the ``west.yml`` file found in the 
+subtree of existing `west`_ based project in the ``west.yml`` file found in the
 ``zephyr`` directory (e.g. Zephyr RTOS):
 
 .. code-block:: yaml
