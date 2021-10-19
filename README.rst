@@ -61,7 +61,7 @@ Connect SDK with following command:
 
    west init -m https://github.com/nrfconnect/sdk-nrf --mr v1.7.0-rc2
 
-Add following entry to ``manifest/projects`` subtree in the ``west.yml`` file 
+Add following entry to ``manifest/projects`` subtree in the ``west.yml`` file
 found in either the ``nrf`` directory or the ``zephyr`` directory:
 
 .. code-block:: yaml
