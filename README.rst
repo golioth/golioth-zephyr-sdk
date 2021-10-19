@@ -25,7 +25,7 @@ Adding Golioth SDK to existing west project
 
 Alternatively add following entry to ``manifest/projects``
 subtree of existing `west`_ based project in the ``west.yml`` file found in the
-``zephyr`` directory (e.g. Zephyr RTOS):
+``zephyr`` directory:
 
 .. code-block:: yaml
 
@@ -62,7 +62,7 @@ Connect SDK with following command:
    west init -m https://github.com/nrfconnect/sdk-nrf --mr v1.7.0-rc2
 
 Add following entry to ``manifest/projects`` subtree in the ``west.yml`` file
-found in either the ``nrf`` directory or the ``zephyr`` directory:
+found in the ``nrf`` directory:
 
 .. code-block:: yaml
 
