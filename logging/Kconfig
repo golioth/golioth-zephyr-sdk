@@ -9,7 +9,7 @@ config LOG_BACKEND_GOLIOTH
 	depends on LOG
 	depends on !LOG_IMMEDIATE
 	depends on GOLIOTH
-	select TINYCBOR
+	select QCBOR
 	help
 	  Enable sending logs to Golioth cloud.
 
