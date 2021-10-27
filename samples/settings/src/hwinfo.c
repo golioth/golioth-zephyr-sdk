@@ -38,34 +38,11 @@ bool get_device_identity(char *id, int id_max_len)
   return length > 0;
 }
 
-static int cmd_hwinfo_get(const struct shell *shell, size_t argc,
-                          char *argv[])
-{
-  char device_id[DEVICE_ID_HEX_MAX_SIZE] = {0};
-  if (!get_device_identity(device_id, DEVICE_ID_HEX_MAX_SIZE))
-  {
-    shell_fprintf(shell, SHELL_ERROR,
-                  "Failed to read device id\n");
-    return -ENOEXEC;
-  }
-  shell_fprintf(shell, SHELL_NORMAL,
-                "hwinfo/id:%s\n", device_id);
-
-  return 0;
-}
-
-SHELL_STATIC_SUBCMD_SET_CREATE(hwinfo_commands,
-                               SHELL_CMD(get, NULL, "",
-                                         cmd_hwinfo_get),
-                               SHELL_SUBCMD_SET_END);
-
-SHELL_CMD_REGISTER(hwinfo, &hwinfo_commands, "HW info commands", NULL);
-
 static int hwinfo_settings_get(const char *name, char *dst, int val_len_max)
 {
   size_t val_len;
 
-  if (!strcmp(name, "id"))
+  if (!strcmp(name, "devid"))
   { 
     if (!get_device_identity(dst, val_len_max))
     {
