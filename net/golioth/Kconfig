@@ -54,6 +54,12 @@ config GOLIOTH_SYSTEM_CLIENT
 
 if GOLIOTH_SYSTEM_CLIENT
 
+config GOLIOTH_SYSTEM_CLIENT_STACK_SIZE
+	int "Stack size"
+	default 2048
+	help
+	  Defines system client thread stack size.
+
 config GOLIOTH_SYSTEM_SERVER_HOST
 	string "Server Host"
 	default "coap.golioth.io" if ((NET_NATIVE && NET_IPV4 && DNS_RESOLVER) || NET_SOCKETS_OFFLOAD)

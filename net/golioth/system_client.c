@@ -320,7 +320,8 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 	}
 }
 
-K_THREAD_DEFINE(golioth_system, 2048, golioth_system_client_main,
+K_THREAD_DEFINE(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_STACK_SIZE,
+		golioth_system_client_main,
 		GOLIOTH_SYSTEM_CLIENT_GET(), NULL, NULL,
 		K_LOWEST_APPLICATION_THREAD_PRIO, 0, SYS_FOREVER_MS);
 
