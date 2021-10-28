@@ -56,7 +56,7 @@ if GOLIOTH_SYSTEM_CLIENT
 
 config GOLIOTH_SYSTEM_CLIENT_STACK_SIZE
 	int "Stack size"
-	default 2048
+	default 3072
 	help
 	  Defines system client thread stack size.
 
