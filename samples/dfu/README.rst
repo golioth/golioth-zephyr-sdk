@@ -51,6 +51,9 @@ Using with Zephyr
 Building and flashing MCUboot
 =============================
 
+Zephyr MCUboot target
+---------------------
+
 The below steps describe how to build and run the MCUboot bootloader. Detailed
 instructions can be found in the `MCUboot`_ documentation page.
 
@@ -63,6 +66,12 @@ means that we can build and flash it like normal using ``west``, like so:
    west flash -d build_mcuboot
 
 Substitute <board> for one of the boards supported by the sample.
+
+Espressif MCUboot target
+------------------------
+
+Follow https://github.com/mcu-tools/mcuboot/blob/main/docs/readme-espressif.md
+on how to build and flash MCUboot.
 
 Building the sample application
 ===============================
