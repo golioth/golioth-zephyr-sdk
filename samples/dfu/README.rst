@@ -35,12 +35,13 @@ from old firmware::
 
    $ west build -p -b circuitdojo_feather_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
 
-Follow `Start DFU using goliothctl`_ to send new firmware, but use
-``build/zephyr/app_update.bin`` instead of ``new.bin`` in the first step:
+Follow `Start DFU using goliothctl`_ to create new firmware release and roll it
+out to device, but use ``build/zephyr/app_update.bin`` instead of ``new.bin`` in
+the first step when uploading new artifact:
 
 .. code-block:: console
 
-   $ goliothctl updates send <device-id> build/zephyr/app_update.bin
+   $ goliothctl artifact create build/zephyr/app_update.bin --version 1.2.3
 
 See `nRF9160 Feather Programming and Debugging`_ for details.
 
@@ -206,23 +207,44 @@ if not explicitly specified) and new firmware.
 Start DFU using goliothctl
 ==========================
 
-Run following command on host PC to send new firmware:
+Run following command on host PC to upload new firmware as artifact to Golioth:
 
 .. code-block:: console
 
-   $ goliothctl updates send <device-id> new.bin
+   $ goliothctl artifact create new.bin --version 1.2.3
+
+Then create new release consisting of this single firmware and roll it out to
+all devices in a project:
+
+.. code-block:: console
+
+   $ goliothctl release --release-tags 1.2.3 --components main@1.2.3 --rollout true
 
 DFU process should be started in Zephyr and this is what should be visible on
 serial console:
 
 .. code-block:: console
 
-   [00:03:31.847,045] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 0
-   [00:03:31.847,167] <inf> mcuboot_util: Swap type: none
-   [00:03:31.847,167] <inf> golioth_dfu: swap type: none
-   [00:03:31.972,869] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 1024
-   [00:03:32.011,718] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 2048
-   [00:03:32.051,666] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 3072
+   [00:00:06.483,764] <dbg> golioth_dfu: Desired
+                                         a3 01 1a 61 7a be 80 02  78 40 61 66 62 66 38 34 |...az... x@afbf84
+                                         33 31 33 61 36 66 65 30  66 37 63 30 35 35 39 37 |313a6fe0 f7c05597
+                                         62 36 31 37 32 38 32 30  64 31 37 65 30 64 30 39 |b6172820 d17e0d09
+                                         37 63 31 32 34 35 36 31  64 34 30 34 65 38 32 34 |7c124561 d404e824
+                                         37 39 32 30 64 38 66 30  39 33 03 81 a6 01 64 6d |7920d8f0 93....dm
+                                         61 69 6e 02 65 31 2e 32  2e 33 03 78 40 35 30 34 |ain.e1.2 .3.x@504
+                                         39 36 32 37 30 38 31 39  33 32 39 37 66 36 38 66 |96270819 3297f68f
+                                         62 61 34 61 33 31 39 64  65 65 66 61 34 39 61 37 |ba4a319d eefa49a7
+                                         35 31 33 32 39 30 31 31  35 36 63 32 37 31 63 62 |51329011 56c271cb
+                                         31 34 65 37 39 66 63 61  38 30 33 64 66 04 1a 00 |14e79fca 803df...
+                                         09 b0 a0 05 70 2f 2e 75  2f 63 2f 6d 61 69 6e 40 |....p/.u /c/main@
+                                         31 2e 32 2e 33 06 67 6d  63 75 62 6f 6f 74       |1.2.3.gm cuboot
+   [00:00:06.484,130] <inf> golioth: Manifest sequence-number: 1635434112
+   [00:00:06.637,725] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 0
+   [00:00:06.637,847] <inf> mcuboot_util: Swap type: none
+   [00:00:06.637,847] <inf> golioth_dfu: swap type: none
+   [00:00:06.863,555] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 1024
+   [00:00:07.000,457] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 2048
+   [00:00:07.137,786] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 3072
    ...
    [00:03:44.913,208] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 218112
    [00:03:44.956,146] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 219136
