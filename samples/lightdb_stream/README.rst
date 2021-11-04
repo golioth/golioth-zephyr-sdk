@@ -138,7 +138,7 @@ sample application (i.e., ``samples/ligthdb_stream``) and type:
 
 .. code-block:: console
 
-   $ west build -b circuitdojo_feather_nrf9160ns samples/lightdb_stream
+   $ west build -b circuitdojo_feather_nrf9160_ns samples/lightdb_stream
 
 Enter bootloader and use ``mcumgr`` (or ``newtmgr``) to flash firmware:
 

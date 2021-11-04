@@ -136,7 +136,7 @@ sample application (i.e., ``samples/hello``) and type:
 
 .. code-block:: console
 
-   $ west build -b circuitdojo_feather_nrf9160ns samples/hello
+   $ west build -b circuitdojo_feather_nrf9160_ns samples/hello
 
 Enter bootloader and use ``mcumgr`` (or ``newtmgr``) to flash firmware:
 

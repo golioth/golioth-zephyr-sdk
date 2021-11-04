@@ -58,7 +58,7 @@ Connect SDK with following command:
 
 .. code-block:: console
 
-   west init -m https://github.com/nrfconnect/sdk-nrf --mr v1.7.0-rc2
+   west init -m https://github.com/nrfconnect/sdk-nrf --mr v1.7.1
 
 Add following entry to ``west.yml`` file in ``manifest/projects`` subtree:
 
