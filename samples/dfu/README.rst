@@ -20,7 +20,7 @@ Build Zephyr sample application for nRF9160 Feather:
 
 .. code-block:: console
 
-   $ west build -b circuitdojo_feather_nrf9160ns samples/dfu
+   $ west build -b circuitdojo_feather_nrf9160_ns samples/dfu
 
 Enter bootloader and use ``mcumgr`` to flash firmware:
 
@@ -33,7 +33,7 @@ from old firmware::
 
 .. code-block:: console
 
-   $ west build -p -b circuitdojo_feather_nrf9160ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
+   $ west build -p -b circuitdojo_feather_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
 
 Follow `Start DFU using goliothctl`_ to send new firmware, but use
 ``build/zephyr/app_update.bin`` instead of ``new.bin`` in the first step:
