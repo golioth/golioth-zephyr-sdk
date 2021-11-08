@@ -328,7 +328,7 @@ void golioth_system_client_start(void)
  * credentials are stored. This means that we need to allocate memory for
  * credentials ourselves.
  */
-static uint8_t golioth_dtls_psk[64];
+static uint8_t golioth_dtls_psk[CONFIG_MBEDTLS_PSK_MAX_LEN];
 static size_t golioth_dtls_psk_len;
 static uint8_t golioth_dtls_psk_id[64];
 static size_t golioth_dtls_psk_id_len;
