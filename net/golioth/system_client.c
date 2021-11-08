@@ -33,6 +33,9 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #define TLS_PSK			""
 #endif
 
+BUILD_ASSERT(sizeof(TLS_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
+	     "PSK exceeds mbedTLS configured maximum PSK length");
+
 #define PSK_TAG			1
 
 #define PING_INTERVAL		(CONFIG_GOLIOTH_SYSTEM_CLIENT_PING_INTERVAL_SEC * 1000)
