@@ -1,0 +1,18 @@
+&spi1 { /* feather SPI */
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	sck-pin = <47>; /* D13 */
+	mosi-pin = <45>; /* D14 */
+	miso-pin = <46>; /* D11 */
+	cs-gpios = <&gpio1 10 GPIO_ACTIVE_LOW>; /* D5 */
+
+	w5500: w5500@0 {
+		compatible = "wiznet,w5500";
+		label = "w5500";
+		status = "okay";
+		reg = <0x0>;
+		spi-max-frequency = <8000000>;
+		int-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>; /* D4 */
+		reset-gpios = <&gpio1 2 GPIO_ACTIVE_LOW>; /* D3 */
+	};
+};
