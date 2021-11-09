@@ -1,4 +1,6 @@
 &flash0 {
+	write-block-size = <8>;
+
 	partitions {
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
