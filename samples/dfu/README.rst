@@ -29,7 +29,7 @@ Enter bootloader and use ``mcumgr`` to flash firmware:
    $ mcumgr --conntype serial --connstring /dev/ttyUSB,baudrate=1000000 build/zephyr/app_update.bin
 
 Now rebuild application with assigned new version to 1.2.3 to distinguish it
-from old firmware::
+from old firmware:
 
 .. code-block:: console
 
