@@ -3,7 +3,11 @@ sample:
   name: dfu
 common:
   harness: net
-  platform_allow: nrf52840dk_nrf52840
+  platform_allow: >
+    circuitdojo_feather_nrf9160_ns
+    nrf52840dk_nrf52840
+    nrf9160dk_nrf9160_ns
+    qemu_x86
   tags: golioth net socket
 tests:
   sample.golioth.dfu: {}

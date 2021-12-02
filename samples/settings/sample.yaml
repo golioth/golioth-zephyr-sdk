@@ -4,7 +4,14 @@ sample:
   name: settings
 common:
   harness: net
-  platform_allow: nrf52840dk_nrf52840
+  platform_allow: >
+    circuitdojo_feather_nrf9160_ns
+    esp32
+    esp32c3_devkitm
+    nrf52840dk_nrf52840
+    nrf9160dk_nrf9160_ns
+    qemu_cortex_m3
+    qemu_x86
   tags: golioth net settings socket
 tests:
   sample.golioth.settings: {}
