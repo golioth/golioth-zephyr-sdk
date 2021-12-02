@@ -19,6 +19,9 @@ extern char current_version_str[sizeof("255.255.65535")];
 
 #else /* CONFIG_BOOTLOADER_MCUBOOT */
 
+#include <stddef.h>
+#include <stdint.h>
+
 struct flash_img_context {
 	/* empty */
 };
