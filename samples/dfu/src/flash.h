@@ -19,6 +19,7 @@ extern char current_version_str[sizeof("255.255.65535")];
 
 #else /* CONFIG_BOOTLOADER_MCUBOOT */
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -45,6 +46,11 @@ int flash_img_buffered_write(struct flash_img_context *ctx, const uint8_t *data,
 static inline int boot_request_upgrade(int permanent)
 {
 	return 0;
+}
+
+static inline bool boot_is_img_confirmed(void)
+{
+	return true;
 }
 
 static inline int boot_write_img_confirmed(void)
