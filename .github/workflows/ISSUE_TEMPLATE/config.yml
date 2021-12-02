@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Github Discussions
+    url: https://github.com/golioth/zephyr-sdk/discussions
+    about: Feature requests or product questions?
+  - name: Discord
+    url: https://discord.com/invite/qKjmvzMVYR
+    about: Communicate with us in a less asynchronous fashion here.
