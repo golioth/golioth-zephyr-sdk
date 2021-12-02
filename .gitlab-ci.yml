@@ -103,7 +103,9 @@ twister:
   script:
     - >
       zephyr/scripts/twister
-      --all
+      -p nrf52840dk_nrf52840
+      -p qemu_cortex_m3
+      -p qemu_x86
       -o reports
       -T modules/lib/golioth
   artifacts:
