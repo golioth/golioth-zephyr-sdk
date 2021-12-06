@@ -16,8 +16,8 @@
 #include "mgmt/mgmt.h"
 #include "tinycbor/cbor.h"
 
-static mgmt_handler_fn cfg_mgmt_val_get;
-static mgmt_handler_fn cfg_mgmt_val_set;
+static int cfg_mgmt_val_get(struct mgmt_ctxt *ctxt);
+static int cfg_mgmt_val_set(struct mgmt_ctxt *ctxt);
 
 static const struct mgmt_handler cfg_mgmt_group_handlers[] = {
 	[CFG_MGMT_ID_VAL] = {
