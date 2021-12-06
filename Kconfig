@@ -8,5 +8,6 @@ menu "Golioth options"
 rsource "logging/Kconfig"
 rsource "mgmt/Kconfig"
 rsource "net/Kconfig"
+rsource "app_support/Kconfig"
 
 endmenu

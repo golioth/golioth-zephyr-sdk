@@ -9,7 +9,7 @@ LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 #include <net/coap.h>
 #include <net/golioth/system_client.h>
-#include <net/golioth/wifi.h>
+#include <app_support/wifi.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 

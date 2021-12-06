@@ -10,7 +10,7 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 #include <net/coap.h>
 #include <net/golioth/fw.h>
 #include <net/golioth/system_client.h>
-#include <net/golioth/wifi.h>
+#include <app_support/wifi.h>
 
 #include <logging/log_ctrl.h>
 #include <power/reboot.h>
