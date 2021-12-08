@@ -9,6 +9,7 @@ tasks:
       west init -l $GITPOD_REPO_ROOT
       west update --narrow
       cd $GITPOD_REPO_ROOT
+      pip install pre-commit
 
 
 vscode:
