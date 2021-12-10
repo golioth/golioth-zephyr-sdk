@@ -197,10 +197,6 @@ static void golioth_on_message(struct golioth_client *client,
 
 void main(void)
 {
-	char str_counter[sizeof("4294967295")];
-	int counter = 0;
-	int err;
-
 	LOG_DBG("Start Light DB LED sample");
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
@@ -215,18 +211,6 @@ void main(void)
 	golioth_system_client_start();
 
 	while (true) {
-		snprintk(str_counter, sizeof(str_counter) - 1, "%d", counter);
-
-		err = golioth_lightdb_set(client,
-					  GOLIOTH_LIGHTDB_PATH("counter"),
-					  COAP_CONTENT_FORMAT_TEXT_PLAIN,
-					  str_counter, strlen(str_counter));
-		if (err) {
-			LOG_WRN("Failed to update counter: %d", err);
-		}
-
-		counter++;
-
 		k_sleep(K_SECONDS(5));
 	}
 }
