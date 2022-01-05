@@ -13,9 +13,9 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 #include <net/golioth/wifi.h>
 
 #include <logging/log_ctrl.h>
-#include <power/reboot.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/reboot.h>
 
 #include "flash.h"
 
