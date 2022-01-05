@@ -18,7 +18,6 @@ Execute this command to download this repository together with all dependencies:
 
    west init -m git@github.com:golioth/zephyr.git --mr main
    west update
-   west patch
 
 Adding Golioth SDK to existing west project
 -------------------------------------------
