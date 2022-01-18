@@ -70,7 +70,7 @@ Substitute <board> for one of the boards supported by the sample.
 Espressif MCUboot target
 ------------------------
 
-Follow https://github.com/mcu-tools/mcuboot/blob/main/docs/readme-espressif.md
+Follow https://github.com/mcu-tools/mcuboot/blob/399720d1cabd26c4356445d351f263b31e942961/docs/readme-espressif.md
 on how to build and flash MCUboot.
 
 Building the sample application
