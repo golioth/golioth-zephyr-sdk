@@ -536,7 +536,7 @@ static int log_msg_process(struct golioth_log_ctx *ctx, struct log_msg *msg)
 
 	err = log_packet_prepare(ctx);
 	if (err) {
-		return err;
+		goto finish;
 	}
 
 	if (log_msg_is_std(msg)) {
@@ -548,21 +548,22 @@ static int log_msg_process(struct golioth_log_ctx *ctx, struct log_msg *msg)
 	}
 
 	if (err) {
-		return err;
+		goto finish;
 	}
 
 	err = log_packet_finish(ctx);
 	if (err) {
-		return err;
+		goto finish;
 	}
 
 	golioth_send_coap(ctx->client, &ctx->coap_packet);
 
+finish:
 	ctx->msg_index++;
 
 	log_msg_put(msg);
 
-	return 0;
+	return err;
 }
 
 static void send_output(const struct log_backend *const backend,
@@ -603,7 +604,7 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 
 	err = log_packet_prepare(ctx);
 	if (err) {
-		return err;
+		goto finish;
 	}
 
 	log_cbor_create_map(ctx, CborIndefiniteLength);
@@ -633,7 +634,7 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 		}
 
 		if (err) {
-			return err;
+			goto finish;
 		}
 
 		err = cbpprintf(cbprintf_out_func, ctx, data);
@@ -663,7 +664,7 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 
 		err = log_pdu_prepare(pdu, cbor);
 		if (err) {
-			return err;
+			goto finish;
 		}
 
 		if (len > pdu->end - pdu->begin) {
@@ -680,14 +681,15 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 
 	err = log_packet_finish(ctx);
 	if (err) {
-		return err;
+		goto finish;
 	}
 
 	golioth_send_coap(ctx->client, &ctx->coap_packet);
 
+finish:
 	ctx->msg_index++;
 
-	return 0;
+	return err;
 }
 
 static void process(const struct log_backend *const backend,
