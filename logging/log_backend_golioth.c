@@ -616,6 +616,9 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 		log2_cbor_append_headers(ctx, msg);
 	}
 
+	cbor_encode_text_stringz(&cbor->map, "index");
+	cbor_encode_uint(&cbor->map, ctx->msg_index);
+
 	size_t len;
 	uint8_t *data = log_msg2_get_package(msg, &len);
 
