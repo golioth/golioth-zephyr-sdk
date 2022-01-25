@@ -154,10 +154,6 @@ static void log2_cbor_append_headers(struct golioth_log_ctx *ctx,
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
 	void *source = (void *)log_msg2_get_source(msg);
 
-	cbor_encode_text_stringz(&cbor->map, "uptime");
-	cbor_encode_uint(&cbor->map,
-			log_output_timestamp_to_us(log_msg2_get_timestamp(msg)));
-
 	if (source) {
 		uint8_t domain_id = log_msg2_get_domain(msg);
 		int16_t source_id =
@@ -611,6 +607,10 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 	}
 
 	log_cbor_create_map(ctx, CborIndefiniteLength);
+
+	cbor_encode_text_stringz(&cbor->map, "uptime");
+	cbor_encode_uint(&cbor->map,
+			 log_output_timestamp_to_us(log_msg2_get_timestamp(msg)));
 
 	if (!raw_string) {
 		log2_cbor_append_headers(ctx, msg);
