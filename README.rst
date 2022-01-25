@@ -16,7 +16,7 @@ Execute this command to download this repository together with all dependencies:
 
 .. code-block:: console
 
-   west init -m git@github.com:golioth/zephyr.git --mr main
+   west init -m https://github.com/golioth/zephyr-sdk.git --mr main
    west update
 
 Adding Golioth SDK to existing west project
