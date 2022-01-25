@@ -13,8 +13,9 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 #include <drivers/gpio.h>
 #include <stdlib.h>
-#include <tinycbor/cbor.h>
-#include <tinycbor/cbor_buf_reader.h>
+#include <qcbor/qcbor.h>
+#include <qcbor/qcbor_decode.h>
+#include <qcbor/qcbor_spiffy_decode.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
@@ -67,89 +68,96 @@ static int golioth_led_handle(const struct coap_packet *response,
 			      struct coap_reply *reply,
 			      const struct sockaddr *from)
 {
-	const uint8_t *payload;
+	QCBORDecodeContext decode_ctx;
+	QCBORItem decoded_item;
+	UsefulBufC payload;
 	uint16_t payload_len;
-	struct cbor_buf_reader reader;
-	CborParser parser;
-	CborValue value;
-	CborError err;
+	QCBORError qerr;
+	char name[5];
 
-	payload = coap_packet_get_payload(response, &payload_len);
+	payload.ptr = coap_packet_get_payload(response, &payload_len);
+	payload.len = payload_len;
 
-	cbor_buf_reader_init(&reader, payload, payload_len);
-	err = cbor_parser_init(&reader.r, 0, &parser, &value);
+	QCBORDecode_Init(&decode_ctx, payload, QCBOR_DECODE_MODE_NORMAL);
 
-	if (err != CborNoError) {
-		LOG_ERR("Failed to init CBOR parser: %d", err);
-		return -EINVAL;
+	/*
+	 * Expect map of "text string" (label) -> boolean (value) entries.
+	 *
+	 * Example 1:
+	 * {
+	 *     "0": true,
+	 *     "1": false
+	 * }
+	 * means that:
+	 * - LED 0 is expected to be switched on,
+	 * - LED 1 is expected to be switched off.
+	 *
+	 * Example 2:
+	 * {
+	 *     "0": false,
+	 *     "4": true,
+	 *     "6": false.
+	 * }
+	 * means that:
+	 * - LED 0 is expected to be switched off,
+	 * - LED 4 is expected to be switched on,
+	 * - LED 6 is expected to be switched off.
+	 */
+	QCBORDecode_EnterMap(&decode_ctx, NULL);
+	qerr = QCBORDecode_GetError(&decode_ctx);
+	if (qerr != QCBOR_SUCCESS) {
+		LOG_WRN("Did not enter CBOR map correctly");
+		return -EBADMSG;
 	}
 
-	if (cbor_value_is_boolean(&value)) {
-		bool v;
+	/* Iterate through all entries in map */
+	while (true) {
+		QCBORDecode_VGetNext(&decode_ctx, &decoded_item);
 
-		cbor_value_get_boolean(&value, &v);
-
-		LOG_INF("LED value: %d", v);
-
-		golioth_led_set(0, v);
-	} else if (cbor_value_is_map(&value)) {
-		CborValue map;
-		char name[5];
-		size_t name_len;
-		bool v;
-
-		err = cbor_value_enter_container(&value, &map);
-		if (err != CborNoError) {
-			LOG_WRN("Failed to enter map: %d", err);
-			return -EINVAL;
+		qerr = QCBORDecode_GetError(&decode_ctx);
+		if (qerr == QCBOR_ERR_NO_MORE_ITEMS) {
+			break;
 		}
 
-		while (!cbor_value_at_end(&map)) {
-			/* key */
-			if (!cbor_value_is_text_string(&map)) {
-				LOG_WRN("Map key is not string: %d",
-					cbor_value_get_type(&map));
-				break;
-			}
-
-			name_len = sizeof(name) - 1;
-			err = cbor_value_copy_text_string(&map,
-							  name, &name_len,
-							  &map);
-			if (err != CborNoError) {
-				LOG_WRN("Failed to read map key: %d", err);
-				break;
-			}
-
-			name[name_len] = '\0';
-
-			/* value */
-			if (!cbor_value_is_boolean(&map)) {
-				LOG_WRN("Map key is not boolean");
-				break;
-			}
-
-			err = cbor_value_get_boolean(&map, &v);
-			if (err != CborNoError) {
-				LOG_WRN("Failed to read map key: %d", err);
-				break;
-			}
-
-			err = cbor_value_advance_fixed(&map);
-			if (err != CborNoError) {
-				LOG_WRN("Failed to advance: %d", err);
-				break;
-			}
-
-			LOG_INF("LED %s -> %d", log_strdup(name), (int) v);
-
-			golioth_led_set_by_name(name, v);
+		if (qerr != QCBOR_SUCCESS) {
+			LOG_DBG("QCBORDecode_GetError: %d", qerr);
+			break;
 		}
 
-		err = cbor_value_leave_container(&value, &map);
-		if (err != CborNoError) {
-			LOG_WRN("Failed to enter map: %d", err);
+		if (decoded_item.uLabelType != QCBOR_TYPE_TEXT_STRING) {
+			LOG_WRN("Label type should be text string");
+			continue;
 		}
+
+		if (decoded_item.uDataType != QCBOR_TYPE_FALSE &&
+		    decoded_item.uDataType != QCBOR_TYPE_TRUE) {
+			LOG_WRN("Data type should be boolean");
+			continue;
+		}
+
+		if (decoded_item.label.string.len > sizeof(name) - 1) {
+			LOG_HEXDUMP_WRN(decoded_item.label.string.ptr,
+					decoded_item.label.string.len,
+					"Too long label");
+			continue;
+		}
+
+		/* Copy label to NULL-terminated string */
+		memcpy(name, decoded_item.label.string.ptr, decoded_item.label.string.len);
+		name[decoded_item.label.string.len] = '\0';
+
+		/*
+		 * Switch on/off requested LED based on label (LED name/id) and
+		 * value (requested LED state).
+		 */
+		golioth_led_set_by_name(name, decoded_item.uDataType == QCBOR_TYPE_TRUE);
+	}
+
+	QCBORDecode_ExitMap(&decode_ctx);
+
+	qerr = QCBORDecode_Finish(&decode_ctx);
+	if (qerr != QCBOR_SUCCESS) {
+		LOG_WRN("Failed to finish decoding: %d (%s)", qerr, qcbor_err_to_str(qerr));
 	}
 
 	return 0;
