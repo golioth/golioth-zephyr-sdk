@@ -624,11 +624,10 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 	uint8_t *data = log_msg2_get_package(msg, &len);
 
 	if (len) {
-		const uint8_t *colon;
+		const uint8_t *func_colon = NULL;
 
 		if (has_func) {
 			err = log_pdu_prepare_ext(pdu, cbor, 2, sizeof("func") + 1);
-			colon = find_colon(pdu->begin, pdu->ptr);
 		} else {
 			err = log_pdu_prepare(pdu, cbor);
 		}
@@ -642,12 +641,16 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 		(void)err;
 		__ASSERT_NO_MSG(err >= 0);
 
-		if (has_func && colon) {
-			const uint8_t *post_colon = colon + sizeof(": ") - 1;
+		if (has_func) {
+			func_colon = find_colon(pdu->begin, pdu->ptr);
+		}
+
+		if (func_colon) {
+			const uint8_t *post_colon = func_colon + sizeof(": ") - 1;
 
 			cbor_encode_text_stringz(&cbor->map, "func");
 			cbor_encode_text_string(&cbor->map, pdu->begin,
-						colon - pdu->begin);
+						func_colon - pdu->begin);
 
 			cbor_encode_text_stringz(&cbor->map, "msg");
 			cbor_encode_text_string(&cbor->map, post_colon,
