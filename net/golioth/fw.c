@@ -112,14 +112,18 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
 		goto exit_root_map;
 	}
 
-	qerr = QCBORDecode_GetError(&decode_ctx);
+exit_root_map:
+	QCBORDecode_ExitMap(&decode_ctx);
+
+	if (err) {
+		return err;
+	}
+
+	qerr = QCBORDecode_Finish(&decode_ctx);
 	if (qerr != QCBOR_SUCCESS) {
 		LOG_ERR("Error at the end: %d (%s)", qerr, qcbor_err_to_str(qerr));
 		return -EINVAL;
 	}
-
-exit_root_map:
-	QCBORDecode_ExitMap(&decode_ctx);
 
 	return err;
 }
