@@ -57,14 +57,16 @@ static int parse_component(QCBORDecodeContext *decode_ctx,
 	}
 
 	if (version_bufc.len > *version_len) {
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto exit_map;
 	}
 
 	memcpy(version, version_bufc.ptr, version_bufc.len);
 	*version_len = version_bufc.len;
 
 	if (uri_bufc.len > *uri_len) {
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto exit_map;
 	}
 
 	memcpy(uri, uri_bufc.ptr, uri_bufc.len);
