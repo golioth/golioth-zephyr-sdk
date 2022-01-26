@@ -6,6 +6,7 @@
 
 #include <net/golioth.h>
 #include <net/golioth/fw.h>
+#include <qcbor/posix_error_map.h>
 #include <qcbor/qcbor.h>
 #include <qcbor/qcbor_spiffy_decode.h>
 #include <stdio.h>
@@ -52,7 +53,7 @@ static int parse_component(QCBORDecodeContext *decode_ctx,
 	qerr = QCBORDecode_GetError(decode_ctx);
 	if (qerr != QCBOR_SUCCESS) {
 		LOG_ERR("Failed to get version and URI: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		err = -EINVAL;
+		err = qcbor_error_to_posix(qerr);
 		goto exit_map;
 	}
 
@@ -98,7 +99,7 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
 	qerr = QCBORDecode_GetError(&decode_ctx);
 	if (qerr != QCBOR_SUCCESS) {
 		LOG_ERR("Failed to get manifest bstr: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		err = -EINVAL;
+		err = qcbor_error_to_posix(qerr);
 		goto exit_root_map;
 	}
 
@@ -124,7 +125,7 @@ exit_root_map:
 	qerr = QCBORDecode_Finish(&decode_ctx);
 	if (qerr != QCBOR_SUCCESS) {
 		LOG_ERR("Error at the end: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		return -EINVAL;
+		return qcbor_error_to_posix(qerr);
 	}
 
 	return err;
@@ -378,8 +379,7 @@ int golioth_fw_report_state(struct golioth_client *client,
 
 	qerr = QCBOREncode_FinishGetSize(&encode_ctx, &encoded_len);
 	if (qerr != QCBOR_SUCCESS) {
-		/* TODO: better error mapping */
-		return -EINVAL;
+		return qcbor_error_to_posix(qerr);
 	}
 
 	/*
