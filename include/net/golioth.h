@@ -296,6 +296,19 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 			uint8_t *data, uint16_t data_len);
 
 /**
+ * @brief Delete value in Golioth's Light DB
+ *
+ * Delete value in Light DB.
+ *
+ * @param client Client instance
+ * @param path Light DB resource path
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path);
+
+/**
  * @brief Observe value in Golioth's Light DB
  *
  * Observe value in Light DB and initialize passed CoAP reply handler.
