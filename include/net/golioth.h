@@ -64,6 +64,7 @@ struct golioth_client {
 	int sock;
 
 	void (*on_connect)(struct golioth_client *client);
+	void (*on_disconnect)(struct golioth_client *client);
 	void (*on_message)(struct golioth_client *client,
 			   struct coap_packet *rx);
 };

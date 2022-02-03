@@ -191,7 +191,15 @@ static int golioth_close(struct golioth_client *client)
 
 int golioth_disconnect(struct golioth_client *client)
 {
-	return golioth_close(client);
+	int err;
+
+	err = golioth_close(client);
+
+	if (client->on_disconnect) {
+		client->on_disconnect(client);
+	}
+
+	return err;
 }
 
 int golioth_set_proto_coap_udp(struct golioth_client *client,
