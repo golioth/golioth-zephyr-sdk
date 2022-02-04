@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Golioth, Inc.
+ * Copyright (c) 2021-2022 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,8 @@
 #include <qcbor/qcbor.h>
 #include <qcbor/qcbor_spiffy_decode.h>
 #include <stdio.h>
+
+#include "coap_utils.h"
 
 #include <logging/log.h>
 LOG_MODULE_DECLARE(golioth);
@@ -153,9 +155,7 @@ int golioth_fw_observe_desired(struct golioth_client *client,
 		return err;
 	}
 
-	err = coap_packet_append_option(&packet, COAP_OPTION_URI_PATH,
-					GOLIOTH_FW_DESIRED,
-					sizeof(GOLIOTH_FW_DESIRED) - 1);
+	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_FW_DESIRED);
 	if (err) {
 		LOG_ERR("Unable add uri path to packet");
 		return err;
@@ -195,8 +195,7 @@ static int golioth_fw_download_next(struct golioth_fw_download_ctx *ctx)
 		return err;
 	}
 
-	err = coap_packet_append_option(&request, COAP_OPTION_URI_PATH,
-					ctx->uri, ctx->uri_len);
+	err = coap_packet_append_uri_path_from_string(&request, ctx->uri, ctx->uri_len);
 	if (err) {
 		LOG_ERR("Unable add uri path to packet");
 		return err;
@@ -337,8 +336,7 @@ int golioth_fw_report_state(struct golioth_client *client,
 		return -ENOMEM;
 	}
 
-	err = coap_packet_append_option(&packet, COAP_OPTION_URI_PATH,
-					uri, written);
+	err = coap_packet_append_uri_path_from_string(&packet, uri, written);
 	if (err) {
 		LOG_ERR("failed to append logs uri path: %d", err);
 		return err;

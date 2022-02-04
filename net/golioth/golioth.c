@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Golioth, Inc.
+ * Copyright (c) 2021-2022 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,8 @@
 #include <random/rand32.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "coap_utils.h"
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(golioth, CONFIG_GOLIOTH_LOG_LEVEL);
@@ -444,8 +446,7 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 		return err;
 	}
 
-	err = coap_packet_append_option(&packet, COAP_OPTION_URI_PATH,
-					path, strlen(path));
+	err = coap_packet_append_uri_path_from_stringz(&packet, path);
 	if (err) {
 		LOG_ERR("Unable add uri path to packet");
 		return err;
@@ -481,8 +482,7 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 		return err;
 	}
 
-	err = coap_packet_append_option(&packet, COAP_OPTION_URI_PATH,
-					path, strlen(path));
+	err = coap_packet_append_uri_path_from_stringz(&packet, path);
 	if (err) {
 		LOG_ERR("Unable add uri path to packet");
 		return err;
@@ -518,8 +518,7 @@ static int golioth_coap_observe_init(struct coap_packet *packet,
 		return err;
 	}
 
-	err = coap_packet_append_option(packet, COAP_OPTION_URI_PATH,
-					path, strlen(path));
+	err = coap_packet_append_uri_path_from_stringz(packet, path);
 	if (err) {
 		LOG_ERR("Unable add uri path to packet");
 		return err;
@@ -747,8 +746,7 @@ static int golioth_blockwise_request_next(struct golioth_blockwise_observe_ctx *
 		return err;
 	}
 
-	err = coap_packet_append_option(&request, COAP_OPTION_URI_PATH,
-					ctx->path, strlen(ctx->path));
+	err = coap_packet_append_uri_path_from_stringz(&request, ctx->path);
 	if (err) {
 		LOG_ERR("Unable add uri path to packet");
 		return err;
