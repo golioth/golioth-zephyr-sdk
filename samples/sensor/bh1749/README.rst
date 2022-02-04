@@ -1,0 +1,65 @@
+﻿.. _bh1749:
+
+BH1749: Ambient Light Sensor IC And Golioth LightDB
+###############################
+
+.. contents::
+   :local:
+   :depth: 2
+
+This sample application sets up the BH1749 color sensor to provide 8-bit measurement data every time a set threshold value (>50) is reached for the RED color channel.
+It also shows how to enable interrupt every time data is ready, instead of threshold trigging.
+
+The sample will connect to Golioth and transmit red, green, blue, and IR color data using LightDB.
+
+
+Requirements
+************
+
+The sample requires the nrf Connect SDK.
+The sample supports the following nRF9160-based device:
+
+.. table-from-rows:: /includes/sample_board_rows.txt
+   :header: heading
+   :rows: thingy91_nrf9160_ns
+
+Building and running
+********************
+
+This project outputs sensor data to the console and to Golioth Cloud.
+Add Golioth device credentials to the prj.conf file before building.
+It requires a BH1749 sensor.
+It should work with any platform featuring a I2C peripheral interface.
+It does not work on QEMU.
+The example below uses the Thingy:91.
+
+
+.. |sample path| replace:: :file:`samples/sensor/bh1749`
+
+.. include:: /includes/build_and_run.txt
+
+Sample Output
+=============
+
+.. code-block:: console
+
+    J-Link RTT Viewer
+
+     device is 0x20022384, name is BH1749
+
+     Threshold trigger
+
+     BH1749 RED: 387
+
+     BH1749 GREEN: 753
+
+     BH1749 BLUE: 397
+
+     BH1749 IR: 81
+
+     (continues when trigger level reached)
+
+References
+**********
+
+* `BH1749NUC-E`_
