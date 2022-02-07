@@ -18,7 +18,7 @@ static struct coap_reply coap_replies[1];
 
 /*
  * This function is registed to be called when the data
- * stored at `/observed` changes.
+ * stored at `/counter` changes.
  */
 static int on_update(const struct coap_packet *response,
 		     struct coap_reply *reply,
@@ -61,14 +61,14 @@ static void golioth_on_connect(struct golioth_client *client)
 					       ARRAY_SIZE(coap_replies));
 
 	/*
-	 * Observe the data stored at `/observed` in LightDB.
+	 * Observe the data stored at `/counter` in LightDB.
 	 * When that data is updated, the `on_update` callback
 	 * will be called.
 	 * This will get the value when first called, even if
 	 * the value doesn't change.
 	 */
 	err = golioth_lightdb_observe(client,
-				      GOLIOTH_LIGHTDB_PATH("observed"),
+				      GOLIOTH_LIGHTDB_PATH("counter"),
 				      COAP_CONTENT_FORMAT_TEXT_PLAIN,
 				      observe_reply, on_update);
 

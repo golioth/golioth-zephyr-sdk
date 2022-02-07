@@ -175,12 +175,12 @@ This is the output from the serial console:
 Set the observed value
 ======================
 
-The device retrieves the value stored at ``/observed`` in LightDB and then
+The device retrieves the value stored at ``/counter`` in LightDB and then
 retrieves it every time that it's updated. The value can be updates as such:
 
 .. code-block:: console
 
-   goliothctl lightdb set <device-name> /observed -b "{\"m\":\"new\"}"
+   goliothctl lightdb set <device-name> /counter -b "{\"m\":\"new\"}"
 
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/latest/guides/networking/qemu_setup.html#networking-with-qemu
