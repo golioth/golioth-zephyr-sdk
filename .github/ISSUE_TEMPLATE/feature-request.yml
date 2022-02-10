@@ -5,13 +5,14 @@ body:
   - type: textarea
     id: proposal
     attributes:
-      label: Describe the feature you would like
+      label: Describe the feature
       description: A concise description of the functionality you would like to have
     validations:
       required: true
   - type: input
     id: feature-reference
     attributes:
-      label: Does it relate to existing feature? If so, please provide its name.
+      label: Existing feature reference
+      description: Does this request relate to an existing feature? If so, please provide its name.
     validations:
       required: false
