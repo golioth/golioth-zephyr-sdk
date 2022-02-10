@@ -7,6 +7,12 @@ Overview
 This DFU application demonstrates how to connect with Golioth and use Device
 Firmware Upgrade (DFU) procedure.
 
+The app is first built and flashed to the device which will then listen to
+Golioth Cloud for a new firmware binary to become available. A second binary is
+built with a new version number, registered as an artifact, and deployed as a
+release. The device will detect this change and automatically download and
+install.
+
 Requirements
 ************
 
