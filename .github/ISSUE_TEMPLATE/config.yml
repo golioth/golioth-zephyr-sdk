@@ -2,7 +2,6 @@ blank_issues_enabled: true
 contact_links:
   - name: Github Discussions
     url: https://github.com/golioth/zephyr-sdk/discussions
-    about: Feature requests or product questions?
   - name: Discord
     url: https://discord.com/invite/qKjmvzMVYR
-    about: Communicate with us in a less asynchronous fashion here.
+    about: Chat with the community and our team on Discord. Office hours at 10:00am PST every Wednesday!
