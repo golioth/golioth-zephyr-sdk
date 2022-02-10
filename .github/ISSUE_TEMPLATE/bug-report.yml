@@ -1,54 +1,59 @@
-name: Bug Report
+name: 🐞 Bug Report
 description: File a bug report
-title: "[Bug]: "
-labels: ["bug", "triage"]
+labels: ["bug"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for taking the time to fill out this bug report!
   - type: input
-    id: hardware-target
+    id: zephyr-version
     attributes:
-      label: Hardware Target
+      label: Zephyr Commit hash
+      description: Run `git show HEAD -s --format='%H'` in your copy of the Zephyr repository
     validations:
       required: true
   - type: input
     id: dsdk-version
     attributes:
-      label: Golioth Dsdk Commit Hash
+      label: Golioth SDK Commit Hash
+      description: Run `git show HEAD -s --format='%H'` in your copy of the Golioth SDK repository
     validations:
       required: true
-  - type: dropdown
+  - type: input
+    id: hardware-target
+    attributes:
+      label: Hardware Target
+      description: What hardware platform are you using? (e.g. nRF91, ESP32, QEMU, ...)
+    validations:
+      required: false
+  - type: textarea
     id: host-os
     attributes:
-      label: What Host OS are you using?
-      multiple: true
-      options:
-        - Windows
-        - Mac
-        - Ubuntu
-        - Other (Mention Below)
+      label: What host OS are you using?
+      description: Linux users, please share the contents of /etc/os-release (`cat /etc/os-release`)
   - type: textarea
-    id: what-happened
+    id: current-behavior
     attributes:
-      label: What happened?
-      description: Also tell us, what did you expect to happen?
-      placeholder: Tell us what you see!
-      value: "A bug happened!"
+      label: Current Behavior
+      description: A concise description of what you're experiencing.
     validations:
-      required: true
+      required: false
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you expected to happen.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: false
   - type: textarea
     id: logs
     attributes:
-      label: Relevant log output
-      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      label: Logs, console output, or any kind of debug information
+      description: Please copy and paste any relevant debug information. This will be automatically formatted into code, so no need for backticks.
       render: shell
-  - type: checkboxes
-    id: terms
-    attributes:
-      label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/golioth/zephyr-sdk/blob/main/CODE_OF_CONDUCT.md)
-      options:
-        - label: I agree to follow this project's Code of Conduct
-          required: true
