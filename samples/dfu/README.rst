@@ -220,14 +220,14 @@ Run following command on host PC to upload new firmware as artifact to Golioth:
 
 .. code-block:: console
 
-   $ goliothctl artifact create new.bin --version 1.2.3
+   $ goliothctl dfu artifact create new.bin --version 1.2.3
 
 Then create new release consisting of this single firmware and roll it out to
 all devices in a project:
 
 .. code-block:: console
 
-   $ goliothctl release --release-tags 1.2.3 --components main@1.2.3 --rollout true
+   $ goliothctl dfu release create --release-tags 1.2.3 --components main@1.2.3 --rollout true
 
 DFU process should be started in Zephyr and this is what should be visible on
 serial console:
