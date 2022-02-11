@@ -128,21 +128,27 @@ sample application (i.e., ``samples/hello``) and type:
    $ west build -b nrf52840dk_nrf52840 samples/hello
    $ west flash
 
-nRF9160 Feather
----------------
+nRF9160-based devices
+---------------------
 
 On your host computer open a terminal window, locate the source code of this
 sample application (i.e., ``samples/hello``) and type:
 
 .. code-block:: console
 
+   $ #Build for the Circuit Dojo nrf9160 Feather:
    $ west build -b circuitdojo_feather_nrf9160_ns samples/hello
+   $ #or build for the Thingy:91:
+   $ west build -b thingy91_nrf9160_ns samples/hello
 
 Enter bootloader and use ``mcumgr`` (or ``newtmgr``) to flash firmware:
 
 .. code-block:: console
 
+   $ #Flashing the Circuit Dojo nRF9160 Feather
    $ mcumgr --conntype=serial --connstring='dev=/dev/ttyUSB0,baud=1000000' image upload build/zephyr/app_update.bin
+   $ #Flashing example for Thingy:91
+   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' image upload build/zephyr/app_update.bin
 
 See `nRF9160 Feather Programming and Debugging`_ for details.
 
