@@ -19,31 +19,38 @@ Requirements
 - Golioth credentials
 - Network connectivity
 
-Using nRF9160 Feather with nRF Connect SDK
+nRF9160-based devices with nRF Connect SDK
 ******************************************
 
 Build Zephyr sample application for nRF9160 Feather:
 
 .. code-block:: console
 
+   $ #Build for the Circuit Dojo nrf9160 Feather:
    $ west build -b circuitdojo_feather_nrf9160_ns samples/dfu
+   $ #or build for the Thingy:91:
+   $ west build -b thingy91_nrf9160_ns samples/dfu
 
 Enter bootloader and use ``mcumgr`` to flash firmware:
 
 .. code-block:: console
 
+   $ #Flashing the Circuit Dojo nRF9160 Feather
    $ mcumgr --conntype=serial --connstring='dev=/dev/ttyUSB0,baud=1000000' image upload build/zephyr/app_update.bin
+   $ #Flashing example for Thingy:91
+   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' image upload build/zephyr/app_update.bin
 
-Now rebuild application with assigned new version to 1.2.3 to distinguish it
-from old firmware:
+Now rebuild the application with the new version number 1.2.3 to distinguish it
+from the old firmware:
 
 .. code-block:: console
 
-   $ west build -p -b circuitdojo_feather_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
+   $ west build -b circuitdojo_feather_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
 
-Follow `Start DFU using goliothctl`_ to create new firmware release and roll it
-out to device, but use ``build/zephyr/app_update.bin`` instead of ``new.bin`` in
-the first step when uploading new artifact:
+Jump down to the `Start DFU using goliothctl`_ section lower on this page and
+follow those steps to create a new firmware release and roll it out to the
+device. **IMPORTANT:** use ``build/zephyr/app_update.bin`` instead of
+``new.bin`` in the first step when uploading the new artifact:
 
 .. code-block:: console
 
