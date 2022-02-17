@@ -38,3 +38,11 @@ jobs:
       - name: Run twister
         run: |
           zephyr/scripts/twister -T modules/lib/golioth
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: twister-artifacts
+          path: |
+            reports/*
+            twister-out/**/build.log
