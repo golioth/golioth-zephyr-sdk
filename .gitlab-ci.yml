@@ -160,7 +160,9 @@ twister-ncs:
   script:
     - >
       zephyr/scripts/twister
+      --board-root nrf/boards
       -p circuitdojo_feather_nrf9160_ns
       -p nrf9160dk_nrf9160_ns
+      -p thingy91_nrf9160_ns
       -o reports
       -T modules/lib/golioth
