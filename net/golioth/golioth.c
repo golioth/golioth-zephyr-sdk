@@ -146,7 +146,7 @@ static int __golioth_connect(struct golioth_client *client, int *sock,
 		}
 	}
 
-	freeaddrinfo(addrs);
+	zsock_freeaddrinfo(addrs);
 
 	return err;
 }
