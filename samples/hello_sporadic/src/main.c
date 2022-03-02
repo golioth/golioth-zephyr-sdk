@@ -55,7 +55,7 @@ void main(void)
 		golioth_system_client_start();
 		k_sem_take(&sys_client_conn_resolved, K_FOREVER);
 
-		LOG_INF("Sending hello! %d", counter++);
+		LOG_INF("Sending hello! %d", counter);
 
 		err = golioth_send_hello(client);
 		if (err) {
@@ -63,6 +63,7 @@ void main(void)
 		}
 		golioth_system_client_stop();
 
+		++counter;
 		k_sleep(K_SECONDS(60));
 	}
 }

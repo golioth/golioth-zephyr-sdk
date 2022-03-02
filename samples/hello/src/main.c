@@ -44,13 +44,13 @@ void main(void)
 	golioth_system_client_start();
 
 	while (true) {
-		LOG_INF("Sending hello! %d", counter++);
+		LOG_INF("Sending hello! %d", counter);
 
 		err = golioth_send_hello(client);
 		if (err) {
 			LOG_WRN("Failed to send hello!");
 		}
-
+		++counter;
 		k_sleep(K_SECONDS(5));
 	}
 }
