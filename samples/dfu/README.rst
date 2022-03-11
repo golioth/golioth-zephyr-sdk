@@ -47,16 +47,27 @@ from the old firmware:
 
    $ west build -b circuitdojo_feather_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
 
-Jump down to the `Start DFU using goliothctl`_ section lower on this page and
-follow those steps to create a new firmware release and roll it out to the
-device. **IMPORTANT:** use ``build/zephyr/app_update.bin`` instead of
-``new.bin`` in the first step when uploading the new artifact:
+See `nRF9160 Feather Programming and Debugging`_ for details.
+
+Start DFU using goliothctl
+==========================
+
+Run following command on host PC to upload new firmware as artifact to Golioth:
 
 .. code-block:: console
 
-   $ goliothctl artifact create build/zephyr/app_update.bin --version 1.2.3
+   $ goliothctl dfu artifact create build/zephyr/app_update.bin --version 1.2.3
 
-See `nRF9160 Feather Programming and Debugging`_ for details.
+Then create new release consisting of this single firmware and roll it out to
+all devices in a project:
+
+.. code-block:: console
+
+   $ goliothctl dfu release create --release-tags 1.2.3 --components main@1.2.3 --rollout true
+
+
+Jump down to the `Observe DFU process in target console output`_ section lower
+on this page to see the expected behavior of the target device during DFU.
 
 Using with Zephyr
 *****************
@@ -241,6 +252,9 @@ all devices in a project:
 .. code-block:: console
 
    $ goliothctl dfu release create --release-tags 1.2.3 --components main@1.2.3 --rollout true
+
+Observe DFU process in target console output
+============================================
 
 DFU process should be started in Zephyr and this is what should be visible on
 serial console:
