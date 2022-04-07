@@ -329,8 +329,8 @@ running from primary area (first application slot):
      copy done: unset
      image ok: unset
 
-.. _MCUboot: https://docs.zephyrproject.org/latest/guides/device_mgmt/dfu.html#mcuboot
-.. _Signing Binaries: https://docs.zephyrproject.org/latest/guides/west/sign.html#west-sign
-.. _Flash map: https://docs.zephyrproject.org/latest/reference/storage/flash_map/flash_map.html#flash-map-api
+.. _MCUboot: https://docs.zephyrproject.org/3.0.0/guides/device_mgmt/dfu.html#mcuboot
+.. _Signing Binaries: https://docs.zephyrproject.org/3.0.0/guides/west/sign.html#west-sign
+.. _Flash map: https://docs.zephyrproject.org/3.0.0/reference/storage/flash_map/flash_map.html#flash-map-api
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
 .. _nRF9160 Feather Programming and Debugging: https://docs.jaredwolff.com/nrf9160-programming-and-debugging.html
