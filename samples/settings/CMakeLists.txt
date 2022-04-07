@@ -6,5 +6,6 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(settings)
 
 target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/settings.c)
 target_sources_ifdef(CONFIG_BT app PRIVATE src/bt.c)
 target_sources_ifdef(CONFIG_MCUMGR app PRIVATE src/mcumgr.c)
