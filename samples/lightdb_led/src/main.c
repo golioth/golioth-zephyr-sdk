@@ -27,7 +27,7 @@ static struct coap_reply coap_replies[1];
 		    ())
 
 static struct gpio_dt_spec led[] = {
-	UTIL_LISTIFY(10, LED_GPIO_SPEC)
+	LISTIFY(10, LED_GPIO_SPEC, ())
 };
 
 static void golioth_led_initialize(void)
