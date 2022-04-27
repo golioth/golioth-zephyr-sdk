@@ -34,8 +34,7 @@ Platform specific configuration
 QEMU
 ----
 
-This application has been built and tested with QEMU x86 (qemu_x86) and QEMU ARM
-Cortex-M3 (qemu_cortex_m3).
+This application has been built and tested with QEMU x86 (qemu_x86).
 
 On your Linux host computer, open a terminal window, locate the source code
 of this sample application (i.e., ``samples/logging``) and type:
@@ -128,29 +127,16 @@ sample application (i.e., ``samples/logging``) and type:
    $ west build -b nrf52840dk_nrf52840 samples/logging
    $ west flash
 
-nRF9160-based devices
----------------------
+nRF9160 DK
+----------
 
 On your host computer open a terminal window, locate the source code of this
 sample application (i.e., ``samples/logging``) and type:
 
 .. code-block:: console
 
-   $ #Build for the Circuit Dojo nrf9160 Feather:
-   $ west build -b circuitdojo_feather_nrf9160_ns samples/logging
-   $ #or build for the Thingy:91:
-   $ west build -b thingy91_nrf9160_ns samples/logging
-
-Enter bootloader and use ``mcumgr`` (or ``newtmgr``) to flash firmware:
-
-.. code-block:: console
-
-   $ #Flashing the Circuit Dojo nRF9160 Feather
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyUSB0,baud=1000000' image upload build/zephyr/app_update.bin
-   $ #Flashing example for Thingy:91
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' image upload build/zephyr/app_update.bin
-
-See `nRF9160 Feather Programming and Debugging`_ for details.
+   $ west build -b nrf9160dk_nrf9160_ns samples/logging
+   $ west flash
 
 Sample output
 =============
@@ -215,4 +201,3 @@ This is how logs are visible
 .. _Networking with QEMU: https://docs.zephyrproject.org/3.0.0/guides/networking/qemu_setup.html#networking-with-qemu
 .. _ESP32: https://docs.zephyrproject.org/3.0.0/boards/xtensa/esp32/doc/index.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
-.. _nRF9160 Feather Programming and Debugging: https://docs.jaredwolff.com/nrf9160-programming-and-debugging.html
