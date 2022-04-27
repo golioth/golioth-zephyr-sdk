@@ -79,8 +79,8 @@ Configure WiFi SSID and PSK using ``mcumgr``:
 
    mcumgr --conntype ble --connstring peer_name=Zephyr reset
 
-nRF9160-based devices
----------------------
+nRF9160 DK
+----------
 
 On your host computer open a terminal window, locate the directory that contains
 the sample folder (i.e., ``~/zephyr-nrf/modules/lib/golioth``). We will build it
@@ -90,22 +90,15 @@ bootloader mode):
 
 .. code-block:: console
 
-   $ #Build and flash for the Circuit Dojo nrf9160 Feather:
-   $ west build -b circuitdojo_feather_nrf9160_ns samples/settings
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyUSB0,baud=1000000' image upload build/zephyr/app_update.bin
-   $ #or build and flash for the Thingy:91:
-   $ west build -b thingy91_nrf9160_ns samples/settings
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' image upload build/zephyr/app_update.bin
+   $ west build -b nrf9160dk_nrf9160_ns samples/settings
+   $ west flash
 
-To write the settings to flash, we need to get out of bootloader mode, send the
-desired values, and then reset the application to start using them. Here is the
-process for the Thingy91 (change the ``connstring`` as necessary for your
-hardware):
+To write the settings to flash, we need to send the desired values, and then
+reset the application to start using them. Here is the process for the nRF9160 DK
+(change the ``connstring`` as necessary for your hardware):
 
 .. code-block:: console
 
-   $ #Write the settings to the Thingy:91
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' reset
    $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' config golioth/psk-id device-id@project-id
    $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' config golioth/psk device-pre-shared-key
    $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' reset

@@ -19,35 +19,22 @@ Requirements
 - Golioth credentials
 - Network connectivity
 
-nRF9160-based devices with nRF Connect SDK
-******************************************
+nRF9160 DK with nRF Connect SDK
+*******************************
 
-Build Zephyr sample application for nRF9160 Feather:
-
-.. code-block:: console
-
-   $ #Build for the Circuit Dojo nrf9160 Feather:
-   $ west build -b circuitdojo_feather_nrf9160_ns samples/dfu
-   $ #or build for the Thingy:91:
-   $ west build -b thingy91_nrf9160_ns samples/dfu
-
-Enter bootloader and use ``mcumgr`` to flash firmware:
+Build Zephyr sample application for nRF9160 DK:
 
 .. code-block:: console
 
-   $ #Flashing the Circuit Dojo nRF9160 Feather
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyUSB0,baud=1000000' image upload build/zephyr/app_update.bin
-   $ #Flashing example for Thingy:91
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' image upload build/zephyr/app_update.bin
+   $ west build -b nrf9160dk_nrf9160_ns samples/dfu
+   $ west flash
 
 Now rebuild the application with the new version number 1.2.3 to distinguish it
 from the old firmware:
 
 .. code-block:: console
 
-   $ west build -b circuitdojo_feather_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
-
-See `nRF9160 Feather Programming and Debugging`_ for details.
+   $ west build -b nrf9160dk_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
 
 Start DFU using goliothctl
 ==========================
@@ -333,4 +320,3 @@ running from primary area (first application slot):
 .. _Signing Binaries: https://docs.zephyrproject.org/3.0.0/guides/west/sign.html#west-sign
 .. _Flash map: https://docs.zephyrproject.org/3.0.0/reference/storage/flash_map/flash_map.html#flash-map-api
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
-.. _nRF9160 Feather Programming and Debugging: https://docs.jaredwolff.com/nrf9160-programming-and-debugging.html
