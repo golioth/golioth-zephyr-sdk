@@ -1,7 +1,7 @@
 manifest:
   projects:
     - name: zephyr
-      revision: fd8d1f5fb3a63403717da0e17f1c574ccd0740c2
+      revision: 7d27f8dd583da5fbcda7167bc0b9ec9aa7d3dad1
       url: https://github.com/zephyrproject-rtos/zephyr
       west-commands: scripts/west-commands.yml
       import:
@@ -16,8 +16,8 @@ manifest:
           - mcumgr
           - net-tools
           - segger
-          - tinycbor
           - tinycrypt
+          - zcbor
 
     - name: qcbor
       revision: 17b5607b8c49b835d22dec3effa97b25c89267b3

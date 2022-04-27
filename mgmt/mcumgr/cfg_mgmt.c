@@ -11,10 +11,15 @@
 #include <util/mcumgr_util.h>
 #include <settings/settings.h>
 
-#include "cborattr/cborattr.h"
+#include <zcbor_common.h>
+#include <zcbor_decode.h>
+#include <zcbor_encode.h>
+#include <mgmt/mcumgr/buf.h>
+
 #include "cfg_mgmt/cfg_mgmt.h"
 #include "mgmt/mgmt.h"
-#include "tinycbor/cbor.h"
+
+#include "zcbor_bulk/zcbor_bulk_priv.h"
 
 static int cfg_mgmt_val_get(struct mgmt_ctxt *ctxt);
 static int cfg_mgmt_val_set(struct mgmt_ctxt *ctxt);
@@ -59,45 +64,60 @@ static int cfg_mgmt_impl_get(const char *name, uint8_t *val, size_t *val_len)
  */
 static int cfg_mgmt_val_get(struct mgmt_ctxt *ctxt)
 {
+	struct zcbor_string map_name = {};
 	char name[CONFIG_MCUMGR_CMD_CFG_MGMT_KEY_MAX_LEN];
 	char val[CONFIG_MCUMGR_CMD_CFG_MGMT_VAL_MAX_LEN];
 	size_t val_len = sizeof(val);
-	CborError err = 0;
+	zcbor_state_t *zsd = ctxt->cnbd->zs;
+	zcbor_state_t *zse = ctxt->cnbe->zs;
+	bool ok;
 	int rc;
 
-	const struct cbor_attr_t attrs[] = {
-		{
-			.attribute = "name",
-			.type = CborAttrTextStringType,
-			.addr.string = name,
-			.nodefault = true,
-			.len = sizeof(name),
-		},
-		{ },
-	};
+	if (!zcbor_map_start_decode(zsd)) {
+		return MGMT_ERR_EUNKNOWN;
+	}
 
-	name[0] = '\0';
+	do {
+		struct zcbor_string map_key;
 
-	rc = cbor_read_object(&ctxt->it, attrs);
-	if (rc != 0) {
+		ok = zcbor_tstr_decode(zsd, &map_key);
+
+		if (ok) {
+			static const char name_key[] = "name";
+
+			if (map_key.len == ARRAY_SIZE(name_key) - 1 &&
+			    memcmp(map_key.value, name_key, ARRAY_SIZE(name_key) - 1) == 0) {
+				ok = zcbor_tstr_decode(zsd, &map_name);
+				break;
+			}
+
+			ok = zcbor_any_skip(zsd, NULL);
+		}
+	} while (ok);
+
+	if (!ok || !zcbor_map_end_decode(zsd)) {
+		return MGMT_ERR_EUNKNOWN;
+	}
+
+	if (map_name.len == 0 || map_name.len >= sizeof(name)) {
 		return MGMT_ERR_EINVAL;
 	}
 
+	/* Copy to local buffer to add NULL termination */
+	memcpy(name, map_name.value, map_name.len);
+	name[map_name.len] = '\0';
+
 	rc = cfg_mgmt_impl_get(name, val, &val_len);
 
-	err |= cbor_encode_text_stringz(&ctxt->encoder, "rc");
-	err |= cbor_encode_int(&ctxt->encoder, rc);
+	ok = zcbor_tstr_put_lit(zse, "rc") &&
+		zcbor_int32_put(zse, rc);
 
-	if (rc == 0) {
-		err |= cbor_encode_text_stringz(&ctxt->encoder, "val");
-		err |= cbor_encode_byte_string(&ctxt->encoder, val, val_len);
+	if (ok && rc == 0) {
+		ok = zcbor_tstr_put_lit(zse, "val") &&
+			zcbor_bstr_encode_ptr(zse, val, val_len);
 	}
 
-	if (err != 0) {
-		return MGMT_ERR_ENOMEM;
-	}
-
-	return 0;
+	return ok ? MGMT_ERR_EOK : MGMT_ERR_ENOMEM;
 }
 
 static int cfg_mgmt_impl_set(const char *name, const uint8_t *val,
@@ -120,76 +140,60 @@ static int cfg_mgmt_impl_set(const char *name, const uint8_t *val,
 	return 0;
 }
 
+static bool zcbor_bstr_or_tstr_decode(zcbor_state_t *state, struct zcbor_string *result)
+{
+	bool ok;
+
+	ok = zcbor_bstr_decode(state, result);
+	if (ok) {
+		return ok;
+	}
+
+	return zcbor_tstr_decode(state, result);
+}
+
 /**
  * Command handler: cfg val
  */
 static int cfg_mgmt_val_set(struct mgmt_ctxt *ctxt)
 {
+	struct zcbor_string map_name = {};
 	char name[CONFIG_MCUMGR_CMD_CFG_MGMT_KEY_MAX_LEN];
-	char val[CONFIG_MCUMGR_CMD_CFG_MGMT_VAL_MAX_LEN];
-	size_t val_len = SIZE_MAX;
+	struct zcbor_string val;
+	zcbor_state_t *zsd = ctxt->cnbd->zs;
+	zcbor_state_t *zse = ctxt->cnbe->zs;
+	size_t decoded;
+	bool ok;
 	bool save;
-	CborError err = 0;
 	int rc;
 
-	const struct cbor_attr_t attrs[] = {
-		{
-			.attribute = "name",
-			.type = CborAttrTextStringType,
-			.addr.string = name,
-			.nodefault = true,
-			.len = sizeof(name),
-		},
-		{
-			.attribute = "val",
-			.type = CborAttrByteStringType,
-			.addr.bytestring.data = val,
-			.addr.bytestring.len = &val_len,
-			.nodefault = true,
-			.len = sizeof(val),
-		},
-		{
-			.attribute = "val",
-			.type = CborAttrTextStringType,
-			.addr.string = val,
-			.nodefault = true,
-			.len = sizeof(val),
-		},
-		{
-			.attribute = "save",
-			.type = CborAttrBooleanType,
-			.addr.boolean = &save,
-			.dflt.boolean = false,
-		},
-		{ },
+	struct zcbor_map_decode_key_val cfg_set_decode[] = {
+		ZCBOR_MAP_DECODE_KEY_VAL(name, zcbor_tstr_decode, &map_name),
+		ZCBOR_MAP_DECODE_KEY_VAL(val, zcbor_bstr_or_tstr_decode, &val),
+		ZCBOR_MAP_DECODE_KEY_VAL(save, zcbor_bool_decode, &save),
 	};
 
-	name[0] = '\0';
-	val[0] = '\0';
+	ok = zcbor_map_decode_bulk(zsd, cfg_set_decode,
+		ARRAY_SIZE(cfg_set_decode), &decoded) == 0;
 
-	rc = cbor_read_object(&ctxt->it, attrs);
-	if (rc != 0) {
+	if (!ok) {
 		return MGMT_ERR_EINVAL;
 	}
 
-	if (val_len == SIZE_MAX) {
-		val_len = strlen(val);
-	}
-
-	if (name[0] == '\0') {
+	if (map_name.len == 0 || map_name.len >= sizeof(name)) {
 		return MGMT_ERR_EINVAL;
 	}
 
-	rc = cfg_mgmt_impl_set(name, val, val_len);
+	/* Copy to local buffer to add NULL termination */
+	memcpy(name, map_name.value, map_name.len);
+	name[map_name.len] = '\0';
 
-	err |= cbor_encode_text_stringz(&ctxt->encoder, "rc");
-	err |= cbor_encode_int(&ctxt->encoder, rc);
+	rc = cfg_mgmt_impl_set(name, val.value, val.len);
 
-	if (err != 0) {
-		return MGMT_ERR_ENOMEM;
-	}
+	ok = zcbor_tstr_put_lit(zse, "rc") &&
+		zcbor_int32_put(zse, rc);
 
-	return 0;
+	return ok ? MGMT_ERR_EOK : MGMT_ERR_ENOMEM;
 }
 
 void cfg_mgmt_register_group(void)
