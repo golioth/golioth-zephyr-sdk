@@ -26,8 +26,16 @@ static struct coap_reply coap_replies[1];
 		    (GPIO_DT_SPEC_GET(DT_ALIAS(led##i), gpios),),	\
 		    ())
 
+/*
+ * Workaround for nRF Connect SDK, which uses older version of Zephyr without
+ * LISTIFY().
+ */
+#ifndef LISTIFY
+#define LISTIFY(LEN, F, sep, ...) UTIL_LISTIFY(LEN, F, __VA_ARGS__)
+#endif
+
 static struct gpio_dt_spec led[] = {
-	UTIL_LISTIFY(10, LED_GPIO_SPEC)
+	LISTIFY(10, LED_GPIO_SPEC, ())
 };
 
 static void golioth_led_initialize(void)

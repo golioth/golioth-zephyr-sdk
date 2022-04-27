@@ -1,7 +1,7 @@
 manifest:
   projects:
     - name: zephyr
-      revision: 4f8d78ceeb436e82f528511998515f6fc137c6cd
+      revision: fd8d1f5fb3a63403717da0e17f1c574ccd0740c2
       url: https://github.com/zephyrproject-rtos/zephyr
       west-commands: scripts/west-commands.yml
       import:
