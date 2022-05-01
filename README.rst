@@ -49,30 +49,16 @@ Using with nRF Connect SDK
 ==========================
 
 Platforms like `nRF9160 Feather`_ require `nRF Connect SDK`_ to make use of
-their distinct features, which is cellular network connectivity. Initialize nRF
-Connect SDK with following command:
+their distinct features, which is cellular network connectivity.
+
+Using Golioth SDK as manifest repository
+----------------------------------------
+
+Execute this command to download this repository together with all dependencies:
 
 .. code-block:: console
 
-   west init -m https://github.com/nrfconnect/sdk-nrf --mr v1.7.1
-
-Add following entry to ``west.yml`` file in ``manifest/projects`` subtree:
-
-.. code-block:: yaml
-
-    # Golioth repository.
-    - name: golioth
-      path: modules/lib/golioth
-      revision: main
-      url: https://github.com/golioth/zephyr-sdk.git
-      import:
-        name-allowlist:
-          - qcbor
-
-Now clone all repositories with:
-
-.. code-block:: console
-
+   west init -m https://github.com/golioth/zephyr-sdk.git --mf west-ncs.yml
    west update
 
 Follow `nRF Connect SDK Getting Started`_ for details on how to setup nRF
