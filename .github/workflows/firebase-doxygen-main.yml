@@ -1,0 +1,23 @@
+name: Deploy Doxygen to Firebase Hosting on Main
+'on':
+  push:
+    branches:
+      - main
+jobs:
+  build_and_preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Doxygen
+        run: sudo apt install doxygen graphviz
+      - name: Generate Doxygen
+        run: |
+          cd docs/doxygen
+          doxygen
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_GOLIOTH }}'
+          projectId: golioth
+          target: docs-prod
+          entryPoint: docs

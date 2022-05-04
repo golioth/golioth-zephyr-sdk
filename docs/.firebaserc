@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "golioth"
+  },
+  "targets": {
+    "golioth": {
+      "hosting": {
+        "docs-dev": [
+          "golioth-zephyr-sdk-doxygen-dev"
+        ],
+        "docs-prod": [
+          "golioth-zephyr-sdk-doxygen"
+        ]
+      }
+    }
+  }
+}
