@@ -6,7 +6,7 @@ Overview
 
 This sample application demonstrates how to enable Zephyr settings subsystem and
 use it for storing Golioth credentials. Additionally it shows how to provision
-these credentials using ``mcumgr`` CLI.
+these credentials using devive shell CLI.
 
 Requirements
 ************
@@ -61,23 +61,20 @@ sample application (i.e., ``samples/settings``) and type:
    $ west build -b nrf52840dk_nrf52840 samples/settings
    $ west flash
 
-Configure PSK and PSK-ID using ``mcumgr`` based on your Golioth credentials:
+Configure PSK-ID and PSK using the device shell based on your Golioth credentials:
 
 .. code-block:: console
 
-   mcumgr --conntype ble --connstring peer_name=Zephyr config golioth/psk-id <my-id>
-   mcumgr --conntype ble --connstring peer_name=Zephyr config golioth/psk <my-pass>
+   uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
+   uart:~$ settings set golioth/psk <my-psk>
 
-Configure WiFi SSID and PSK using ``mcumgr``:
-
-.. code-block:: console
-
-   mcumgr --conntype ble --connstring peer_name=Zephyr config wifi/ssid <my-ssid>
-   mcumgr --conntype ble --connstring peer_name=Zephyr config wifi/psk <my-pass>
+Configure WiFi SSID and PSK using the device shell and reboot:
 
 .. code-block:: console
 
-   mcumgr --conntype ble --connstring peer_name=Zephyr reset
+   uart:~$ settings set wifi/ssid <my-ssid>
+   uart:~$ settings set wifi/psk <my-psk>
+   uart:~$ kernel reboot cold
 
 nRF9160 DK
 ----------
@@ -93,18 +90,12 @@ bootloader mode):
    $ west build -b nrf9160dk_nrf9160_ns samples/settings
    $ west flash
 
-To write the settings to flash, we need to send the desired values, and then
-reset the application to start using them. Here is the process for the nRF9160 DK
-(change the ``connstring`` as necessary for your hardware):
+Configure PSK-ID and PSK using the device shell based on your Golioth credentials and reboot:
 
 .. code-block:: console
 
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' config golioth/psk-id device-id@project-id
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' config golioth/psk device-pre-shared-key
-   $ mcumgr --conntype=serial --connstring='dev=/dev/ttyACM0,baud=115200' reset
-
-Replace the ``device-id@project-id`` and ``device-pre-shared-key`` with your
-actual values. These can be found on the devices page of the Golioth Console
-(https://console.golioth.io/).
+   uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
+   uart:~$ settings set golioth/psk <my-psk>
+   uart:~$ kernel reboot cold
 
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
