@@ -58,7 +58,7 @@ sample application (i.e., ``samples/settings``) and type:
 
 .. code-block:: console
 
-   $ west build -b nrf52840dk_nrf52840 samples/hello
+   $ west build -b nrf52840dk_nrf52840 samples/settings
    $ west flash
 
 Configure PSK and PSK-ID using ``mcumgr`` based on your Golioth credentials:
@@ -107,37 +107,4 @@ Replace the ``device-id@project-id`` and ``device-pre-shared-key`` with your
 actual values. These can be found on the devices page of the Golioth Console
 (https://console.golioth.io/).
 
-Sample output
-=============
-
-This is the output from the serial console of nRF52840 DK + ESP32-WROOM-32:
-
-.. code-block:: console
-
-   [00:00:00.366,455] <inf> bt: Bluetooth initialized
-   [00:00:00.366,912] <inf> bt: Advertising successfully started
-   [00:00:00.366,943] <inf> golioth_system: Initializing
-   [00:00:00.373,016] <inf> fs_nvs: 8 Sectors of 4096 bytes
-   [00:00:00.373,016] <inf> fs_nvs: alloc wra: 0, f88
-   [00:00:00.373,016] <inf> fs_nvs: data wra: 0, 6c
-   [00:00:00.373,107] <dbg> golioth_hello.main: Start Hello sample
-   [00:00:00.373,199] <dbg> golioth_wifi.wifi_settings_set: Name: ssid
-   [00:00:00.373,199] <dbg> golioth_wifi: value
-                                          xx xx xx xx xx xx xx                             |xxxxxxx
-   [00:00:00.373,352] <dbg> golioth_wifi.wifi_settings_set: Name: psk
-   [00:00:00.373,352] <dbg> golioth_wifi: value
-                                          xx xx xx xx xx xx xx xx  xx xx xx xx xx xx xx xx |xxxxxxxx xxxxxxxx
-   [00:00:00.373,779] <inf> golioth_hello: Connecting to WiFi
-   [00:00:00.373,809] <err> golioth_wifi: Failed to request WiFi connect: -5
-   [00:00:01.676,879] <inf> wifi_esp_at: ESP Wi-Fi ready
-   [00:00:05.560,089] <dbg> golioth_wifi.wifi_mgmt_event_handler: wifi event: d1560003
-   [00:00:05.561,035] <inf> golioth_wifi: Successfully connected to WiFi
-   [00:00:05.561,035] <inf> golioth_hello: Sending hello! 0
-   [00:00:05.561,065] <inf> golioth_system: Starting connect
-   [00:00:05.561,309] <wrn> golioth_hello: Failed to send hello!
-   [00:00:06.547,180] <inf> golioth_system: Client connected!
-   [00:00:10.561,370] <inf> golioth_hello: Sending hello! 1
-   [00:00:15.565,368] <inf> golioth_hello: Sending hello! 2
-
-.. _Networking with QEMU: https://docs.zephyrproject.org/3.0.0/guides/networking/qemu_setup.html#networking-with-qemu
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
