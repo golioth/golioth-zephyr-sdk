@@ -4,7 +4,6 @@ image: zephyrprojectrtos/ci:v0.23.1
   - rm -rf .west modules/lib/golioth
   - west init -m $CI_REPOSITORY_URL
   - (cd modules/lib/golioth; git checkout $CI_COMMIT_SHA)
-  - west forall -c 'git clean -ffdx && git reset --hard'
 
 .cache-deps: &cache-deps
   key: west-modules
@@ -37,7 +36,11 @@ stages:
     policy: pull
   before_script:
     - *west-init
-    - west update -o=--depth=1 -n
+    - >
+      west update -o=--depth=1 -n ||
+      (west forall -c 'git clean -ffdx && git reset --hard' &&
+       west update -o=--depth=1 -n)
+    - west forall -c 'git clean -ffdx && git reset --hard'
     - west patch --apply
 
 .west-build:
@@ -62,7 +65,11 @@ checkpatch:
   before_script:
     - *west-init
     - west update modules/lib/golioth
-    - west update zephyr -o=--depth=1 -n
+    - >
+      west update zephyr -o=--depth=1 -n ||
+      (west forall -c 'git clean -ffdx && git reset --hard' &&
+       west update zephyr -o=--depth=1 -n)
+    - west forall -c 'git clean -ffdx && git reset --hard'
   script:
     - cd modules/lib/golioth
     - git fetch
