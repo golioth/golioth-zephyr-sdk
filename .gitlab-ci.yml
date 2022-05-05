@@ -1,8 +1,11 @@
 image: zephyrprojectrtos/ci:v0.23.1
 
+variables:
+  WEST_MANIFEST: west.yml
+
 .west-init: &west-init
   - rm -rf .west modules/lib/golioth
-  - west init -m $CI_REPOSITORY_URL
+  - west init -m $CI_REPOSITORY_URL --mf ${WEST_MANIFEST}
   - (cd modules/lib/golioth; git checkout $CI_COMMIT_SHA)
 
 .cache-deps: &cache-deps
@@ -137,28 +140,8 @@ twister-esp:
 
 twister-ncs:
   extends: .twister
-  before_script:
-    - rm -rf .west nrf
-    - west init -m https://github.com/nrfconnect/sdk-nrf --mr v1.7.1
-    - west forall -c 'git clean -ffdx && git reset --hard'
-    - mkdir -p nrf/submanifests
-    - |
-      cat <<EOF > nrf/submanifests/golioth.yaml
-      manifest:
-        projects:
-          - name: golioth
-            path: modules/lib/golioth
-            revision: $CI_COMMIT_SHA
-            url: $CI_REPOSITORY_URL
-            import:
-              name-allowlist:
-                - qcbor
-      EOF
-    - |
-      cat <<EOF >> nrf/west.yml
-          import: submanifests
-      EOF
-    - west update -o=--depth=1 -n
+  variables:
+    WEST_MANIFEST: west-ncs.yml
   script:
     - >
       zephyr/scripts/twister
