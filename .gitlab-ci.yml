@@ -5,7 +5,7 @@ variables:
 
 .west-init: &west-init
   - rm -rf .west modules/lib/golioth
-  - west init -m $CI_REPOSITORY_URL --mr $CI_COMMIT_REF_NAME
+  - west init -m $CI_REPOSITORY_URL --mf west-zephyr.yml --mr $CI_COMMIT_REF_NAME
   - (cd modules/lib/golioth; git checkout $CI_COMMIT_SHA)
   - west forall -c 'git clean -ffdx && git reset --hard'
 
@@ -146,9 +146,7 @@ twister-ncs:
             path: modules/lib/golioth
             revision: $CI_COMMIT_SHA
             url: $CI_REPOSITORY_URL
-            import:
-              name-allowlist:
-                - qcbor
+            import: west-external.yml
       EOF
     - |
       cat <<EOF >> nrf/west.yml
