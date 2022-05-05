@@ -2,7 +2,7 @@
 
 The latest Doxygen documentation can be viewed here:
 
-https://golioth-zephyr-sdk-doxygen-prod.firebaseapp.com/
+https://golioth-zephyr-sdk-doxygen.firebaseapp.com/
 
 
 ### Building Doxygen Locally
