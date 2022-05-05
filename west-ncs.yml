@@ -1,14 +1,10 @@
 # NCS Workflow 4: Application as the manifest repo
 # https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/dm_adding_code.html
 manifest:
-  remotes:
-    - name: ncs
-      url-base: http://github.com/nrfconnect
   projects:
     - name: nrf
-      repo-path: sdk-nrf
-      remote: ncs
       revision: v1.7.1
+      url: http://github.com/nrfconnect/sdk-nrf
       import: true
 
     - name: qcbor
