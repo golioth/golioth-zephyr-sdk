@@ -25,14 +25,14 @@ Contributions of all types are encouraged and valued. See the [Table of Contents
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
-[Golioth Zephyr DSDK Code of Conduct](https://github.com/golioth/zephyr-sdk/blob/master/CODE_OF_CONDUCT.md).
+[Golioth Zephyr DSDK Code of Conduct](https://github.com/golioth/golioth-zephyr-sdk/blob/master/CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to <coc@golioth.io>.
 
 ---
 ## I Have a Question
 
-After referring to our documentation [Documentation](https://docs.golioth.io) and searching for existing [Issues](https://github.com/golioth/zephyr-sdk/issues) and [Discussions](https://github.com/golioth/zephyr-sdk/discussions) feel free to ask a question at the projects [Discussion Board](https://github.com/golioth/zephyr-sdk/discussions/new?category=q-a)
+After referring to our documentation [Documentation](https://docs.golioth.io) and searching for existing [Issues](https://github.com/golioth/golioth-zephyr-sdk/issues) and [Discussions](https://github.com/golioth/golioth-zephyr-sdk/discussions) feel free to ask a question at the projects [Discussion Board](https://github.com/golioth/golioth-zephyr-sdk/discussions/new?category=q-a)
 - Provide as much context as you can about what you're running into.
 - Provide project and platform versions (target board, version of our sdk, ), depending on what seems relevant.
 
@@ -65,7 +65,7 @@ We have a special place in our hearts for Embedded Developers and have been on t
 To best help you out we *reccomend* that you gather the following information before making a bug report.
 
 - Make sure that you are using the latest supported version
-- Check if there is not already a bug report existing for your bug or error in the [bug tracker](https://github.com/golioth/zephyr-sdk/issues?q=label%3Abug).
+- Check if there is not already a bug report existing for your bug or error in the [bug tracker](https://github.com/golioth/golioth-zephyr-sdk/issues?q=label%3Abug).
 - Collect information about the bug:
   - Stack trace (Traceback)
   - OS, Platform and Version (Windows, Linux, macOS, x86, ARM)
@@ -85,7 +85,7 @@ However we also realize there are those times where you just need a good ol' san
 
 Upon following the reccomendations in the previous section:
 
-- Open a [Bug Report](https://github.com/golioth/zephyr-sdk/issues/new/choose)
+- Open a [Bug Report](https://github.com/golioth/golioth-zephyr-sdk/issues/new/choose)
 - Complete the Bug Report form
 - Include any information gathered in the previous section
 - Please provide as much context as possible and describe the *reproduction steps* that someone else can follow to recreate the issue on their own.
@@ -109,13 +109,13 @@ This section guides you through submitting an enhancement suggestion for Golioth
 
 - Make sure that you are using the latest version.
 - Read the [documentation](https://docs.golioth.io) carefully and find out if the functionality is already covered, maybe by an individual configuration.
-- Perform a [search](https://github.com/golioth/zephyr-sdk/issues) to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
+- Perform a [search](https://github.com/golioth/golioth-zephyr-sdk/issues) to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
 - Find out whether your idea fits with the scope and aims of the project. It's up to you to make a strong case to convince the project's developers of the merits of this feature. Keep in mind that we want features that will be useful to the majority of our users and not just a small subset. If you're just targeting a minority of users, consider writing an add-on/plugin library.
 
 <!-- omit in toc -->
 ### How Do I Submit a Good Enhancement Suggestion?
 
-Enhancement suggestions are currently tracked as [Discussions](https://github.com/golioth/zephyr-sdk/discussions).
+Enhancement suggestions are currently tracked as [Discussions](https://github.com/golioth/golioth-zephyr-sdk/discussions).
 We reccomend establishing the following in your discussion topic and description.
 
 - Use a **clear and descriptive title** for the issue to identify the suggestion.

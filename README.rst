@@ -16,7 +16,7 @@ Execute this command to download this repository together with all dependencies:
 
 .. code-block:: console
 
-   west init -m https://github.com/golioth/zephyr-sdk.git
+   west init -m https://github.com/golioth/golioth-zephyr-sdk.git
    west update
 
 Adding Golioth SDK to existing west project
@@ -31,7 +31,7 @@ subtree of existing `west`_ based project (e.g. Zephyr RTOS):
     - name: golioth
       path: modules/lib/golioth
       revision: main
-      url: https://github.com/golioth/zephyr-sdk.git
+      url: https://github.com/golioth/golioth-zephyr-sdk.git
       import:
         name-allowlist:
           - qcbor
@@ -58,7 +58,7 @@ Execute this command to download this repository together with all dependencies:
 
 .. code-block:: console
 
-   west init -m https://github.com/golioth/zephyr-sdk.git --mf west-ncs.yml
+   west init -m https://github.com/golioth/golioth-zephyr-sdk.git --mf west-ncs.yml
    west update
 
 Follow `nRF Connect SDK Getting Started`_ for details on how to setup nRF
