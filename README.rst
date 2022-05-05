@@ -16,7 +16,7 @@ Execute this command to download this repository together with all dependencies:
 
 .. code-block:: console
 
-   west init -m https://github.com/golioth/golioth-zephyr-sdk.git
+   west init -m https://github.com/golioth/golioth-zephyr-sdk.git --mf west-zephyr.yml
    west update
 
 Adding Golioth SDK to existing west project
@@ -32,9 +32,7 @@ subtree of existing `west`_ based project (e.g. Zephyr RTOS):
       path: modules/lib/golioth
       revision: main
       url: https://github.com/golioth/golioth-zephyr-sdk.git
-      import:
-        name-allowlist:
-          - qcbor
+      import: west-external.yml
 
 and clone all repositories including that one by running:
 
