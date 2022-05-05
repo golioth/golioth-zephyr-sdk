@@ -98,4 +98,32 @@ Configure PSK-ID and PSK using the device shell based on your Golioth credential
    uart:~$ settings set golioth/psk <my-psk>
    uart:~$ kernel reboot cold
 
+ESP32
+-----
+
+Configure the following Kconfig options based on your WiFi AP credentials
+by adding these lines to configuration file (e.g. ``prj.conf`` or
+``board/esp32.conf``):
+
+.. code-block:: cfg
+
+   CONFIG_ESP32_WIFI_SSID="my-wifi"
+   CONFIG_ESP32_WIFI_PSK="my-psk"
+
+On your host computer open a terminal window, locate the source code of this
+sample application (i.e., ``samples/settings``) and type:
+
+.. code-block:: console
+
+   $ west build -b esp32 samples/settings
+   $ west flash
+
+Configure PSK-ID and PSK using the device shell based on your Golioth credentials and reboot:
+
+.. code-block:: console
+
+   uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
+   uart:~$ settings set golioth/psk <my-psk>
+   uart:~$ kernel reboot cold
+
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
