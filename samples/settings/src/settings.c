@@ -181,15 +181,22 @@ static int cmd_settings_get(const struct shell *shell, size_t argc,
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(settings_commands,
-	SHELL_CMD_ARG(set, NULL, "set a module config\n"
-			  "usage:\n$ settings set <key> <value>\n"
-			  "example:\n$ settings set golioth/psk pre-shared-key-value\n"
-			  "$ seetings set golioth/psk-id psk-identity-value",
-			  cmd_settings_set, 3, 1),
-	SHELL_CMD_ARG(get, NULL, "get a module config value\n"
-			  "usage:\n$ settings get <key>\n"
-			  "example:\n$ settings get golioth/psk\n"
-			  "\t$ settings get golioth/psk-id\n", cmd_settings_get, 2, 1),
+	SHELL_CMD_ARG(set, NULL,
+		"set a module config\n"
+		"usage:\n"
+		"$ settings set <key> <value>\n"
+		"example:\n"
+		"$ settings set golioth/psk pre-shared-key-value\n"
+		"$ settings set golioth/psk-id psk-identity-value",
+		cmd_settings_set, 3, 1),
+	SHELL_CMD_ARG(get, NULL,
+		"get a module config value\n"
+		"usage:\n"
+		"$ settings get <key>\n"
+		"example:\n"
+		"$ settings get golioth/psk\n"
+		"$ settings get golioth/psk-id",
+		cmd_settings_get, 2, 1),
 	SHELL_SUBCMD_SET_END);
 
 SHELL_CMD_REGISTER(settings, &settings_commands, "Settings commands", NULL);
