@@ -5,7 +5,7 @@ variables:
 
 .west-init: &west-init
   - rm -rf .west modules/lib/golioth
-  - west init -m $CI_REPOSITORY_URL
+  - west init -m $CI_REPOSITORY_URL --mr $CI_COMMIT_REF_NAME
   - (cd modules/lib/golioth; git checkout $CI_COMMIT_SHA)
   - west forall -c 'git clean -ffdx && git reset --hard'
 
