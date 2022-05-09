@@ -13,10 +13,8 @@ manifest:
           - hal_stm32
           - mbedtls
           - mcuboot
-          - mcumgr
           - net-tools
           - segger
-          - tinycbor
           - tinycrypt
 
   self:
