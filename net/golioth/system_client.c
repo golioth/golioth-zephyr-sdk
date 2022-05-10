@@ -47,6 +47,13 @@ BUILD_ASSERT(sizeof(TLS_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
 
 #define PSK_TAG			1
 
+#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&	\
+	defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+static void golioth_settings_check_credentials(void);
+#else
+static inline void golioth_settings_check_credentials(void) {}
+#endif
+
 #define PING_INTERVAL		(CONFIG_GOLIOTH_SYSTEM_CLIENT_PING_INTERVAL_SEC * 1000)
 #define RECV_TIMEOUT		(CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC * 1000)
 
@@ -97,9 +104,54 @@ static void eventfd_timeout_handle(struct k_work *work)
 
 static K_WORK_DELAYABLE_DEFINE(eventfd_timeout, eventfd_timeout_handle);
 
+static bool contains_char(const uint8_t *str, size_t str_len, uint8_t c)
+{
+	for (const uint8_t *p = str; p < &str[str_len]; p++) {
+		if (*p == c) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static bool golioth_psk_id_is_valid(const uint8_t *psk_id, size_t psk_id_len)
+{
+	return contains_char(psk_id, psk_id_len, '@');
+}
+
+static bool golioth_psk_is_valid(const uint8_t *psk, size_t psk_len)
+{
+	return (psk_len > 0);
+}
+
+static int golioth_check_credentials(const uint8_t *psk_id, size_t psk_id_len,
+				     const char *psk, size_t psk_len)
+{
+	int err = 0;
+
+	if (!golioth_psk_id_is_valid(psk_id, psk_id_len)) {
+		LOG_WRN("Configured PSK-ID is invalid");
+		err = -EINVAL;
+	}
+
+	if (!golioth_psk_is_valid(psk, psk_len)) {
+		LOG_WRN("Configured PSK is invalid");
+		err = -EINVAL;
+	}
+
+	return err;
+}
+
 static int init_tls(void)
 {
 	int err;
+
+	err = golioth_check_credentials(TLS_PSK_ID, sizeof(TLS_PSK_ID) - 1,
+					TLS_PSK, sizeof(TLS_PSK) - 1);
+	if (err) {
+		return err;
+	}
 
 	err = tls_credential_add(PSK_TAG,
 				TLS_CREDENTIAL_PSK,
@@ -346,6 +398,8 @@ K_THREAD_DEFINE(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_STACK_SIZE,
 
 void golioth_system_client_start(void)
 {
+	golioth_settings_check_credentials();
+
 	k_sem_give(&sys_client_started);
 }
 
@@ -372,6 +426,12 @@ static uint8_t golioth_dtls_psk[PSK_MAX_LEN];
 static size_t golioth_dtls_psk_len;
 static uint8_t golioth_dtls_psk_id[64];
 static size_t golioth_dtls_psk_id_len;
+
+static void golioth_settings_check_credentials(void)
+{
+	golioth_check_credentials(golioth_dtls_psk_id, golioth_dtls_psk_id_len,
+				  golioth_dtls_psk, golioth_dtls_psk_len);
+}
 
 static int golioth_settings_get(const char *name, char *dst, int val_len_max)
 {
@@ -443,6 +503,23 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 
 	LOG_DBG("Name: %s", log_strdup(name));
 	LOG_HEXDUMP_DBG(value, *value_len, "value");
+
+	switch (type) {
+	case TLS_CREDENTIAL_PSK_ID:
+		if (!golioth_psk_id_is_valid(value, *value_len)) {
+			LOG_WRN("Configured PSK-ID is invalid");
+			return -EINVAL;
+		}
+		break;
+	case TLS_CREDENTIAL_PSK:
+		if (!golioth_psk_is_valid(value, *value_len)) {
+			LOG_WRN("Configured PSK is invalid");
+			return -EINVAL;
+		}
+		break;
+	default:
+		break;
+	}
 
 	err = tls_credential_add(PSK_TAG, type, value, *value_len);
 	if (err) {
