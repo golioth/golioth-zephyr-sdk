@@ -155,14 +155,10 @@ int golioth_connect(struct golioth_client *client, const char *host,
 		    uint16_t port)
 {
 	int sock = -1;
-	int err = 0;
+	int err;
 
 	if (client->sock >= 0) {
-		err = -EALREADY;
-	}
-
-	if (err) {
-		return err;
+		return -EALREADY;
 	}
 
 	err = __golioth_connect(client, &sock, host, port);
