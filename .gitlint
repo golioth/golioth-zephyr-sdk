@@ -4,4 +4,4 @@
 extra-path=scripts/gitlint
 
 [body-max-line-length]
-line-length=72
+line-length=75
