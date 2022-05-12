@@ -7,5 +7,6 @@ menu "Golioth options"
 
 rsource "logging/Kconfig"
 rsource "net/Kconfig"
+rsource "samples/common/Kconfig"
 
 endmenu
