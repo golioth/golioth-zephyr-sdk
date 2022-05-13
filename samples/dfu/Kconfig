@@ -23,4 +23,17 @@ config DNS_SERVER1
 
 endif # DNS_RESOLVER
 
+if SETTINGS
+
+config SETTINGS_RUNTIME
+	default y
+
+config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
+	default y
+
+config GOLIOTH_SAMPLE_SETTINGS_SHELL
+	default y
+
+endif # SETTINGS
+
 source "Kconfig.zephyr"
