@@ -29,6 +29,14 @@ Build Zephyr sample application for nRF9160 DK:
    $ west build -b nrf9160dk_nrf9160_ns samples/dfu
    $ west flash
 
+Configure PSK-ID and PSK using the device shell based on your Golioth credentials and reboot:
+
+.. code-block:: console
+
+   uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
+   uart:~$ settings set golioth/psk <my-psk>
+   uart:~$ kernel reboot cold
+
 Now rebuild the application with the new version number 1.2.3 to distinguish it
 from the old firmware:
 
@@ -87,18 +95,6 @@ on how to build and flash MCUboot.
 Building the sample application
 ===============================
 
-Configure the following Kconfig options based on your Golioth credentials:
-
-- GOLIOTH_SYSTEM_CLIENT_PSK_ID  - PSK ID of registered device
-- GOLIOTH_SYSTEM_CLIENT_PSK     - PSK of registered device
-
-by adding these lines to configuration file (e.g. ``prj.conf``):
-
-.. code-block:: cfg
-
-   CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID="my-psk-id"
-   CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK="my-psk"
-
 Platform specific configuration
 -------------------------------
 
@@ -135,16 +131,31 @@ using wires:
 |GND        |GND           |
 +-----------+--------------+
 
-Configure the following Kconfig options based on your WiFi AP credentials:
-
-- GOLIOTH_SAMPLE_WIFI_SSID - WiFi SSID
-- GOLIOTH_SAMPLE_WIFI_PSK  - WiFi PSK
-
-Now build Zephyr sample application for nRF52840 DK:
+On your host computer open a terminal window, locate the source code of this
+sample application (i.e., ``samples/dfu``) and type:
 
 .. code-block:: console
 
    $ west build -b nrf52840dk_nrf52840 samples/dfu
+
+ESP32
+~~~~~
+
+Configure the following Kconfig options based on your WiFi AP credentials
+by adding these lines to configuration file (e.g. ``prj.conf`` or
+``board/esp32.conf``):
+
+.. code-block:: cfg
+
+   CONFIG_ESP32_WIFI_SSID="my-wifi"
+   CONFIG_ESP32_WIFI_PSK="my-psk"
+
+On your host computer open a terminal window, locate the source code of this
+sample application (i.e., ``samples/dfu``) and type:
+
+.. code-block:: console
+
+   $ west build -b esp32 samples/dfu
 
 Signing the sample image
 ========================
@@ -203,6 +214,24 @@ slot (primary area):
      image ok: set
 
    failed to read secondary area (2) header: -5
+
+Configure credentials
+=====================
+
+(``nRF52840 DK + ESP32-WROOM-32`` only) Configure WiFi SSID and PSK using the device shell:
+
+.. code-block:: console
+
+   uart:~$ settings set wifi/ssid <my-ssid>
+   uart:~$ settings set wifi/psk <my-psk>
+
+Configure PSK-ID and PSK using the device shell based on your Golioth credentials and reboot:
+
+.. code-block:: console
+
+   uart:~$ settings set golioth/psk-id <my-psk-id@my-project>
+   uart:~$ settings set golioth/psk <my-psk>
+   uart:~$ kernel reboot cold
 
 Prepare new firmware
 ====================
