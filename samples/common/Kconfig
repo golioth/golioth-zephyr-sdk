@@ -4,6 +4,13 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
+	bool "Autoamtically load settings before main()"
+	depends on SETTINGS
+	help
+	  Load settings automatically before running main() function. Enable it,
+	  so that application does not need to call settings_load() manually.
+
 config GOLIOTH_SAMPLE_SETTINGS_SHELL
 	bool "Settings shell"
 	depends on SETTINGS
