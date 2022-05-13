@@ -82,8 +82,7 @@ nRF9160 DK
 On your host computer open a terminal window, locate the directory that contains
 the sample folder (i.e., ``~/zephyr-nrf/modules/lib/golioth``). We will build it
 without assigning any Golioth credentials, and this sample automatically builds
-for MCUboot. Build and flash examples are below (remember to put the device in
-bootloader mode):
+for MCUboot. Build and flash examples are below:
 
 .. code-block:: console
 
