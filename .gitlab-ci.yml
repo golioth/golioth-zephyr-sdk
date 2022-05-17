@@ -128,10 +128,7 @@ twister:
 twister-esp:
   extends: .twister
   script:
-    - west espressif install
     - west espressif update
-    - export ZEPHYR_TOOLCHAIN_VARIANT="espressif"
-    - export ESPRESSIF_TOOLCHAIN_PATH="${HOME}/.espressif/tools/zephyr"
     - >
       zephyr/scripts/twister
       -p esp32
