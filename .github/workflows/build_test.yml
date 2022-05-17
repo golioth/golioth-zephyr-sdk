@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: zephyrprojectrtos/ci:v0.23.1
+      image: zephyrprojectrtos/ci:v0.23.3
 
     env:
-      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.14.1
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.14.2
 
     steps:
       - uses: actions/checkout@v2
