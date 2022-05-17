@@ -116,12 +116,12 @@ close_sock:
 static int __golioth_connect(struct golioth_client *client, int *sock,
 			     const char *host, uint16_t port)
 {
-	struct addrinfo hints = {
+	struct zsock_addrinfo hints = {
 		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_DGRAM,
 		.ai_protocol = IPPROTO_UDP,
 	};
-	struct addrinfo *addrs, *addr;
+	struct zsock_addrinfo *addrs, *addr;
 	char port_str[8];
 	int ret;
 	int err = -ENOENT;
