@@ -299,7 +299,13 @@ static int golioth_sendmsg(struct golioth_client *client,
 
 	free(data);
 
-	return ret;
+	if (ret < 0) {
+		return ret;
+	} else if (ret < len) {
+		return -EIO;
+	}
+
+	return 0;
 }
 
 int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
@@ -341,7 +347,6 @@ int golioth_send_coap_payload(struct golioth_client *client,
 		.msg_iov = msg_iov,
 		.msg_iovlen = ARRAY_SIZE(msg_iov),
 	};
-	int ret;
 	int err;
 
 	if (client->proto == IPPROTO_UDP) {
@@ -371,7 +376,7 @@ int golioth_send_coap_payload(struct golioth_client *client,
 	msg_iov[1].iov_base = payload;
 	msg_iov[1].iov_len = payload_len;
 
-	ret = golioth_sendmsg(client, &msg, 0);
+	err = golioth_sendmsg(client, &msg, 0);
 	if (err) {
 		return err;
 	}
