@@ -741,3 +741,8 @@ int log_backend_golioth_init(struct golioth_client *client)
 
 	return 0;
 }
+
+const struct log_backend *log_backend_golioth_get(void)
+{
+	return &log_backend_golioth;
+}

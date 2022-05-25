@@ -17,4 +17,6 @@ struct golioth_client;
 
 int log_backend_golioth_init(struct golioth_client *client);
 
+const struct log_backend *log_backend_golioth_get(void);
+
 #endif /* GOLIOTH_INCLUDE_LOGGING_GOLIOTH_H_ */
