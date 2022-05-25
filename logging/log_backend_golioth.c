@@ -737,7 +737,7 @@ int log_backend_golioth_init(struct golioth_client *client)
 {
 	log_ctx.client = client;
 
-	log_backend_activate(&log_backend_golioth, &log_ctx);
+	log_backend_enable(&log_backend_golioth, &log_ctx, CONFIG_LOG_MAX_LEVEL);
 
 	return 0;
 }
