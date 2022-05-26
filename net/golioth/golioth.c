@@ -236,6 +236,8 @@ static int __golioth_send(struct golioth_client *client, uint8_t *data,
 	sent = zsock_send(client->sock, data, len, flags);
 	if (sent < 0) {
 		return -errno;
+	} else if (sent < len) {
+		return -EIO;
 	}
 
 	return 0;
@@ -299,13 +301,7 @@ static int golioth_sendmsg(struct golioth_client *client,
 
 	free(data);
 
-	if (ret < 0) {
-		return ret;
-	} else if (ret < len) {
-		return -EIO;
-	}
-
-	return 0;
+	return ret;
 }
 
 int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
