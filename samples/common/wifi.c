@@ -7,7 +7,7 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(golioth_wifi, LOG_LEVEL_DBG);
 
-#include <net/golioth/wifi.h>
+#include <samples/common/wifi.h>
 #include <net/wifi_mgmt.h>
 #include <settings/settings.h>
 
