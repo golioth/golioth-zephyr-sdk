@@ -9,7 +9,7 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 #include <net/coap.h>
 #include <net/golioth/system_client.h>
-#include <net/golioth/wifi.h>
+#include <samples/common/wifi.h>
 
 #include <stdlib.h>
 
