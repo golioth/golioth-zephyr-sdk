@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log_backend.h>
-#include <logging/log_ctrl.h>
-#include <logging/log_core.h>
-#include <logging/log_output.h>
 #include <net/golioth.h>
-#include <sys/cbprintf.h>
+#include <zephyr/logging/log_backend.h>
+#include <zephyr/logging/log_ctrl.h>
+#include <zephyr/logging/log_core.h>
+#include <zephyr/logging/log_output.h>
+#include <zephyr/sys/cbprintf.h>
 #include <qcbor/posix_error_map.h>
 #include <qcbor/qcbor.h>
 

@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
-#include <init.h>
-#include <net/coap.h>
 #include <net/golioth/system_client.h>
 #include <samples/common/wifi.h>
+#include <zephyr/init.h>
+#include <zephyr/net/coap.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 

@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(golioth_dfu);
 
 #include <stdio.h>
-#include <storage/flash_map.h>
+#include <zephyr/storage/flash_map.h>
 
 #include "flash.h"
 

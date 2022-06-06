@@ -7,10 +7,10 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 
-#include <kernel.h>
-#include <net/coap.h>
-#include <net/tls_credentials.h>
 #include <stdint.h>
+#include <zephyr/kernel.h>
+#include <zephyr/net/coap.h>
+#include <zephyr/net/tls_credentials.h>
 
 /**
  * @defgroup net Golioth Networking

@@ -4,17 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 
 #include <errno.h>
 #include <logging/golioth.h>
 #include <net/golioth/system_client.h>
-#include <net/socket.h>
-#include <net/tls_credentials.h>
-#include <posix/sys/eventfd.h>
-#include <settings/settings.h>
-#include <sys/atomic.h>
+#include <zephyr/net/socket.h>
+#include <zephyr/net/tls_credentials.h>
+#include <zephyr/posix/sys/eventfd.h>
+#include <zephyr/settings/settings.h>
+#include <zephyr/sys/atomic.h>
 
 #define USE_EVENTFD							\
 	IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD)

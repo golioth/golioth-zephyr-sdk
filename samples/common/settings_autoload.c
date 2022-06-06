@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <init.h>
-#include <settings/settings.h>
+#include <zephyr/init.h>
+#include <zephyr/settings/settings.h>
 
 static int settings_autoload(const struct device *dev)
 {
