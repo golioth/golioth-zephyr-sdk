@@ -9,10 +9,10 @@
 
 #include <net/golioth/rpc.h>
 #include <net/golioth/settings.h>
-#include <kernel.h>
-#include <net/coap.h>
-#include <net/tls_credentials.h>
 #include <stdint.h>
+#include <zephyr/kernel.h>
+#include <zephyr/net/coap.h>
+#include <zephyr/net/tls_credentials.h>
 
 /**
  * @defgroup net Golioth Networking

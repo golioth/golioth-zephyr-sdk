@@ -12,7 +12,7 @@
 
 #include "coap_utils.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(golioth);
 
 #define GOLIOTH_FW_DESIRED	".u/desired"

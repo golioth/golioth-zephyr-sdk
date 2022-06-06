@@ -4,16 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <net/coap.h>
+#include <zephyr/net/coap.h>
 #include <net/golioth.h>
-#include <net/socket.h>
-#include <random/rand32.h>
+#include <zephyr/net/socket.h>
+#include <zephyr/random/rand32.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "coap_utils.h"
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth, CONFIG_GOLIOTH_LOG_LEVEL);
 
 #define COAP_BASIC_HEADER_SIZE	4

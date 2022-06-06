@@ -9,8 +9,8 @@
 
 #ifdef CONFIG_BOOTLOADER_MCUBOOT
 
-#include <dfu/flash_img.h>
-#include <dfu/mcuboot.h>
+#include <zephyr/dfu/flash_img.h>
+#include <zephyr/dfu/mcuboot.h>
 #include <zephyr/types.h>
 
 int flash_img_prepare(struct flash_img_context *flash);

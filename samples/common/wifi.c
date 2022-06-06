@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_wifi, LOG_LEVEL_DBG);
 
 #include <samples/common/wifi.h>
-#include <net/wifi_mgmt.h>
-#include <settings/settings.h>
+#include <zephyr/net/wifi_mgmt.h>
+#include <zephyr/settings/settings.h>
 
 struct wifi_data {
 	struct net_mgmt_event_callback wifi_mgmt_cb;

@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
-#include <net/coap.h>
 #include <net/golioth/system_client.h>
 #include <samples/common/wifi.h>
+#include <zephyr/net/coap.h>
 
 #include <stdlib.h>
 
