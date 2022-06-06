@@ -7,8 +7,8 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_SETTINGS_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_SETTINGS_H_
 
-#include <net/coap.h>
 #include <stdint.h>
+#include <zephyr/net/coap.h>
 
 /**
  * @defgroup golioth_settings Golioth Settings

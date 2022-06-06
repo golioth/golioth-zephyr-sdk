@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
-#include <net/coap.h>
 #include <net/golioth/system_client.h>
 #include <samples/common/wifi.h>
+#include <zephyr/net/coap.h>
 
-#include <drivers/gpio.h>
+#include <zephyr/drivers/gpio.h>
 #include <stdlib.h>
 #include <qcbor/qcbor.h>
 #include <qcbor/qcbor_decode.h>

@@ -6,7 +6,6 @@
 
 #include <net/golioth/rpc.h>
 #include <net/golioth/system_client.h>
-#include <logging/log.h>
 #include <qcbor/posix_error_map.h>
 #include <qcbor/qcbor.h>
 #include <qcbor/qcbor_spiffy_decode.h>
@@ -30,6 +29,7 @@
  * }
  */
 
+#include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(golioth);
 
 #define GOLIOTH_RPC_PATH ".rpc"

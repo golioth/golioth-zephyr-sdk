@@ -4,15 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <shell/shell.h>
-#include <sys/printk.h>
-#include <init.h>
-#include <ctype.h>
-
-#include <settings/settings.h>
+#include <zephyr/kernel.h>
+#include <zephyr/init.h>
+#include <zephyr/settings/settings.h>
+#include <zephyr/shell/shell.h>
+#include <zephyr/sys/printk.h>
 
 struct settings_read_callback_params {
 	const struct shell *shell_ptr;

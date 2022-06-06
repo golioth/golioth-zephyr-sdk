@@ -4,9 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(test, LOG_LEVEL_DBG);
+
+/* Make it compatible with twister running from NCS, which uses older Zephyr version */
+#ifdef CONFIG_LEGACY_INCLUDE_PATH
 #include <ztest.h>
+#else
+#include <zephyr/ztest.h>
+#endif
+
 #include <net/golioth/system_client.h>
 #include <samples/common/wifi.h>
 

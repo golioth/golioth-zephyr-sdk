@@ -6,7 +6,7 @@
 
 #include "coap_utils.h"
 
-#include <net/coap.h>
+#include <zephyr/net/coap.h>
 
 int coap_packet_append_uri_path_from_string_range(struct coap_packet *packet,
 						  const char *begin,
