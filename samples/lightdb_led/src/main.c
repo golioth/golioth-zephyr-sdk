@@ -156,7 +156,7 @@ static int golioth_led_handle(const struct coap_packet *response,
 	QCBORDecode_ExitMap(&decode_ctx);
 
 	qerr = QCBORDecode_Finish(&decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
+	if (qerr != QCBOR_ERR_NO_MORE_ITEMS) {
 		LOG_WRN("Failed to finish decoding: %d (%s)", qerr, qcbor_err_to_str(qerr));
 	}
 
