@@ -10,7 +10,4 @@ common:
     qemu_x86
   tags: golioth logger socket
 tests:
-  sample.golioth.logging.v1: {}
-  sample.golioth.logging.v2:
-    extra_configs:
-      - CONFIG_LOG2_MODE_DEFERRED=y
+  sample.golioth.logging: {}
