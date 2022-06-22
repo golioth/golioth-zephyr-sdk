@@ -60,6 +60,12 @@ config GOLIOTH_SYSTEM_CLIENT_STACK_SIZE
 	help
 	  Defines system client thread stack size.
 
+config GOLIOTH_SYSTEM_CLIENT_THREAD_PRIORITY
+	int "Thread priority"
+	default 14
+	help
+	  Priority at which the Golioth client system thread runs.
+
 config GOLIOTH_SYSTEM_SERVER_HOST
 	string "Server Host"
 	default "coap.golioth.io" if ((NET_NATIVE && NET_IPV4 && DNS_RESOLVER) || NET_SOCKETS_OFFLOAD)
