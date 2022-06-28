@@ -10,10 +10,14 @@ manifest:
           - hal_espressif
           - hal_nordic
           - mbedtls
-          - mcuboot
           - net-tools
           - segger
           - tinycrypt
+
+    - name: mcuboot
+      revision: e7415b555134e671ba04f036b02f55cbc087d0e9
+      path: bootloader/mcuboot
+      url: https://github.com/zephyrproject-rtos/mcuboot
 
   self:
     path: modules/lib/golioth
