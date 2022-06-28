@@ -62,34 +62,84 @@ static int __golioth_close(int sock)
 	return 0;
 }
 
-static int golioth_connect_sockaddr(struct golioth_client *client, int *sock,
-				    struct sockaddr *addr, socklen_t addrlen)
+static int __golioth_send(struct golioth_client *client, uint8_t *data,
+			  size_t len, int flags)
 {
-	int ret;
+	ssize_t sent;
+
+	if (client->sock < 0) {
+		return -ENOTCONN;
+	}
+
+	sent = zsock_send(client->sock, data, len, flags);
+	if (sent < 0) {
+		return -errno;
+	} else if (sent < len) {
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int __golioth_send_empty_coap(struct golioth_client *client)
+{
+	struct coap_packet packet;
+	uint8_t buffer[GOLIOTH_EMPTY_PACKET_LEN];
 	int err;
 
-	*sock = zsock_socket(addr->sa_family, SOCK_DGRAM, client->proto);
-	if (*sock < 0) {
+	err = coap_packet_init(&packet, buffer, sizeof(buffer),
+			       COAP_VERSION_1, COAP_TYPE_NON_CON,
+			       0, NULL,
+			       COAP_CODE_EMPTY, coap_next_id());
+	if (err) {
+		return err;
+	}
+
+	return __golioth_send(client, packet.data, packet.offset, 0);
+}
+
+static int golioth_connect_sockaddr(struct golioth_client *client,
+				    struct sockaddr *addr, socklen_t addrlen)
+{
+	int sock;
+	int ret;
+	int err = 0;
+
+	sock = zsock_socket(addr->sa_family, SOCK_DGRAM, client->proto);
+	if (sock < 0) {
 		return -errno;
 	}
 
 	if (client->proto == IPPROTO_DTLS_1_2) {
-		err = golioth_setsockopt_dtls(client, *sock);
+		err = golioth_setsockopt_dtls(client, sock);
 		if (err) {
 			goto close_sock;
 		}
 	}
 
-	ret = zsock_connect(*sock, addr, addrlen);
+	ret = zsock_connect(sock, addr, addrlen);
 	if (ret < 0) {
 		err = -errno;
 		goto close_sock;
 	}
 
-	return 0;
+	golioth_lock(client);
+	client->sock = sock;
+
+	/* Send empty packet to start TLS handshake */
+	err = __golioth_send_empty_coap(client);
+	if (err) {
+		client->sock = -1;
+		goto unlock;
+	}
+
+unlock:
+	golioth_unlock(client);
 
 close_sock:
-	__golioth_close(*sock);
+	if (err) {
+		__golioth_close(sock);
+	}
 
 	return err;
 }
@@ -113,7 +163,7 @@ close_sock:
 #define LOG_SOCKADDR(fmt, addr)
 #endif
 
-static int __golioth_connect(struct golioth_client *client, int *sock,
+static int __golioth_connect(struct golioth_client *client,
 			     const char *host, uint16_t port)
 {
 	struct zsock_addrinfo hints = {
@@ -138,7 +188,7 @@ static int __golioth_connect(struct golioth_client *client, int *sock,
 	for (addr = addrs; addr != NULL; addr = addr->ai_next) {
 		LOG_SOCKADDR("Trying addr '%s'", addr->ai_addr);
 
-		err = golioth_connect_sockaddr(client, sock, addr->ai_addr,
+		err = golioth_connect_sockaddr(client, addr->ai_addr,
 					       addr->ai_addrlen);
 		if (!err) {
 			/* Ready to go */
@@ -154,19 +204,14 @@ static int __golioth_connect(struct golioth_client *client, int *sock,
 int golioth_connect(struct golioth_client *client, const char *host,
 		    uint16_t port)
 {
-	int sock = -1;
 	int err;
 
 	if (client->sock >= 0) {
 		return -EALREADY;
 	}
 
-	err = __golioth_connect(client, &sock, host, port);
+	err = __golioth_connect(client, host, port);
 	if (!err) {
-		golioth_lock(client);
-		client->sock = sock;
-		golioth_unlock(client);
-
 		if (client->on_connect) {
 			client->on_connect(client);
 		}
@@ -223,25 +268,6 @@ int golioth_set_proto_coap_dtls(struct golioth_client *client,
 
 #define QUERY_PREFIX		"id="
 #define QUERY_PREFIX_LEN	(sizeof(QUERY_PREFIX) - 1)
-
-static int __golioth_send(struct golioth_client *client, uint8_t *data,
-			  size_t len, int flags)
-{
-	ssize_t sent;
-
-	if (client->sock < 0) {
-		return -ENOTCONN;
-	}
-
-	sent = zsock_send(client->sock, data, len, flags);
-	if (sent < 0) {
-		return -errno;
-	} else if (sent < len) {
-		return -EIO;
-	}
-
-	return 0;
-}
 
 static int golioth_send(struct golioth_client *client, uint8_t *data,
 			size_t len, int flags)
