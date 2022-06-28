@@ -17,7 +17,7 @@ static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 static struct coap_reply coap_replies[1];
 
 /*
- * This function is registed to be called when the data
+ * This function is registered to be called when the data
  * stored at `/counter` changes.
  */
 static int on_update(const struct coap_packet *response,
@@ -47,7 +47,7 @@ static int on_update(const struct coap_packet *response,
 }
 
 /*
- * In the `main` function, this function is registed to be
+ * In the `main` function, this function is registered to be
  * called when the device connects to the Golioth server.
  */
 static void golioth_on_connect(struct golioth_client *client)
@@ -78,7 +78,7 @@ static void golioth_on_connect(struct golioth_client *client)
 }
 
 /*
- * In the `main` function, this function is registed to be
+ * In the `main` function, this function is registered to be
  * called when the device receives a packet from the Golioth server.
  */
 static void golioth_on_message(struct golioth_client *client,

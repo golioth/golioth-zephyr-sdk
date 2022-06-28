@@ -19,7 +19,7 @@ static struct coap_reply coap_replies[1];
 K_MUTEX_DEFINE(coap_reply_mutex);
 
 /*
- * This function is registed to be called when the reply
+ * This function is registered to be called when the reply
  * is received from the Golioth server.
  */
 static int reply_callback(const struct coap_packet *response,
@@ -49,7 +49,7 @@ static int reply_callback(const struct coap_packet *response,
 }
 
 /*
- * In the `main` function, this function is registed to be
+ * In the `main` function, this function is registered to be
  * called when the device receives a packet from the Golioth server.
  */
 static void golioth_on_message(struct golioth_client *client,
