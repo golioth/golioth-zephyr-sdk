@@ -143,6 +143,18 @@ static inline void golioth_unlock(struct golioth_client *client)
 void golioth_init(struct golioth_client *client);
 
 /**
+ * @brief Check if client is connected to Golioth
+ *
+ * Check if client instance is connected to Golioth.
+ *
+ * @param client Client instance.
+ *
+ * @retval true When client is connected to Golioth.
+ * @retval false When client is not connected to Golioth.
+ */
+bool golioth_is_connected(struct golioth_client *client);
+
+/**
  * @brief Connect to Golioth
  *
  * Attempt to connect to Golioth.

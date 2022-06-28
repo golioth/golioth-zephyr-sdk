@@ -28,6 +28,17 @@ void golioth_init(struct golioth_client *client)
 	client->sock = -1;
 }
 
+bool golioth_is_connected(struct golioth_client *client)
+{
+	bool is_connected;
+
+	k_mutex_lock(&client->lock, K_FOREVER);
+	is_connected = (client->sock >= 0);
+	k_mutex_unlock(&client->lock);
+
+	return is_connected;
+}
+
 static int golioth_setsockopt_dtls(struct golioth_client *client, int sock)
 {
 	int ret;
