@@ -25,6 +25,22 @@
 #define LOGS_URI_PATH		"logs"
 #define CBOR_SPACE_RESERVED	8
 
+/*
+ * Compatibility macros for NCS, which does not have commit:
+ * 9833ca61c990 ("logging: Removing v2 suffix from logging names")
+ * in Zephyr fork yet.
+ */
+#ifdef CONFIG_LOG_BACKEND_GOLIOTH_LOG_MSG2_COMPAT
+#define log_msg			log_msg2
+#define log_msg_get_source	log_msg2_get_source
+#define log_msg_get_domain	log_msg2_get_domain
+#define log_msg_get_level	log_msg2_get_level
+#define log_msg_get_timestamp	log_msg2_get_timestamp
+#define log_msg_get_package	log_msg2_get_package
+#define log_msg_get_data	log_msg2_get_data
+#define log_msg_generic		log_msg2_generic
+#endif
+
 struct golioth_cbor_ctx {
 	QCBOREncodeContext encode_ctx;
 	UsefulBuf encode_bufc;
@@ -112,14 +128,14 @@ static void log_cbor_prepare(struct golioth_cbor_ctx *cbor, uint8_t *buf,
 	QCBOREncode_Init(&cbor->encode_ctx, cbor->encode_bufc);
 }
 
-static void log2_cbor_append_headers(struct golioth_log_ctx *ctx,
-				     struct log_msg2 *msg)
+static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
+				    struct log_msg *msg)
 {
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
-	void *source = (void *)log_msg2_get_source(msg);
+	void *source = (void *)log_msg_get_source(msg);
 
 	if (source) {
-		uint8_t domain_id = log_msg2_get_domain(msg);
+		uint8_t domain_id = log_msg_get_domain(msg);
 		int16_t source_id =
 			(IS_ENABLED(CONFIG_LOG_RUNTIME_FILTERING) ?
 				log_dynamic_source_id(source) :
@@ -130,7 +146,7 @@ static void log2_cbor_append_headers(struct golioth_log_ctx *ctx,
 	}
 
 	QCBOREncode_AddSZStringToMap(&cbor->encode_ctx, "level",
-				     level_str(log_msg2_get_level(msg)));
+				     level_str(log_msg_get_level(msg)));
 }
 
 static int log_packet_prepare(struct golioth_log_ctx *ctx)
@@ -281,11 +297,11 @@ static const uint8_t *find_colon(const uint8_t *begin, const uint8_t *end)
 	return NULL;
 }
 
-static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
+static int log_msg_process(struct golioth_log_ctx *ctx, struct log_msg *msg)
 {
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
 	struct golioth_pdu_ctx *pdu = &ctx->pdu;
-	uint8_t level = log_msg2_get_level(msg);
+	uint8_t level = log_msg_get_level(msg);
 	bool raw_string = (level == LOG_LEVEL_INTERNAL_RAW_STRING);
 	bool has_func = (BIT(level) & LOG_FUNCTION_PREFIX_MASK);
 	int err;
@@ -300,16 +316,16 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 	log_cbor_create_map(ctx);
 
 	QCBOREncode_AddUInt64ToMap(&cbor->encode_ctx, "uptime",
-				   log_output_timestamp_to_us(log_msg2_get_timestamp(msg)));
+				   log_output_timestamp_to_us(log_msg_get_timestamp(msg)));
 
 	if (!raw_string) {
-		log2_cbor_append_headers(ctx, msg);
+		log_cbor_append_headers(ctx, msg);
 	}
 
 	QCBOREncode_AddUInt64ToMap(&cbor->encode_ctx, "index", ctx->msg_index);
 
 	size_t len;
-	uint8_t *data = log_msg2_get_package(msg, &len);
+	uint8_t *data = log_msg_get_package(msg, &len);
 
 	if (len) {
 		const uint8_t *func_colon = NULL;
@@ -352,7 +368,7 @@ static int log_msg2_process(struct golioth_log_ctx *ctx, struct log_msg2 *msg)
 		}
 	}
 
-	data = log_msg2_get_data(msg, &len);
+	data = log_msg_get_data(msg, &len);
 	if (len) {
 		QCBOREncode_AddSZString(&cbor->encode_ctx, "hexdump");
 
@@ -387,7 +403,7 @@ finish:
 }
 
 static void process(const struct log_backend *const backend,
-		    union log_msg2_generic *msg)
+		    union log_msg_generic *msg)
 {
 	struct golioth_log_ctx *ctx = backend->cb->ctx;
 
@@ -395,7 +411,7 @@ static void process(const struct log_backend *const backend,
 		return;
 	}
 
-	log_msg2_process(ctx, &msg->log);
+	log_msg_process(ctx, &msg->log);
 }
 
 static const struct log_backend log_backend_golioth;

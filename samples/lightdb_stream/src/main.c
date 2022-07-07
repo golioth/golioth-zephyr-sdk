@@ -92,7 +92,7 @@ void main(void)
 			 "%d.%06d", temp.val1, abs(temp.val2));
 		str_temperature[sizeof(str_temperature) - 1] = '\0';
 
-		LOG_DBG("Sending temperature %s", log_strdup(str_temperature));
+		LOG_DBG("Sending temperature %s", str_temperature);
 
 		err = golioth_lightdb_set(client,
 					  GOLIOTH_LIGHTDB_STREAM_PATH("temp"),

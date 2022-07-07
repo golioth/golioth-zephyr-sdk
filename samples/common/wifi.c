@@ -54,7 +54,7 @@ static int wifi_settings_get(const char *name, char *dst, int val_len_max)
 		val = wifi_psk;
 		val_len = wifi_psk_len;
 	} else {
-		LOG_WRN("Unsupported key '%s'", log_strdup(name));
+		LOG_WRN("Unsupported key '%s'", name);
 		return -ENOENT;
 	}
 
@@ -85,7 +85,7 @@ static int wifi_settings_set(const char *name, size_t len_rd,
 		buffer_len = sizeof(wifi_psk);
 		ret_len = &wifi_psk_len;
 	} else {
-		LOG_WRN("Unsupported key '%s'", log_strdup(name));
+		LOG_WRN("Unsupported key '%s'", name);
 		return -ENOENT;
 	}
 

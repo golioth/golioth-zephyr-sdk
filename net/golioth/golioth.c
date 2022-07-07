@@ -185,7 +185,7 @@ close_sock:
 				      buf, sizeof(buf));		\
 		}							\
 									\
-		LOG_DBG(fmt, log_strdup(buf));				\
+		LOG_DBG(fmt, buf);					\
 	} while (0)
 #else
 #define LOG_SOCKADDR(fmt, addr)
@@ -208,8 +208,7 @@ static int __golioth_connect(struct golioth_client *client,
 
 	ret = zsock_getaddrinfo(host, port_str, &hints, &addrs);
 	if (ret < 0) {
-		LOG_ERR("Fail to get address (%s %s) %d", log_strdup(host),
-			log_strdup(port_str), ret);
+		LOG_ERR("Fail to get address (%s %s) %d", host, port_str, ret);
 		return -EAGAIN;
 	}
 
