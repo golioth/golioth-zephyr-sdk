@@ -142,7 +142,7 @@ static int golioth_desired_update(const struct coap_packet *update,
 	if (version_len == strlen(current_version_str) &&
 	    !strncmp(current_version_str, dfu->version, version_len)) {
 		LOG_INF("Desired version (%s) matches current firmware version!",
-			log_strdup(current_version_str));
+			current_version_str);
 		return -EALREADY;
 	}
 

@@ -496,7 +496,7 @@ static int golioth_settings_get(const char *name, char *dst, int val_len_max)
 		val = golioth_dtls_psk_id;
 		val_len = strlen(golioth_dtls_psk_id);
 	} else {
-		LOG_WRN("Unsupported key '%s'", log_strdup(name));
+		LOG_WRN("Unsupported key '%s'", name);
 		return -ENOENT;
 	}
 
@@ -531,7 +531,7 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 		value_len = &golioth_dtls_psk_id_len;
 		buffer_len = sizeof(golioth_dtls_psk_id);
 	} else {
-		LOG_ERR("Unsupported key '%s'", log_strdup(name));
+		LOG_ERR("Unsupported key '%s'", name);
 		return -ENOTSUP;
 	}
 
@@ -539,7 +539,7 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 		err = tls_credential_delete(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG, type);
 		if (err && err != -ENOENT) {
 			LOG_ERR("Failed to delete cred %s: %d",
-				log_strdup(name), err);
+				name, err);
 			return err;
 		}
 	}
@@ -552,7 +552,7 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 
 	*value_len = ret;
 
-	LOG_DBG("Name: %s", log_strdup(name));
+	LOG_DBG("Name: %s", name);
 	LOG_HEXDUMP_DBG(value, *value_len, "value");
 
 	switch (type) {
@@ -575,7 +575,7 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG, type,
 				 value, *value_len);
 	if (err) {
-		LOG_ERR("Failed to add cred %s: %d", log_strdup(name), err);
+		LOG_ERR("Failed to add cred %s: %d", name, err);
 		return err;
 	}
 

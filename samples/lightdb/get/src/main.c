@@ -43,7 +43,7 @@ static int reply_callback(const struct coap_packet *response,
 	memcpy(str, payload, payload_len);
 	str[payload_len] = '\0';
 
-	LOG_DBG("payload: %s", log_strdup(str));
+	LOG_DBG("payload: %s", str);
 
 	return 0;
 }
