@@ -7,6 +7,7 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 
+#include <net/golioth/rpc.h>
 #include <kernel.h>
 #include <net/coap.h>
 #include <net/tls_credentials.h>
@@ -87,6 +88,9 @@ struct golioth_client {
 	/* Storage for additional on_message callbacks */
 	struct golioth_message_callback_reg message_callbacks[GOLIOTH_MAX_NUM_MESSAGE_CALLBACKS];
 	size_t num_message_callbacks;
+
+	struct golioth_rpc rpc;
+	struct k_mutex rpc_mutex;
 };
 
 struct golioth_blockwise_observe_ctx;
