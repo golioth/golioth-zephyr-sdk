@@ -39,6 +39,19 @@ config GOLIOTH_FW
 	  Enable Golioth firmware management, which allows to ask for newest
 	  desired firmware and issue firmware download process.
 
+config GOLIOTH_RPC
+	bool "Remote Procedure Call"
+	help
+	  Enable Golioth Remote Procedure Call feature.
+
+config GOLIOTH_RPC_MAX_NUM_METHODS
+	int "Maximum number of registered Golioth RPC methods"
+	depends on GOLIOTH_RPC
+	default 8
+	help
+	  Maximum number of Golioth Remote Procedure Call methods that can
+	  be registered.
+
 config GOLIOTH_FW_PACKAGE_NAME_MAX_LEN
 	int "Maximum length of package name"
 	default 32
