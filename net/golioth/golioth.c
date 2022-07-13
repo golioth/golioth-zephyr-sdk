@@ -702,6 +702,14 @@ static int golioth_process_rx_data(struct golioth_client *client,
 		client->on_message(client, &client->rx_packet);
 	}
 
+	for (size_t i = 0; i < client->num_message_callbacks; i++) {
+		const struct golioth_message_callback_reg *callback_reg =
+			&client->message_callbacks[i];
+		if (callback_reg->callback) {
+			callback_reg->callback(client, &client->rx_packet, callback_reg->user_arg);
+		}
+	}
+
 	type = coap_header_get_type(&client->rx_packet);
 	if (type == COAP_TYPE_CON) {
 		golioth_ack_packet(client, &client->rx_packet);
@@ -992,4 +1000,21 @@ int golioth_process_rx(struct golioth_client *client)
 	}
 
 	return golioth_process_rx_data(client, client->rx_buffer, ret);
+}
+
+int golioth_register_message_callback(struct golioth_client *client,
+				      golioth_message_callback callback,
+				      void *user_arg)
+{
+	if (client->num_message_callbacks >= GOLIOTH_MAX_NUM_MESSAGE_CALLBACKS) {
+		LOG_ERR("No more message callback registration slots");
+		return -1;
+	}
+
+	struct golioth_message_callback_reg *new_reg =
+		&client->message_callbacks[client->num_message_callbacks++];
+	new_reg->callback = callback;
+	new_reg->user_arg = user_arg;
+
+	return 0;
 }

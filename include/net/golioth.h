@@ -23,6 +23,8 @@
 #define GOLIOTH_MAX_IDENTITY_LEN	32
 #define GOLIOTH_EMPTY_PACKET_LEN	(16 + GOLIOTH_MAX_IDENTITY_LEN)
 
+#define GOLIOTH_MAX_NUM_MESSAGE_CALLBACKS 4
+
 #define GOLIOTH_LIGHTDB_PATH(x)		".d/" x
 #define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
 
@@ -40,6 +42,22 @@ struct golioth_unsecure {
 struct golioth_tls {
 	sec_tag_t *sec_tag_list;
 	size_t sec_tag_count;
+};
+
+/**
+ * @brief Callback function type to handle received CoAP packets.
+ */
+struct golioth_client;
+typedef void (*golioth_message_callback)(struct golioth_client *client,
+					 struct coap_packet *rx,
+					 void *user_arg);
+
+/**
+ * @brief Data associated with a message callback registration.
+ */
+struct golioth_message_callback_reg {
+	golioth_message_callback callback;
+	void *user_arg;
 };
 
 /**
@@ -64,8 +82,11 @@ struct golioth_client {
 	int sock;
 
 	void (*on_connect)(struct golioth_client *client);
-	void (*on_message)(struct golioth_client *client,
-			   struct coap_packet *rx);
+	void (*on_message)(struct golioth_client *client, struct coap_packet *rx);
+
+	/* Storage for additional on_message callbacks */
+	struct golioth_message_callback_reg message_callbacks[GOLIOTH_MAX_NUM_MESSAGE_CALLBACKS];
+	size_t num_message_callbacks;
 };
 
 struct golioth_blockwise_observe_ctx;
@@ -370,6 +391,24 @@ int golioth_observe_blockwise(struct golioth_client *client,
  * @retval <0 On failure
  */
 int golioth_process_rx(struct golioth_client *client);
+
+/**
+ * @brief Register a callback to be called when a CoAP message is received.
+ *
+ * This is similar to client->on_message, but allows for more than one "on_message"
+ * callback to be registered, and has an additional user_arg parameter which
+ * can be used to pass user data to the callback when it's invoked.
+ *
+ * @param client Client instance
+ * @param callback Message callback to register
+ * @param user_arg User data forwarded directly to callback when invoked. Optional, can be NULL.
+ *
+ * @retval 0 registration successful
+ * @retval <0 registration failed
+ */
+int golioth_register_message_callback(struct golioth_client *client,
+				      golioth_message_callback callback,
+				      void *user_arg);
 
 /** @} */
 
