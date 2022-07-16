@@ -116,6 +116,8 @@ static int golioth_led_handle(const struct coap_packet *response,
 
 		qerr = QCBORDecode_GetError(&decode_ctx);
 		if (qerr == QCBOR_ERR_NO_MORE_ITEMS) {
+			/* Reset decoding error, as "no more items" was expected */
+			QCBORDecode_GetAndResetError(&decode_ctx);
 			break;
 		}
 
