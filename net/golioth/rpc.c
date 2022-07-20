@@ -36,10 +36,10 @@ LOG_MODULE_DECLARE(golioth);
 #define GOLIOTH_RPC_STATUS_PATH ".rpc/status"
 #define GOLIOTH_RPC_MAX_RESPONSE_LEN 256
 
-static struct golioth_client *_client = GOLIOTH_SYSTEM_CLIENT_GET();
 K_MUTEX_DEFINE(_rpc_mutex);
 
-static int send_response(uint8_t *coap_payload, size_t coap_payload_len)
+static int send_response(struct golioth_client *client,
+			 uint8_t *coap_payload, size_t coap_payload_len)
 {
 	struct coap_packet packet;
 	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
@@ -67,7 +67,7 @@ static int send_response(uint8_t *coap_payload, size_t coap_payload_len)
 		return err;
 	}
 
-	err = golioth_send_coap_payload(_client, &packet, coap_payload, coap_payload_len);
+	err = golioth_send_coap_payload(client, &packet, coap_payload, coap_payload_len);
 	if (err) {
 		LOG_ERR("Error in golioth_send_coap: %d", err);
 	}
@@ -78,6 +78,8 @@ static int on_rpc(const struct coap_packet *response,
 		  struct coap_reply *reply,
 		  const struct sockaddr *from)
 {
+	struct golioth_client *client =
+		CONTAINER_OF(reply, struct golioth_client, rpc.observe_reply);
 	uint16_t payload_len;
 	const uint8_t *payload = coap_packet_get_payload(response, &payload_len);
 
@@ -122,8 +124,8 @@ static int on_rpc(const struct coap_packet *response,
 
 	k_mutex_lock(&_rpc_mutex, K_FOREVER);
 
-	for (int i = 0; i < _client->rpc.num_methods; i++) {
-		const struct golioth_rpc_method *method = &_client->rpc.methods[i];
+	for (int i = 0; i < client->rpc.num_methods; i++) {
+		const struct golioth_rpc_method *method = &client->rpc.methods[i];
 
 		if (strncmp(method->name, method_buf.ptr, method_buf.len) == 0) {
 			matching_method = method;
@@ -171,10 +173,10 @@ static int on_rpc(const struct coap_packet *response,
 	LOG_HEXDUMP_DBG(response_buf, response_len, "Response");
 
 	/* Send CoAP response packet */
-	return send_response(response_buf, response_len);
+	return send_response(client, response_buf, response_len);
 }
 
-static int golioth_rpc_observe(void)
+static int golioth_rpc_observe(struct golioth_client *client)
 {
 	struct coap_packet packet;
 	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
@@ -209,13 +211,13 @@ static int golioth_rpc_observe(void)
 
 	k_mutex_lock(&_rpc_mutex, K_FOREVER);
 
-	coap_reply_clear(&_client->rpc.observe_reply);
-	coap_reply_init(&_client->rpc.observe_reply, &packet);
-	_client->rpc.observe_reply.reply = on_rpc;
+	coap_reply_clear(&client->rpc.observe_reply);
+	coap_reply_init(&client->rpc.observe_reply, &packet);
+	client->rpc.observe_reply.reply = on_rpc;
 
 	k_mutex_unlock(&_rpc_mutex);
 
-	return golioth_send_coap(_client, &packet);
+	return golioth_send_coap(client, &packet);
 }
 
 void on_message(struct golioth_client *client,
@@ -223,7 +225,7 @@ void on_message(struct golioth_client *client,
 		void *user_arg)
 {
 	k_mutex_lock(&_rpc_mutex, K_FOREVER);
-	coap_response_received(rx, NULL, &_client->rpc.observe_reply, 1);
+	coap_response_received(rx, NULL, &client->rpc.observe_reply, 1);
 	k_mutex_unlock(&_rpc_mutex);
 }
 
@@ -234,9 +236,7 @@ int golioth_rpc_register(struct golioth_client *client,
 {
 	int status = 0;
 
-	_client = client;
-
-	if (_client->rpc.num_methods >= CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS) {
+	if (client->rpc.num_methods >= CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS) {
 		LOG_ERR("Unable to register, can't register more than %d methods",
 			CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS);
 		return -1;
@@ -244,16 +244,16 @@ int golioth_rpc_register(struct golioth_client *client,
 
 	k_mutex_lock(&_rpc_mutex, K_FOREVER);
 
-	struct golioth_rpc_method *method = &_client->rpc.methods[_client->rpc.num_methods];
+	struct golioth_rpc_method *method = &client->rpc.methods[client->rpc.num_methods];
 
 	method->name = method_name;
 	method->callback = callback;
 	method->callback_arg = callback_arg;
 
-	_client->rpc.num_methods++;
-	if (_client->rpc.num_methods == 1) {
-		golioth_register_message_callback(_client, on_message, NULL);
-		status = golioth_rpc_observe();
+	client->rpc.num_methods++;
+	if (client->rpc.num_methods == 1) {
+		golioth_register_message_callback(client, on_message, NULL);
+		status = golioth_rpc_observe(client);
 	}
 
 	k_mutex_unlock(&_rpc_mutex);
