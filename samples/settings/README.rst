@@ -4,9 +4,10 @@ Golioth Settings sample
 Overview
 ********
 
-This sample application demonstrates how to enable Zephyr settings subsystem and
-use it for storing Golioth credentials. Additionally it shows how to provision
-these credentials using devive shell CLI.
+This sample application demonstrates how to use the Golioth Settings service.
+Additionally, it shows how to enable Zephyr Settings subsystem and
+use it for storing Golioth credentials, as well as how to provision
+these credentials using the device shell CLI.
 
 Requirements
 ************
