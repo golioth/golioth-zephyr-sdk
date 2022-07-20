@@ -52,6 +52,12 @@ config GOLIOTH_RPC_MAX_NUM_METHODS
 	  Maximum number of Golioth Remote Procedure Call methods that can
 	  be registered.
 
+config GOLIOTH_SETTINGS
+	bool "Settings cloud service"
+	help
+	  Enable Golioth Settings feature. Not to be confused
+	  with Zephyr's own Settings subsystem.
+
 config GOLIOTH_FW_PACKAGE_NAME_MAX_LEN
 	int "Maximum length of package name"
 	default 32

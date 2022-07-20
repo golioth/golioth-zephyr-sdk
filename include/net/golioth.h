@@ -8,6 +8,7 @@
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 
 #include <net/golioth/rpc.h>
+#include <net/golioth/settings.h>
 #include <kernel.h>
 #include <net/coap.h>
 #include <net/tls_credentials.h>
@@ -91,6 +92,8 @@ struct golioth_client {
 
 	struct golioth_rpc rpc;
 	struct k_mutex rpc_mutex;
+
+	struct golioth_settings settings;
 };
 
 struct golioth_blockwise_observe_ctx;
