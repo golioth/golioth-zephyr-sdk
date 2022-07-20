@@ -46,8 +46,6 @@ static void golioth_on_connect(struct golioth_client *client)
 
 void main(void)
 {
-	int err;
-
 	LOG_DBG("Start RPC sample");
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
