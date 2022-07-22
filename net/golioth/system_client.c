@@ -45,8 +45,6 @@ BUILD_ASSERT(sizeof(TLS_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
 #define PSK_MAX_LEN		64
 #endif
 
-#define PSK_TAG			1
-
 #if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&	\
 	defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
 static void golioth_settings_check_credentials(void);
@@ -71,7 +69,7 @@ static uint8_t rx_buffer[RX_BUFFER_SIZE];
 static struct zsock_pollfd fds[NUM_POLLFDS];
 
 static sec_tag_t sec_tag_list[] = {
-	PSK_TAG,
+	CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
 };
 
 enum {
@@ -153,19 +151,19 @@ static int init_tls(void)
 		return err;
 	}
 
-	err = tls_credential_add(PSK_TAG,
-				TLS_CREDENTIAL_PSK,
-				TLS_PSK,
-				sizeof(TLS_PSK) - 1);
+	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_PSK,
+				 TLS_PSK,
+				 sizeof(TLS_PSK) - 1);
 	if (err < 0) {
 		LOG_ERR("Failed to register PSK: %d", err);
 		return err;
 	}
 
-	err = tls_credential_add(PSK_TAG,
-				TLS_CREDENTIAL_PSK_ID,
-				TLS_PSK_ID,
-				sizeof(TLS_PSK_ID) - 1);
+	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_PSK_ID,
+				 TLS_PSK_ID,
+				 sizeof(TLS_PSK_ID) - 1);
 	if (err < 0) {
 		LOG_ERR("Failed to register PSK ID: %d", err);
 		return err;
@@ -485,7 +483,7 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 	}
 
 	if (IS_ENABLED(CONFIG_SETTINGS_RUNTIME)) {
-		err = tls_credential_delete(PSK_TAG, type);
+		err = tls_credential_delete(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG, type);
 		if (err && err != -ENOENT) {
 			LOG_ERR("Failed to delete cred %s: %d",
 				log_strdup(name), err);
@@ -521,7 +519,8 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 		break;
 	}
 
-	err = tls_credential_add(PSK_TAG, type, value, *value_len);
+	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG, type,
+				 value, *value_len);
 	if (err) {
 		LOG_ERR("Failed to add cred %s: %d", log_strdup(name), err);
 		return err;
