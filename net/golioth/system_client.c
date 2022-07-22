@@ -45,6 +45,24 @@ BUILD_ASSERT(sizeof(TLS_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
 #define PSK_MAX_LEN		64
 #endif
 
+static const uint8_t tls_ca_crt[] = {
+#if defined(CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH)
+#include "golioth-systemclient-ca.inc"
+#endif
+};
+
+static const uint8_t tls_client_crt[] = {
+#if defined(CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH)
+#include "golioth-systemclient-crt.inc"
+#endif
+};
+
+static const uint8_t tls_client_key[] = {
+#if defined(CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH)
+#include "golioth-systemclient-key.inc"
+#endif
+};
+
 #if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
 static void golioth_settings_check_credentials(void);
 #else
@@ -140,7 +158,7 @@ static int golioth_check_credentials(const uint8_t *psk_id, size_t psk_id_len,
 	return err;
 }
 
-static int init_tls(void)
+static int init_tls_auth_psk(void)
 {
 	int err;
 
@@ -166,6 +184,48 @@ static int init_tls(void)
 	if (err < 0) {
 		LOG_ERR("Failed to register PSK ID: %d", err);
 		return err;
+	}
+
+	return 0;
+}
+
+static int init_tls_auth_cert(void)
+{
+	int err;
+
+	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_CA_CERTIFICATE,
+				 tls_ca_crt, ARRAY_SIZE(tls_ca_crt));
+	if (err < 0) {
+		LOG_ERR("Failed to register CA cert: %d", err);
+		return err;
+	}
+
+	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_SERVER_CERTIFICATE,
+				 tls_client_crt, ARRAY_SIZE(tls_client_crt));
+	if (err < 0) {
+		LOG_ERR("Failed to register server cert: %d", err);
+		return err;
+	}
+
+	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_PRIVATE_KEY,
+				 tls_client_key, ARRAY_SIZE(tls_client_key));
+	if (err < 0) {
+		LOG_ERR("Failed to register private key: %d", err);
+		return err;
+	}
+
+	return 0;
+}
+
+static int init_tls(void)
+{
+	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_PSK)) {
+		return init_tls_auth_psk();
+	} else if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_CERT)) {
+		return init_tls_auth_cert();
 	}
 
 	return 0;
@@ -388,7 +448,9 @@ K_THREAD_DEFINE(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_STACK_SIZE,
 
 void golioth_system_client_start(void)
 {
-	golioth_settings_check_credentials();
+	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_PSK)) {
+		golioth_settings_check_credentials();
+	}
 
 	k_sem_give(&sys_client_started);
 }
