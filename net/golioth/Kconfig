@@ -67,6 +67,16 @@ config GOLIOTH_SYSTEM_CLIENT
 
 if GOLIOTH_SYSTEM_CLIENT
 
+config GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG
+	int "TLS credentials secure tag"
+	default 515765868
+	help
+	  Secure tag, which is a reference to TLS credential. This value is
+	  configured on created (D)TLS socket in order reference credentials
+	  used during connection handshake.
+
+	  See 'sec_tag_t' typedef in Zephyr for details.
+
 config GOLIOTH_SYSTEM_CLIENT_STACK_SIZE
 	int "Stack size"
 	default 3072
