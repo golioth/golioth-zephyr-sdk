@@ -106,8 +106,8 @@ by adding these lines to configuration file (e.g. ``prj.conf`` or
 
 .. code-block:: cfg
 
-   CONFIG_ESP32_WIFI_SSID="my-wifi"
-   CONFIG_ESP32_WIFI_PSK="my-psk"
+   CONFIG_GOLIOTH_SAMPLE_WIFI_SSID="my-wifi"
+   CONFIG_GOLIOTH_SAMPLE_WIFI_PSK="my-psk"
 
 On your host computer open a terminal window, locate the source code of this
 sample application (i.e., ``samples/settings``) and type:
