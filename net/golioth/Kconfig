@@ -10,7 +10,6 @@ config GOLIOTH
 	select COAP
 	select MBEDTLS
 	select MBEDTLS_DTLS
-	select MBEDTLS_KEY_EXCHANGE_PSK_ENABLED if MBEDTLS_BUILTIN
 	select MBEDTLS_CIPHER_GCM_ENABLED if MBEDTLS_BUILTIN
 	select NET_SOCKETS
 	select NET_UDP
@@ -25,6 +24,51 @@ if GOLIOTH
 module = GOLIOTH
 module-str = golioth
 source "subsys/logging/Kconfig.template.log_config"
+
+choice GOLIOTH_AUTH_METHOD
+	prompt "Authentication method support"
+
+config GOLIOTH_AUTH_METHOD_PSK
+	bool "PSK-ID / PSK only"
+	imply GOLIOTH_AUTH_PSK_MBEDTLS_DEPS
+	help
+	  Only PSK based authentication will be supported.
+
+config GOLIOTH_AUTH_METHOD_CERT
+	bool "Certificate based only"
+	imply GOLIOTH_AUTH_CERT_MBEDTLS_DEPS
+	help
+	  Only certificate based authentication will be supported.
+
+endchoice
+
+config GOLIOTH_AUTH_PSK_MBEDTLS_DEPS
+	bool "mbedTLS dependencies for PSK auth"
+	depends on MBEDTLS_BUILTIN
+	select MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+	help
+	  Select mbedTLS dependencies for PSK based authentication.
+
+	  This is a convenience option when using mbedTLS as a library to make
+	  (D)TLS connection with Golioth cloud.
+
+config GOLIOTH_AUTH_CERT_MBEDTLS_DEPS
+	bool "mbedTLS dependencies for certificate based auth"
+	depends on MBEDTLS_BUILTIN
+	# At least one ECP needs to be selected. This was chosen arbitrarily.
+	imply MBEDTLS_ECP_DP_SECP256R1_ENABLED if MBEDTLS_BUILTIN
+	select MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED if MBEDTLS_BUILTIN
+	help
+	  Select mbedTLS dependencies for certificate based authentication.
+
+	  This is a convenience option when using mbedTLS as a library to make
+	  (D)TLS connection with Golioth cloud.
+
+config GOLIOTH_HOSTNAME_VERIFICATION
+	bool "Hostname verification"
+	default y if GOLIOTH_AUTH_METHOD_CERT
+	help
+	  Enable hostname verification on (D)TLS layer.
 
 config GOLIOTH_COAP_MAX_OPTIONS
 	int "Maximum CoAP options supported"
@@ -110,6 +154,8 @@ config GOLIOTH_SYSTEM_SERVER_PORT
 	help
 	  Defines port number of Golioth server.
 
+if GOLIOTH_AUTH_METHOD_PSK
+
 config GOLIOTH_SYSTEM_CLIENT_PSK_ID
 	string "PSK ID"
 	depends on !GOLIOTH_SYSTEM_SETTINGS
@@ -121,6 +167,30 @@ config GOLIOTH_SYSTEM_CLIENT_PSK
 	depends on !GOLIOTH_SYSTEM_SETTINGS
 	help
 	  Defines PSK used during DTLS handshake with Golioth server.
+
+endif # GOLIOTH_AUTH_METHOD_PSK
+
+if GOLIOTH_AUTH_METHOD_CERT
+
+config GOLIOTH_SYSTEM_CLIENT_CA_PATH
+	string "CA certificate path"
+	default "ca.der"
+	help
+	  Path to CA certificate used for verifying server certificate.
+
+	  Absolute path or relative to application root directory (APPLICATION_SOURCE_DIR).
+
+config GOLIOTH_SYSTEM_CLIENT_CRT_PATH
+	string "Public certificate path"
+	help
+	  Path to client's public certificate.
+
+config GOLIOTH_SYSTEM_CLIENT_KEY_PATH
+	string "Private key path"
+	help
+	  Path to client's private key.
+
+endif # GOLIOTH_AUTH_METHOD_CERT
 
 module = GOLIOTH_SYSTEM_CLIENT
 module-str = Log level for Golioth system client

@@ -39,7 +39,8 @@ bool golioth_is_connected(struct golioth_client *client)
 	return is_connected;
 }
 
-static int golioth_setsockopt_dtls(struct golioth_client *client, int sock)
+static int golioth_setsockopt_dtls(struct golioth_client *client, int sock,
+				   const char *host)
 {
 	int ret;
 
@@ -48,6 +49,23 @@ static int golioth_setsockopt_dtls(struct golioth_client *client, int sock)
 				client->tls.sec_tag_list,
 				client->tls.sec_tag_count *
 					sizeof(*client->tls.sec_tag_list));
+		if (ret < 0) {
+			return -errno;
+		}
+	}
+
+	if (IS_ENABLED(CONFIG_GOLIOTH_HOSTNAME_VERIFICATION)) {
+		/*
+		 * NOTE: At the time of implementation, mbedTLS supported only DNS entries in X509
+		 * Subject Alternative Name, so providing string representation of IP address will
+		 * fail (during handshake).
+		 *
+		 * NOTE: Zephyr TLS layer / mbedTLS API expect NULL terminated string. Length
+		 * (calculated with 'strlen') is ignored at Zephyr TLS layer. Though, we provide
+		 * length without NULL termination, just in case Zephyr/mbedTLS implementation would
+		 * change.
+		 */
+		ret = zsock_setsockopt(sock, SOL_TLS, TLS_HOSTNAME, host, strlen(host));
 		if (ret < 0) {
 			return -errno;
 		}
@@ -109,7 +127,7 @@ static int __golioth_send_empty_coap(struct golioth_client *client)
 	return __golioth_send(client, packet.data, packet.offset, 0);
 }
 
-static int golioth_connect_sockaddr(struct golioth_client *client,
+static int golioth_connect_sockaddr(struct golioth_client *client, const char *host,
 				    struct sockaddr *addr, socklen_t addrlen)
 {
 	int sock;
@@ -121,7 +139,7 @@ static int golioth_connect_sockaddr(struct golioth_client *client,
 		return -errno;
 	}
 
-	err = golioth_setsockopt_dtls(client, sock);
+	err = golioth_setsockopt_dtls(client, sock, host);
 	if (err) {
 		goto close_sock;
 	}
@@ -197,8 +215,7 @@ static int __golioth_connect(struct golioth_client *client,
 	for (addr = addrs; addr != NULL; addr = addr->ai_next) {
 		LOG_SOCKADDR("Trying addr '%s'", addr->ai_addr);
 
-		err = golioth_connect_sockaddr(client, addr->ai_addr,
-					       addr->ai_addrlen);
+		err = golioth_connect_sockaddr(client, host, addr->ai_addr, addr->ai_addrlen);
 		if (!err) {
 			/* Ready to go */
 			break;
