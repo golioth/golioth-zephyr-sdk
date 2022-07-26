@@ -7,10 +7,14 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_RPC_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_RPC_H_
 
-#include <qcbor/qcbor.h>
-#include <qcbor/qcbor_spiffy_decode.h>
 #include <net/coap.h>
 #include <stdint.h>
+
+struct _QCBOREncodeContext;
+struct _QCBOREncodeContext;
+
+typedef struct _QCBORDecodeContext QCBORDecodeContext;
+typedef struct _QCBOREncodeContext QCBOREncodeContext;
 
 /**
  * @defgroup golioth_rpc Golioth Remote Procedure Call

@@ -7,8 +7,6 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_SETTINGS_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_SETTINGS_H_
 
-#include <qcbor/qcbor.h>
-#include <qcbor/qcbor_spiffy_decode.h>
 #include <net/coap.h>
 #include <stdint.h>
 
