@@ -31,14 +31,6 @@
 #define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
 
 /**
- * @brief UDP (unsecure) credentials (identity only) of Golioth client.
- */
-struct golioth_unsecure {
-	const uint8_t *identity;
-	size_t identity_len;
-};
-
-/**
  * @brief (D)TLS credentials of Golioth client.
  */
 struct golioth_tls {
@@ -68,10 +60,7 @@ struct golioth_message_callback_reg {
 struct golioth_client {
 	int proto;
 
-	union {
-		struct golioth_unsecure unsecure;
-		struct golioth_tls tls;
-	};
+	struct golioth_tls tls;
 
 	uint8_t *rx_buffer;
 	size_t rx_buffer_len;
@@ -208,21 +197,6 @@ int golioth_connect(struct golioth_client *client, const char *host,
  * @retval <0 On failure
  */
 int golioth_disconnect(struct golioth_client *client);
-
-/**
- * @brief Set UDP as transport protocol
- *
- * Set UDP as transport protocol for CoAP packets to Golioth and assignes
- * credentials (identity) to be used.
- *
- * @param client Client instance
- * @param identity Client identity
- *
- * @retval 0 On success
- * @retval <0 On failure
- */
-int golioth_set_proto_coap_udp(struct golioth_client *client,
-			       uint8_t *identity, size_t identity_len);
 
 /**
  * @brief Set DTLS as transport protocol

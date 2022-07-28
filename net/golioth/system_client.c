@@ -45,8 +45,7 @@ BUILD_ASSERT(sizeof(TLS_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
 #define PSK_MAX_LEN		64
 #endif
 
-#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&	\
-	defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
 static void golioth_settings_check_credentials(void);
 #else
 static inline void golioth_settings_check_credentials(void) {}
@@ -181,13 +180,8 @@ static int client_initialize(struct golioth_client *client)
 	client->rx_buffer = rx_buffer;
 	client->rx_buffer_len = sizeof(rx_buffer);
 
-	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
-		err = golioth_set_proto_coap_dtls(client, sec_tag_list,
-						  ARRAY_SIZE(sec_tag_list));
-	} else {
-		err = golioth_set_proto_coap_udp(client, TLS_PSK_ID,
-						 sizeof(TLS_PSK_ID) - 1);
-	}
+	err = golioth_set_proto_coap_dtls(client, sec_tag_list,
+					  ARRAY_SIZE(sec_tag_list));
 	if (err) {
 		LOG_ERR("Failed to set protocol: %d", err);
 		return err;
@@ -218,16 +212,14 @@ static int golioth_system_init(const struct device *dev)
 		return err;
 	}
 
-	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
-		if (IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_SETTINGS)) {
-			err = settings_subsys_init();
-			if (err) {
-				LOG_ERR("Failed to initialize settings subsystem: %d", err);
-				return err;
-			}
-		} else {
-			init_tls();
+	if (IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_SETTINGS)) {
+		err = settings_subsys_init();
+		if (err) {
+			LOG_ERR("Failed to initialize settings subsystem: %d", err);
+			return err;
 		}
+	} else {
+		init_tls();
 	}
 
 	return 0;
@@ -412,8 +404,7 @@ void golioth_system_client_stop(void)
 	}
 }
 
-#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&	\
-	defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
+#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
 
 /*
  * TLS credentials subsystem just remembers pointers to memory areas where
@@ -535,5 +526,4 @@ SETTINGS_STATIC_HANDLER_DEFINE(golioth, "golioth",
 	IS_ENABLED(CONFIG_SETTINGS_RUNTIME) ? golioth_settings_get : NULL,
 	golioth_settings_set, NULL, NULL);
 
-#endif /* defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) &&
-	* defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS) */
+#endif /* defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) */
