@@ -10,4 +10,11 @@ common:
     qemu_x86
   tags: golioth socket
 tests:
-  sample.golioth.hello: {}
+  sample.golioth.hello.psk: {}
+  sample.golioth.hello.cert:
+    extra_args: OVERLAY_CONFIG="overlay-auth-cert.conf"
+    extra_configs:
+      # Make it build by providing path that can be resolved
+      - CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH="prj.conf"
+      - CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH="prj.conf"
+      - CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH="prj.conf"
