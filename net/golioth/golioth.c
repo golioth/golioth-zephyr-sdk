@@ -121,11 +121,9 @@ static int golioth_connect_sockaddr(struct golioth_client *client,
 		return -errno;
 	}
 
-	if (client->proto == IPPROTO_DTLS_1_2) {
-		err = golioth_setsockopt_dtls(client, sock);
-		if (err) {
-			goto close_sock;
-		}
+	err = golioth_setsockopt_dtls(client, sock);
+	if (err) {
+		goto close_sock;
 	}
 
 	ret = zsock_connect(sock, addr, addrlen);
@@ -248,24 +246,10 @@ int golioth_disconnect(struct golioth_client *client)
 	return golioth_close(client);
 }
 
-int golioth_set_proto_coap_udp(struct golioth_client *client,
-			       uint8_t *identity, size_t identity_len)
-{
-	client->proto = IPPROTO_UDP;
-	client->unsecure.identity = identity;
-	client->unsecure.identity_len = identity_len;
-
-	return 0;
-}
-
 int golioth_set_proto_coap_dtls(struct golioth_client *client,
 				sec_tag_t *sec_tag_list,
 				size_t sec_tag_count)
 {
-	if (!IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS)) {
-		return -ENOTSUP;
-	}
-
 	if (!sec_tag_list || !sec_tag_count) {
 		return -EINVAL;
 	}
@@ -345,22 +329,6 @@ int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 {
 	int err;
 
-	if (client->proto == IPPROTO_UDP) {
-		uint8_t query[QUERY_PREFIX_LEN +
-			      GOLIOTH_MAX_IDENTITY_LEN] = QUERY_PREFIX;
-
-		memcpy(query + QUERY_PREFIX_LEN, client->unsecure.identity,
-		       client->unsecure.identity_len);
-
-		err = coap_packet_append_option(packet, COAP_OPTION_URI_QUERY,
-					query, QUERY_PREFIX_LEN +
-						client->unsecure.identity_len);
-		if (err) {
-			LOG_ERR("Unable add option to packet");
-			return err;
-		}
-	}
-
 	LOG_HEXDUMP_DBG(packet->data, packet->offset, "TX CoAP");
 
 	err = golioth_send(client, packet->data, packet->offset, 0);
@@ -381,22 +349,6 @@ int golioth_send_coap_payload(struct golioth_client *client,
 		.msg_iovlen = ARRAY_SIZE(msg_iov),
 	};
 	int err;
-
-	if (client->proto == IPPROTO_UDP) {
-		uint8_t query[QUERY_PREFIX_LEN +
-			      GOLIOTH_MAX_IDENTITY_LEN] = QUERY_PREFIX;
-
-		memcpy(query + QUERY_PREFIX_LEN, client->unsecure.identity,
-		       client->unsecure.identity_len);
-
-		err = coap_packet_append_option(packet, COAP_OPTION_URI_QUERY,
-					query, QUERY_PREFIX_LEN +
-						client->unsecure.identity_len);
-		if (err) {
-			LOG_ERR("Unable add option to packet");
-			return err;
-		}
-	}
 
 	err = coap_packet_append_payload_marker(packet);
 	if (err) {
