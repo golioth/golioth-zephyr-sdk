@@ -148,7 +148,8 @@ static int on_setting(const struct coap_packet *response,
 		char key[GOLIOTH_SETTINGS_MAX_NAME_LEN + 1] = {};
 
 		/* Copy setting label/name and ensure it's NULL-terminated */
-		assert(decoded_item.uLabelType == QCBOR_TYPE_BYTE_STRING);
+		assert((decoded_item.uLabelType == QCBOR_TYPE_BYTE_STRING) ||
+		       (decoded_item.uLabelType == QCBOR_TYPE_TEXT_STRING));
 		memcpy(key,
 		       label.ptr,
 		       MIN(GOLIOTH_SETTINGS_MAX_NAME_LEN, label.len));
