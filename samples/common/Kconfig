@@ -12,7 +12,7 @@ menuconfig GOLIOTH_SAMPLES_COMMON
 if GOLIOTH_SAMPLES_COMMON
 
 config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
-	bool "Autoamtically load settings before main()"
+	bool "Automatically load settings before main()"
 	depends on SETTINGS
 	help
 	  Load settings automatically before running main() function. Enable it,
