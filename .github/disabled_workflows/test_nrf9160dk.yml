@@ -1,0 +1,113 @@
+# ---------------------------------------------------------------
+# Workflow is currently disabled due to inconsistent
+# modem initialization on nRF9160dk, which can cause
+# the hw_flash_and_test job to fail:
+#
+# https://golioth.atlassian.net/browse/DSDK-334
+# ---------------------------------------------------------------
+name: Test nrf9160dk
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_for_hw_test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: zephyrprojectrtos/ci:v0.23.3
+
+    env:
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.14.2
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: modules/lib/golioth
+
+      - name: Init and update west
+        run: |
+          mkdir -p .west
+          cat <<EOF > .west/config
+          [manifest]
+          path = modules/lib/golioth
+          file = west-ncs.yml
+          EOF
+
+          west update -o=--depth=1 -n
+          west patch --apply
+
+      - name: Build samples/test
+        run: |
+          cd modules/lib/golioth/samples/test
+          west build -b nrf9160dk_nrf9160_ns . -p
+
+      - name: Create build tarball
+        run: |
+          cd modules/lib/golioth/samples/test
+          tar czf build.tar.gz build/zephyr/merged.hex
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: build.tar.gz
+          path: modules/lib/golioth/samples/test/build.tar.gz
+
+  # Assumptions made about the self-hosted runner:
+  #
+  #  1. Has installed the GitHub Actions self-hosted runner service
+  #  2. Has nrfjprog already installed
+  #  3. Has an environment variable defined for the serial port: CI_NRF9160DK_PORT
+  #  4. Has credentials defined in the file $HOME/credentials_nrf9160.yml
+  #
+  # It is the responsibility of the self-hosted runner admin to ensure
+  # these pre-conditions are met.
+  #
+  # For item 1, GitHub provides instructions when you add a new self-hosted runner
+  # in Settings -> Actions -> Runners.
+  #
+  # For item 2, you'll need to install jlink and nrf-command-line-tools:
+  #   https://www.segger.com/downloads/jlink/
+  #   https://www.nordicsemi.com/Products/Development-tools/nrf-command-line-tools/download
+  #
+  # For item 3, this environment variable can be added to $HOME/actions-runner/runsvc.sh:
+  #   export CI_NRF9160DK_PORT=/dev/ttyACM0
+  #
+  # For item 4, the file needs to have contents like:
+  #
+  # {
+  #   "golioth/psk-id": "device@project",
+  #   "golioth/psk": "supersecret"
+  # }
+  hw_flash_and_test:
+    needs: build_for_hw_test
+    runs-on: [self-hosted, has_nrf9160dk]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Download build tarball
+        uses: actions/download-artifact@v3
+        with:
+          name: build.tar.gz
+          path: samples/test
+
+      - name: Untar
+        run: |
+          cd samples/test
+          tar xvf build.tar.gz
+
+      - name: Copy credentials to samples/test
+        run: |
+          cp $HOME/credentials_nrf9160dk.yml samples/test/credentials.yml
+
+      - name: Flash and Verify Test Results
+        run: |
+          cd samples/test
+          nrfjprog --program build/zephyr/merged.hex --sectorerase --verify -f NRF91 --snr $(nrfjprog --ids)
+          nrfjprog --pinreset -f NRF91 --snr $(nrfjprog --ids)
+          python verify.py $CI_NRF9160DK_PORT
