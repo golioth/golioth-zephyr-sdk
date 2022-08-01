@@ -34,7 +34,7 @@ to <coc@golioth.io>.
 
 After referring to our documentation [Documentation](https://docs.golioth.io) and searching for existing [Issues](https://github.com/golioth/golioth-zephyr-sdk/issues) and [Discussions](https://github.com/golioth/golioth-zephyr-sdk/discussions) feel free to ask a question at the projects [Discussion Board](https://github.com/golioth/golioth-zephyr-sdk/discussions/new?category=q-a)
 - Provide as much context as you can about what you're running into.
-- Provide project and platform versions (target board, version of our sdk, ), depending on what seems relevant.
+- Provide project and platform versions (target board, version of our SDK), depending on what seems relevant.
 
 We will then answer your question as soon as possible.
 
@@ -60,9 +60,9 @@ You may type this line on your own when writing your commit messages. However, G
 <!-- omit in toc -->
 ### Before Submitting a Bug Report
 
-We have a special place in our hearts for Embedded Developers and have been on the receiving end of some nasty sillicon errata and software bugs. Because of this we genuinely appreciate the time and effort you put into uncovering bugs not only in our software but yours as well.
+We have a special place in our hearts for Embedded Developers and have been on the receiving end of some nasty silicon errata and software bugs. Because of this we genuinely appreciate the time and effort you put into uncovering bugs not only in our software but yours as well.
 
-To best help you out we *reccomend* that you gather the following information before making a bug report.
+To best help you out we *recommend* that you gather the following information before making a bug report.
 
 - Make sure that you are using the latest supported version
 - Check if there is not already a bug report existing for your bug or error in the [bug tracker](https://github.com/golioth/golioth-zephyr-sdk/issues?q=label%3Abug).
@@ -80,10 +80,10 @@ However we also realize there are those times where you just need a good ol' san
 <!-- omit in toc -->
 ### How Do I Submit a Good Bug Report?
 
-> It is *vitally* important to NOT publicly report security related issues, vulnerabilities or bugs. Instead sensitive bugs must be sent by email to <security@golioth.io>. We take sercurity very seriously,appreciate your research and will work with you to resolve the situation ASAP.
+> We take security very seriously. It is *vitally* important to NOT publicly report security related issues, vulnerabilities or bugs. Instead, please send your findings by email to <security@golioth.io>. We appreciate your research and will work with you to resolve the situation ASAP.
 <!-- You may add a PGP key to allow the messages to be sent encrypted as well. -->
 
-Upon following the reccomendations in the previous section:
+Upon following the recommendations in the previous section:
 
 - Open a [Bug Report](https://github.com/golioth/golioth-zephyr-sdk/issues/new/choose)
 - Complete the Bug Report form
@@ -116,7 +116,7 @@ This section guides you through submitting an enhancement suggestion for Golioth
 ### How Do I Submit a Good Enhancement Suggestion?
 
 Enhancement suggestions are currently tracked as [Discussions](https://github.com/golioth/golioth-zephyr-sdk/discussions).
-We reccomend establishing the following in your discussion topic and description.
+We recommend establishing the following in your discussion topic and description.
 
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as many details as possible.
