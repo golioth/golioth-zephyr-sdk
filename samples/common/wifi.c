@@ -95,9 +95,6 @@ static int wifi_settings_set(const char *name, size_t len_rd,
 		return ret;
 	}
 
-	LOG_DBG("Name: %s", log_strdup(name));
-	LOG_HEXDUMP_DBG(buffer, ret, "value");
-
 	*ret_len = ret;
 
 	return 0;
