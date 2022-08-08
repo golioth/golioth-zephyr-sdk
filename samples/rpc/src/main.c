@@ -11,6 +11,8 @@ LOG_MODULE_REGISTER(golioth_rpc, LOG_LEVEL_DBG);
 #include <net/golioth/system_client.h>
 #include <net/golioth/rpc.h>
 #include <samples/common/wifi.h>
+#include <qcbor/qcbor.h>
+#include <qcbor/qcbor_spiffy_decode.h>
 #include <assert.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
