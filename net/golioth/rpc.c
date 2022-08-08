@@ -218,9 +218,9 @@ static int golioth_rpc_observe(struct golioth_client *client)
 	return golioth_send_coap(client, &packet);
 }
 
-void on_message(struct golioth_client *client,
-		struct coap_packet *rx,
-		void *user_arg)
+static void on_message(struct golioth_client *client,
+		       struct coap_packet *rx,
+		       void *user_arg)
 {
 	k_mutex_lock(&client->rpc_mutex, K_FOREVER);
 	coap_response_received(rx, NULL, &client->rpc.observe_reply, 1);
