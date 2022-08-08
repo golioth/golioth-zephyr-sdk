@@ -41,6 +41,7 @@ config GOLIOTH_FW
 
 config GOLIOTH_RPC
 	bool "Remote Procedure Call"
+	select QCBOR
 	help
 	  Enable Golioth Remote Procedure Call feature.
 
@@ -54,6 +55,7 @@ config GOLIOTH_RPC_MAX_NUM_METHODS
 
 config GOLIOTH_SETTINGS
 	bool "Settings cloud service"
+	select QCBOR
 	help
 	  Enable Golioth Settings feature. Not to be confused
 	  with Zephyr's own Settings subsystem.
