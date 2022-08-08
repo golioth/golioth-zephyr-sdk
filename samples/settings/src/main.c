@@ -22,6 +22,8 @@ enum golioth_settings_status on_setting(
 {
 	LOG_DBG("Received setting: key = %s, type = %d", key, value->type);
 	if (strcmp(key, "LOOP_DELAY_S") == 0) {
+		/* TODO - change type to INT64 once backend support is merged to prod */
+
 		/* This setting is expected to be numeric, return an error if it's not */
 		if (value->type != GOLIOTH_SETTINGS_VALUE_TYPE_FLOAT) {
 			return GOLIOTH_SETTINGS_VALUE_FORMAT_NOT_VALID;
