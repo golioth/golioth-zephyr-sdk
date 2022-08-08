@@ -70,6 +70,7 @@ enum golioth_settings_value_type {
 	GOLIOTH_SETTINGS_VALUE_TYPE_BOOL,
 	GOLIOTH_SETTINGS_VALUE_TYPE_FLOAT,
 	GOLIOTH_SETTINGS_VALUE_TYPE_STRING,
+	GOLIOTH_SETTINGS_VALUE_TYPE_INT64,
 };
 
 /**
@@ -86,6 +87,7 @@ struct golioth_settings_value {
 			const char *ptr; /* not NULL-terminated */
 			size_t len;
 		} string;
+		int64_t i64;
 	};
 };
 

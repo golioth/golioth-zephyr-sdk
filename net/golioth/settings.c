@@ -159,16 +159,10 @@ static int on_setting(const struct coap_packet *response,
 		bool data_type_valid = true;
 		struct golioth_settings_value value = {};
 
-		/*
-		 * TODO - Add support for decoding integers
-		 *
-		 * Currently, the Golioth server encodes all numbers
-		 * as doubles, but the following ticket will add support for encoding
-		 * integers as integers (instead of double) in the payload:
-		 *
-		 * https://golioth.atlassian.net/browse/GB-346.
-		 */
-		if (data_type == QCBOR_TYPE_DOUBLE) {
+		if (data_type == QCBOR_TYPE_INT64) {
+			value.type = GOLIOTH_SETTINGS_VALUE_TYPE_INT64;
+			value.i64 = decoded_item.val.int64;
+		} else if (data_type == QCBOR_TYPE_DOUBLE) {
 			value.type = GOLIOTH_SETTINGS_VALUE_TYPE_FLOAT;
 			value.f = (float)decoded_item.val.dfnum;
 		} else if (data_type == QCBOR_TYPE_TRUE) {
