@@ -101,6 +101,7 @@ static int settings_read_callback(const char *key,
 	ssize_t num_read_bytes = MIN(len, SETTINGS_MAX_VAL_LEN);
 	uint8_t buffer[num_read_bytes + 1];
 	struct settings_read_callback_params *params = param;
+	bool value_is_printable = true;
 
 	/* Process only the exact match and ignore descendants of the searched name */
 	if (settings_name_next(key, NULL) != 0) {
@@ -127,11 +128,29 @@ static int settings_read_callback(const char *key,
 	/*  add NULL to the last position in the buffer */
 	buffer[num_read_bytes] = 0x00;
 
-	if (params->json_output) {
-		shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN,
-			"{\"status\": \"success\", \"value\": \"%s\"}\n", buffer);
+	/* Determine if all characters in value are printable */
+	for (ssize_t i = 0; i < num_read_bytes; i++) {
+		if (isprint(buffer[i]) == 0) {
+			value_is_printable = false;
+			break;
+		}
+	}
+
+	if (value_is_printable) {
+		if (params->json_output) {
+			shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN,
+				"{\"status\": \"success\", \"value\": \"%s\"}\n", buffer);
+		} else {
+			shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN, "%s\n", buffer);
+		}
 	} else {
-		shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN, "%s\n", buffer);
+		if (params->json_output) {
+			shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_RED,
+				"{\"status\": \"failed\", "
+				"\"msg\": \"value not printable\"}\n");
+		} else {
+			shell_hexdump(params->shell_ptr, buffer, num_read_bytes);
+		}
 	}
 
 	if (len > SETTINGS_MAX_VAL_LEN) {
