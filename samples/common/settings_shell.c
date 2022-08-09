@@ -20,6 +20,10 @@ struct settings_read_callback_params {
 	bool json_output;
 };
 
+struct settings_list_callback_params {
+	const struct shell *shell_ptr;
+};
+
 static int cmd_settings_set(const struct shell *shell, size_t argc, char *argv[])
 {
 	bool json_output;
@@ -180,23 +184,46 @@ static int cmd_settings_get(const struct shell *shell, size_t argc,
 	return 0;
 }
 
+static int settings_list_callback(const char *key,
+				  size_t len,
+				  settings_read_cb read_cb,
+				  void            *cb_arg,
+				  void            *param)
+{
+	struct settings_list_callback_params *params = param;
+
+	shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN, "%s\n", key);
+
+	return 0;
+}
+
+static int cmd_settings_list(const struct shell *shell, size_t argc, char *argv[])
+{
+	int err;
+
+	struct settings_list_callback_params params = {
+		.shell_ptr = shell,
+	};
+
+	err = settings_load_subtree_direct(NULL, settings_list_callback, &params);
+
+	if (err) {
+		shell_error(shell, "Failed to load settings: %d", err);
+	}
+
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(settings_commands,
 	SHELL_CMD_ARG(set, NULL,
-		"set a module config\n"
-		"usage:\n"
-		"$ settings set <key> <value>\n"
-		"example:\n"
-		"$ settings set golioth/psk pre-shared-key-value\n"
-		"$ settings set golioth/psk-id psk-identity-value",
+		"set a setting (usage: settings set <key> <value> [--json])",
 		cmd_settings_set, 3, 1),
 	SHELL_CMD_ARG(get, NULL,
-		"get a module config value\n"
-		"usage:\n"
-		"$ settings get <key>\n"
-		"example:\n"
-		"$ settings get golioth/psk\n"
-		"$ settings get golioth/psk-id",
+		"get a setting (usage: settings get <key> [--json])",
 		cmd_settings_get, 2, 1),
+	SHELL_CMD_ARG(list, NULL,
+		"list all settings (usage: settings list)",
+		cmd_settings_list, 1, 0),
 	SHELL_SUBCMD_SET_END);
 
 SHELL_CMD_REGISTER(settings, &settings_commands, "Settings commands", NULL);
