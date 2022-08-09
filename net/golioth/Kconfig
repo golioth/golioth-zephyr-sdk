@@ -104,6 +104,14 @@ config GOLIOTH_SETTINGS
 	  Enable Golioth Settings feature. Not to be confused
 	  with Zephyr's own Settings subsystem.
 
+config GOLIOTH_SETTINGS_PERSIST
+	bool "Save Golioth settings to persistent storage"
+	depends on GOLIOTH_SETTINGS
+	default y
+	help
+	  Automatically save settings received from Golioth cloud to persistent
+	  storage via the Zephyr Settings subsystem.
+
 config GOLIOTH_FW_PACKAGE_NAME_MAX_LEN
 	int "Maximum length of package name"
 	default 32

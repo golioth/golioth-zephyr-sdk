@@ -10,6 +10,7 @@
 #include <qcbor/posix_error_map.h>
 #include <qcbor/qcbor.h>
 #include <qcbor/qcbor_spiffy_decode.h>
+#include <settings/settings.h>
 #include <stdio.h>
 #include <assert.h>
 
@@ -93,6 +94,27 @@ static int send_status_report(struct golioth_client *client,
 	LOG_HEXDUMP_DBG(response_buf, nbytes, "Response");
 
 	return send_coap_response(client, response_buf, nbytes);
+}
+
+static void save_setting(const char *key, const struct golioth_settings_value *value)
+{
+	int err;
+	char name[64] = {};
+
+	/*
+	 * Use the "gsettings" package in the Zephyr settings subsystem
+	 * to store all settings.
+	 */
+	snprintf(name, sizeof(name), "gsettings/%s", key);
+
+	if (IS_ENABLED(CONFIG_GOLIOTH_SETTINGS_PERSIST)) {
+		LOG_INF("Saving setting: %s", name);
+		err = settings_save_one(name, value, sizeof(struct golioth_settings_value));
+		if (err) {
+			LOG_ERR("Failed to save setting: %d", err);
+			return;
+		}
+	}
 }
 
 static int on_setting(const struct coap_packet *response,
@@ -192,6 +214,8 @@ static int on_setting(const struct coap_packet *response,
 
 			if (setting_status != GOLIOTH_SETTINGS_SUCCESS) {
 				cumulative_status = setting_status;
+			} else {
+				save_setting(key, &value);
 			}
 		}
 

@@ -32,6 +32,14 @@
  * 4. For each setting, this library calls the user-registered callback.
  * 5. This library reports status of applying settings to cloud.
  *
+ * If the user's callback returns GOLIOTH_SETTINGS_SUCCESS, then the
+ * setting is automatically stored to persistent flash via the Zephyr
+ * Settings subsystem if CONFIG_GOLIOTH_SETTINGS_PERSIST is 'y'.
+ * Storing the setting in flash can be useful for applications that
+ * need the setting before the device connects to Golioth.
+ * For this use-case, it's the user's responsibility to retrieve
+ * the setting from the Zephyr Settings subsystem, if desired.
+ *
  * This library is responsible for interfacing with the cloud
  * and has no knowledge of the specific settings.
  * @{
