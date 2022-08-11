@@ -337,20 +337,20 @@ int golioth_fw_report_state(struct golioth_client *client,
 
 	err = coap_packet_append_uri_path_from_string(&packet, uri, written);
 	if (err) {
-		LOG_ERR("failed to append logs uri path: %d", err);
+		LOG_ERR("failed to append uri path: %d", err);
 		return err;
 	}
 
 	err = coap_append_option_int(&packet, COAP_OPTION_CONTENT_FORMAT,
 				     COAP_CONTENT_FORMAT_APP_CBOR);
 	if (err) {
-		LOG_ERR("failed to append logs content format: %d", err);
+		LOG_ERR("failed to append content format: %d", err);
 		return err;
 	}
 
 	err = coap_packet_append_payload_marker(&packet);
 	if (err) {
-		LOG_ERR("failed to append logs payload marker: %d", err);
+		LOG_ERR("failed to append payload marker: %d", err);
 		return err;
 	}
 
