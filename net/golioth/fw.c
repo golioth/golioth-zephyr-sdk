@@ -9,7 +9,6 @@
 #include <qcbor/posix_error_map.h>
 #include <qcbor/qcbor.h>
 #include <qcbor/qcbor_spiffy_decode.h>
-#include <stdio.h>
 
 #include "coap_utils.h"
 
@@ -18,7 +17,7 @@ LOG_MODULE_DECLARE(golioth);
 
 #define GOLIOTH_FW_DESIRED	".u/desired"
 
-#define GOLIOTH_FW_REPORT_STATE_URI_BASE	".u/c/"
+#define GOLIOTH_FW_REPORT_STATE	".u/c"
 
 enum {
 	MANIFEST_KEY_SEQUENCE_NUMBER = 1,
@@ -310,13 +309,12 @@ int golioth_fw_report_state(struct golioth_client *client,
 			    enum golioth_dfu_result result)
 {
 	struct coap_packet packet;
-	uint8_t uri[sizeof(GOLIOTH_FW_REPORT_STATE_URI_BASE) +
-		    CONFIG_GOLIOTH_FW_PACKAGE_NAME_MAX_LEN];
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN + 32 + sizeof(uri)];
+	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN + 32 +
+		       sizeof(GOLIOTH_FW_REPORT_STATE) +
+		       CONFIG_GOLIOTH_FW_PACKAGE_NAME_MAX_LEN];
 	QCBOREncodeContext encode_ctx;
 	UsefulBuf encode_bufc;
 	size_t encoded_len;
-	int written;
 	int err;
 	QCBORError qerr;
 
@@ -328,14 +326,13 @@ int golioth_fw_report_state(struct golioth_client *client,
 		return err;
 	}
 
-	written = snprintf(uri, sizeof(uri), GOLIOTH_FW_REPORT_STATE_URI_BASE "%s",
-			   package_name);
-	if (written >= sizeof(uri)) {
-		LOG_ERR("not enough space in URI buffer");
-		return -ENOMEM;
+	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_FW_REPORT_STATE);
+	if (err) {
+		LOG_ERR("failed to append uri path: %d", err);
+		return err;
 	}
 
-	err = coap_packet_append_uri_path_from_string(&packet, uri, written);
+	err = coap_packet_append_uri_path_from_stringz(&packet, package_name);
 	if (err) {
 		LOG_ERR("failed to append uri path: %d", err);
 		return err;
