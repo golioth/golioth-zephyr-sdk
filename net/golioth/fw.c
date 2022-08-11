@@ -16,7 +16,6 @@
 #include <logging/log.h>
 LOG_MODULE_DECLARE(golioth);
 
-#define GOLIOTH_FW_DOWNLOAD	".u"
 #define GOLIOTH_FW_DESIRED	".u/desired"
 
 #define GOLIOTH_FW_REPORT_STATE_URI_BASE	".u/c/"
