@@ -9,6 +9,7 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 #include <net/golioth/system_client.h>
 #include <samples/common/net_connect.h>
+#include <net/golioth/lightdb_helpers.h>
 
 #include <stdlib.h>
 
@@ -71,6 +72,7 @@ static void counter_set_sync(int counter)
 void main(void)
 {
 	int counter = 0;
+	int err;
 
 	LOG_DBG("Start LightDB set sample");
 
@@ -101,5 +103,29 @@ void main(void)
 
 		counter++;
 		k_sleep(K_SECONDS(5));
+
+		err = golioth_lightdb_set_auto(client, "counter/value",
+					       counter);
+		if (err) {
+			LOG_WRN("Failed to update %s: %d", "counter/value", err);
+		}
+
+		err = golioth_lightdb_set_auto(client, "counter/value_plus_half",
+					       counter + 0.5f);
+		if (err) {
+			LOG_WRN("Failed to update %s: %d", "counter/value_plus_half", err);
+		}
+
+		err = golioth_lightdb_set_auto(client, "counter/is_even",
+					       (bool) (counter % 2 == 0));
+		if (err) {
+			LOG_WRN("Failed to update %s: %d", "counter/is_even", err);
+		}
+
+		err = golioth_lightdb_set_auto(client, "counter/odd_or_even",
+					       (counter % 2) ? "odd" : "even");
+		if (err) {
+			LOG_WRN("Failed to update %s: %d", "counter/odd_or_even", err);
+		}
 	}
 }
