@@ -39,8 +39,8 @@ LOG_MODULE_DECLARE(golioth);
 
 #define GOLIOTH_SETTINGS_PATH ".c"
 #define GOLIOTH_SETTINGS_STATUS_PATH ".c/status"
-#define GOLIOTH_SETTINGS_MAX_NAME_LEN 63
-#define GOLIOTH_SETTINGS_MAX_RESPONSE_LEN 63
+#define GOLIOTH_SETTINGS_MAX_NAME_LEN 63 /* not including NULL */
+#define GOLIOTH_SETTINGS_MAX_RESPONSE_LEN 64
 
 static int send_coap_response(struct golioth_client *client,
 			      uint8_t *coap_payload,
@@ -66,7 +66,7 @@ static int send_coap_response(struct golioth_client *client,
 
 	err = coap_append_option_int(&packet,
 				     COAP_OPTION_CONTENT_FORMAT,
-				     COAP_CONTENT_FORMAT_APP_JSON);
+				     COAP_CONTENT_FORMAT_APP_CBOR);
 	if (err) {
 		LOG_ERR("Unable add content format to packet: %d", err);
 		return err;
@@ -83,16 +83,27 @@ static int send_status_report(struct golioth_client *client,
 			      int64_t version,
 			      enum golioth_settings_status status)
 {
-	char response_buf[64];
-	int nbytes = snprintf(response_buf,
-		 sizeof(response_buf),
-		 "{\"version\":%d,\"error_code\":%d}",
-		 (int32_t)version, (int32_t)status);
-	assert(nbytes > 0);
+	uint8_t response_buf[GOLIOTH_SETTINGS_MAX_RESPONSE_LEN];
+	size_t response_len;
+	QCBOREncodeContext encode_ctx;
+	UsefulBuf response_usefulbuf = { response_buf, sizeof(response_buf) };
 
-	LOG_HEXDUMP_DBG(response_buf, nbytes, "Response");
+	QCBOREncode_Init(&encode_ctx, response_usefulbuf);
+	QCBOREncode_OpenMap(&encode_ctx);
+	QCBOREncode_AddInt64ToMap(&encode_ctx, "version", version);
+	QCBOREncode_AddInt64ToMap(&encode_ctx, "error_code", status);
+	QCBOREncode_CloseMap(&encode_ctx);
 
-	return send_coap_response(client, response_buf, nbytes);
+	QCBORError qerr = QCBOREncode_FinishGetSize(&encode_ctx, &response_len);
+
+	if (qerr != QCBOR_SUCCESS) {
+		LOG_ERR("QCBOREncode_FinishGetSize error: %d (%s)", qerr, qcbor_err_to_str(qerr));
+		return qcbor_error_to_posix(qerr);
+	}
+
+	LOG_HEXDUMP_DBG(response_buf, response_len, "Response");
+
+	return send_coap_response(client, response_buf, response_len);
 }
 
 static int on_setting(const struct coap_packet *response,
