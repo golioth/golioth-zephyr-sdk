@@ -347,8 +347,6 @@ int golioth_send_coap(struct golioth_client *client, struct coap_packet *packet)
 {
 	int err;
 
-	LOG_HEXDUMP_DBG(packet->data, packet->offset, "TX CoAP");
-
 	err = golioth_send(client, packet->data, packet->offset, 0);
 	if (err) {
 		return err;
