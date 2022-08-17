@@ -58,7 +58,8 @@ static int golioth_setsockopt_dtls(struct golioth_client *client, int sock,
 		/*
 		 * NOTE: At the time of implementation, mbedTLS supported only DNS entries in X509
 		 * Subject Alternative Name, so providing string representation of IP address will
-		 * fail (during handshake).
+		 * fail (during handshake). If this is the case, you can can still connect if you
+		 * modify the code below to set host to NULL, which disables hostname verification.
 		 *
 		 * NOTE: Zephyr TLS layer / mbedTLS API expect NULL terminated string. Length
 		 * (calculated with 'strlen') is ignored at Zephyr TLS layer. Though, we provide
