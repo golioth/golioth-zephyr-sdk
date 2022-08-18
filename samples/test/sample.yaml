@@ -1,0 +1,11 @@
+sample:
+  description: Sample app that runs automated tests on the target hardware
+  name: test
+common:
+  harness: net
+  platform_allow: >
+    nrf52840dk_nrf52840
+    nrf9160dk_nrf9160_ns
+  tags: golioth socket
+tests:
+  sample.golioth.test: {}
