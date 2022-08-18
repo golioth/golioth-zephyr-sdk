@@ -36,8 +36,11 @@ jobs:
           west patch --apply
 
       - name: Run twister
-        run: |
-          zephyr/scripts/twister -T modules/lib/golioth
+        run: >
+          zephyr/scripts/twister
+          -p nrf52840dk_nrf52840
+          -p qemu_x86
+          -T modules/lib/golioth
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
