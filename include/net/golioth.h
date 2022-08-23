@@ -85,28 +85,6 @@ struct golioth_client {
 	struct golioth_settings settings;
 };
 
-struct golioth_blockwise_observe_ctx;
-
-/**
- * @typedef golioth_blockwise_observe_received_t
- * @brief Type of the callback being called when a single block of data is
- *        received as part of CoAP observe notification.
- */
-typedef int (*golioth_blockwise_observe_received_t)(struct golioth_blockwise_observe_ctx *ctx,
-						    const uint8_t *data,
-						    size_t offset, size_t len,
-						    bool last);
-
-/**
- * @brief Represents a Golioth blockwise observe context.
- */
-struct golioth_blockwise_observe_ctx {
-	struct coap_block_context block_ctx;
-	struct golioth_client *client;
-	const char *path;
-	golioth_blockwise_observe_received_t received_cb;
-};
-
 struct golioth_blockwise_download_ctx;
 
 /**
@@ -340,25 +318,6 @@ int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path);
 int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
 			    enum coap_content_format format,
 			    struct coap_reply *reply, coap_reply_t reply_cb);
-
-/**
- * @brief Observe resource with blockwise updates
- *
- * @param client Client instance
- * @param ctx Blockwise observe context that will be used for handling resouce
- *            updates
- * @param path Resource path to be monitored
- * @param reply CoAP reply handler object used for notifying about updated
- *              value
- * @param received_cb Received block handler callback
- *
- * @retval 0 On success
- * @retval <0 On failure
- */
-int golioth_observe_blockwise(struct golioth_client *client,
-			      struct golioth_blockwise_observe_ctx *ctx,
-			      const char *path, struct coap_reply *reply,
-			      golioth_blockwise_observe_received_t received_cb);
 
 /**
  * @brief Process incoming data from Golioth
