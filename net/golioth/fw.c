@@ -10,7 +10,9 @@
 #include <qcbor/qcbor.h>
 #include <qcbor/qcbor_spiffy_decode.h>
 
+#include "coap_req.h"
 #include "coap_utils.h"
+#include "pathv.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(golioth);
@@ -132,173 +134,53 @@ exit_root_map:
 }
 
 int golioth_fw_observe_desired(struct golioth_client *client,
-			       struct coap_reply *reply,
-			       coap_reply_t desired_cb)
+			       golioth_req_cb_t cb, void *user_data)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN + 2];
-	int err;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_GET, coap_next_id());
-	if (err) {
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_OBSERVE, 0);
-	if (err) {
-		LOG_ERR("Unable to add observe option");
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_FW_DESIRED);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet");
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_ACCEPT,
-				     COAP_CONTENT_FORMAT_APP_CBOR);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet");
-		return err;
-	}
-
-	coap_reply_clear(reply);
-	coap_reply_init(reply, &packet);
-	reply->reply = desired_cb;
-	reply->user_data = client;
-
-	return golioth_send_coap(client, &packet);
-}
-
-static int golioth_fw_download_next(struct golioth_fw_download_ctx *ctx)
-{
-	struct golioth_blockwise_download_ctx *blockwise_ctx = &ctx->blockwise_ctx;
-	struct golioth_client *client = blockwise_ctx->client;
-	struct coap_block_context *block_ctx = &blockwise_ctx->block_ctx;
-	struct coap_packet request;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN + sizeof(ctx->uri)];
-	int err;
-
-	err = coap_packet_init(&request, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       sizeof(blockwise_ctx->token),
-			       blockwise_ctx->token,
-			       COAP_METHOD_GET, coap_next_id());
-	if (err) {
-		LOG_ERR("Failed to init update block request: %d", err);
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_string(&request, ctx->uri, ctx->uri_len);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet");
-		return err;
-	}
-
-	err = coap_append_block2_option(&request, block_ctx);
-	if (err) {
-		LOG_ERR("Failed to append block2: %d", err);
-		return err;
-	}
-
-	LOG_DBG("Request block %d",
-		(int) (block_ctx->current /
-		       coap_block_size_to_bytes(block_ctx->block_size)));
-
-	/*
-	 * TODO: coap reply should not be used between requests, due to
-	 * synchronization issues (possibility of using the same reply from
-	 * multiple threads).
-	 */
-	coap_reply_init(blockwise_ctx->reply, &request);
-
-	return golioth_send_coap(client, &request);
-}
-
-static int golioth_fw_block_received(const struct coap_packet *update,
-				     struct coap_reply *reply,
-				     const struct sockaddr *from)
-{
-	struct golioth_fw_download_ctx *ctx = reply->user_data;
-	struct golioth_blockwise_download_ctx *blockwise_ctx = &ctx->blockwise_ctx;
-	struct golioth_client *client = blockwise_ctx->client;
-	struct coap_block_context *block_ctx = &blockwise_ctx->block_ctx;
-	const uint8_t *payload;
-	uint16_t payload_len;
-	bool truncated = (client->rx_received > client->rx_buffer_len);
-	size_t cur_offset, new_offset;
-	int err;
-
-	LOG_DBG("Update on blockwise download");
-
-	payload = coap_packet_get_payload(update, &payload_len);
-	if (!payload) {
-		LOG_ERR("No payload in CoAP!");
-		return -EIO;
-	}
-
-	if (truncated) {
-		LOG_ERR("Payload is truncated!");
-		return -EIO;
-	}
-
-	err = coap_update_from_block(update, block_ctx);
-	if (err) {
-		LOG_WRN("Failed to update update block context (%d)", err);
-		return err;
-	}
-
-	if (!block_ctx->total_size) {
-		LOG_DBG("Not a blockwise packet");
-		blockwise_ctx->received_cb(blockwise_ctx, payload, 0, payload_len, true);
-		return 0;
-	}
-
-	cur_offset = block_ctx->current;
-	new_offset = coap_next_block(update, block_ctx);
-
-	if (new_offset == 0) {
-		LOG_DBG("Blockwise transfer is finished!");
-		blockwise_ctx->received_cb(blockwise_ctx, payload, cur_offset, payload_len, true);
-		return 0;
-	}
-
-	LOG_DBG("Update offset: %zu -> %zu", cur_offset, new_offset);
-
-	err = blockwise_ctx->received_cb(blockwise_ctx, payload, cur_offset, payload_len, false);
-	if (err) {
-		return err;
-	}
-
-	return golioth_fw_download_next(ctx);
+	return golioth_coap_req_cb(client, COAP_METHOD_GET, PATHV(GOLIOTH_FW_DESIRED),
+				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
+				   NULL, 0,
+				   cb, user_data,
+				   GOLIOTH_COAP_REQ_OBSERVE);
 }
 
 int golioth_fw_download(struct golioth_client *client,
-			struct golioth_fw_download_ctx *ctx,
-			const char *uri, size_t uri_len,
-			struct coap_reply *reply,
-			golioth_blockwise_download_received_t received_cb)
+			const uint8_t *uri, size_t uri_len,
+			golioth_req_cb_t cb, void *user_data)
 {
-	if (uri_len > sizeof(ctx->uri)) {
-		return -ENOMEM;
+	struct golioth_coap_req *req;
+	int err;
+
+	err = golioth_coap_req_new(&req, client, COAP_METHOD_GET, COAP_TYPE_CON,
+				   GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN,
+				   cb, user_data);
+	if (err) {
+		LOG_ERR("Failed to initialize CoAP GET request: %d", err);
+		goto free_req;
 	}
 
-	memcpy(ctx->uri, uri, uri_len);
-	ctx->uri_len = uri_len;
+	err = coap_packet_append_uri_path_from_string(&req->request, uri, uri_len);
+	if (err) {
+		LOG_ERR("Unable add uri path to packet");
+		goto free_req;
+	}
 
-	golioth_blockwise_download_init(client, &ctx->blockwise_ctx);
+	return golioth_coap_req_schedule(req);
 
-	coap_reply_clear(reply);
-	reply->reply = golioth_fw_block_received;
-	reply->user_data = ctx;
-	ctx->blockwise_ctx.reply = reply;
-	ctx->blockwise_ctx.received_cb = received_cb;
+free_req:
+	golioth_coap_req_free(req);
 
-	return golioth_fw_download_next(ctx);
+	return err;
+}
+
+static int golioth_fw_report_state_cb(struct golioth_req_rsp *rsp)
+{
+	if (rsp->err) {
+		LOG_ERR("Failed to report FW state: %d", rsp->err);
+	} else {
+		LOG_INF("Successfully reported FW state");
+	}
+
+	return 0;
 }
 
 int golioth_fw_report_state(struct golioth_client *client,
@@ -308,51 +190,10 @@ int golioth_fw_report_state(struct golioth_client *client,
 			    enum golioth_fw_state state,
 			    enum golioth_dfu_result result)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN + 32 +
-		       sizeof(GOLIOTH_FW_REPORT_STATE) +
-		       CONFIG_GOLIOTH_FW_PACKAGE_NAME_MAX_LEN];
 	QCBOREncodeContext encode_ctx;
-	UsefulBuf encode_bufc;
+	UsefulBuf_MAKE_STACK_UB(encode_bufc, 64);
 	size_t encoded_len;
-	int err;
 	QCBORError qerr;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_POST, coap_next_id());
-	if (err) {
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_FW_REPORT_STATE);
-	if (err) {
-		LOG_ERR("failed to append uri path: %d", err);
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, package_name);
-	if (err) {
-		LOG_ERR("failed to append uri path: %d", err);
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_CONTENT_FORMAT,
-				     COAP_CONTENT_FORMAT_APP_CBOR);
-	if (err) {
-		LOG_ERR("failed to append content format: %d", err);
-		return err;
-	}
-
-	err = coap_packet_append_payload_marker(&packet);
-	if (err) {
-		LOG_ERR("failed to append payload marker: %d", err);
-		return err;
-	}
-
-	encode_bufc.ptr = &buffer[packet.offset];
-	encode_bufc.len = sizeof(buffer) - packet.offset;
 
 	QCBOREncode_Init(&encode_ctx, encode_bufc);
 
@@ -376,18 +217,10 @@ int golioth_fw_report_state(struct golioth_client *client,
 		return qcbor_error_to_posix(qerr);
 	}
 
-	/*
-	 * Add CBOR payload into CoAP payload. In fact CBOR is already in good
-	 * place in memory, so the only thing that is needed is moving forward
-	 * CoAP offset.
-	 *
-	 * TODO: add CoAP API that will prevent internal memcpy()
-	 */
-	err = coap_packet_append_payload(&packet, &buffer[packet.offset],
-					 encoded_len);
-	if (err) {
-		return err;
-	}
-
-	return golioth_send_coap(client, &packet);
+	return golioth_coap_req_cb(client, COAP_METHOD_POST,
+				   PATHV(GOLIOTH_FW_REPORT_STATE, package_name),
+				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
+				   encode_bufc.ptr, encoded_len,
+				   golioth_fw_report_state_cb, NULL,
+				   0);
 }

@@ -30,10 +30,7 @@ K_WORK_DELAYABLE_DEFINE(reboot_work, reboot_handler);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
-static struct coap_reply coap_replies[4];
-
 struct dfu_ctx {
-	struct golioth_fw_download_ctx fw_ctx;
 	struct flash_img_context flash;
 	char version[65];
 };
@@ -41,30 +38,34 @@ struct dfu_ctx {
 static struct dfu_ctx update_ctx;
 static enum golioth_dfu_result dfu_initial_result = GOLIOTH_DFU_RESULT_INITIAL;
 
-static int data_received(struct golioth_blockwise_download_ctx *ctx,
-			 const uint8_t *data, size_t offset, size_t len,
-			 bool last)
+static int data_received(struct golioth_req_rsp *rsp)
 {
-	struct dfu_ctx *dfu = CONTAINER_OF(ctx, struct dfu_ctx, fw_ctx);
+	struct dfu_ctx *dfu = rsp->user_data;
+	bool last = rsp->get_next == NULL;
 	int err;
 
-	LOG_DBG("Received %zu bytes at offset %zu%s", len, offset,
+	if (rsp->err) {
+		LOG_ERR("Error while receiving FW data: %d", rsp->err);
+		return 0;
+	}
+
+	LOG_DBG("Received %zu bytes at offset %zu%s", rsp->len, rsp->off,
 		last ? " (last)" : "");
 
-	if (offset == 0) {
+	if (rsp->off == 0) {
 		err = flash_img_prepare(&dfu->flash);
 		if (err) {
 			return err;
 		}
 	}
 
-	err = flash_img_buffered_write(&dfu->flash, data, len, last);
+	err = flash_img_buffered_write(&dfu->flash, rsp->data, rsp->len, last);
 	if (err) {
 		LOG_ERR("Failed to write to flash: %d", err);
 		return err;
 	}
 
-	if (offset > 0 && last) {
+	if (last) {
 		err = golioth_fw_report_state(client, "main",
 					      current_version_str,
 					      dfu->version,
@@ -99,6 +100,10 @@ static int data_received(struct golioth_blockwise_download_ctx *ctx,
 		k_work_schedule(&reboot_work, K_SECONDS(REBOOT_DELAY_SEC));
 	}
 
+	if (rsp->get_next) {
+		rsp->get_next(rsp->get_next_data, 0);
+	}
+
 	return 0;
 }
 
@@ -112,29 +117,23 @@ static uint8_t *uri_strip_leading_slash(uint8_t *uri, size_t *uri_len)
 	return uri;
 }
 
-static int golioth_desired_update(const struct coap_packet *update,
-				  struct coap_reply *reply,
-				  const struct sockaddr *from)
+static int golioth_desired_update(struct golioth_req_rsp *rsp)
 {
-	struct dfu_ctx *dfu = &update_ctx;
-	struct coap_reply *fw_reply;
-	const uint8_t *payload;
-	uint16_t payload_len;
+	struct dfu_ctx *dfu = rsp->user_data;
 	size_t version_len = sizeof(dfu->version) - 1;
 	uint8_t uri[64];
 	uint8_t *uri_p;
 	size_t uri_len = sizeof(uri);
 	int err;
 
-	payload = coap_packet_get_payload(update, &payload_len);
-	if (!payload) {
-		LOG_ERR("No payload in CoAP!");
-		return -EIO;
+	if (rsp->err) {
+		LOG_ERR("Error while receiving desired FW update: %d", rsp->err);
+		return 0;
 	}
 
-	LOG_HEXDUMP_DBG(payload, payload_len, "Desired");
+	LOG_HEXDUMP_DBG(rsp->data, rsp->len, "Desired");
 
-	err = golioth_fw_desired_parse(payload, payload_len,
+	err = golioth_fw_desired_parse(rsp->data, rsp->len,
 				       dfu->version, &version_len,
 				       uri, &uri_len);
 	if (err) {
@@ -151,12 +150,6 @@ static int golioth_desired_update(const struct coap_packet *update,
 		return -EALREADY;
 	}
 
-	fw_reply = coap_reply_next_unused(coap_replies, ARRAY_SIZE(coap_replies));
-	if (!reply) {
-		LOG_ERR("No more reply handlers");
-		return -ENOMEM;
-	}
-
 	uri_p = uri_strip_leading_slash(uri, &uri_len);
 
 	err = golioth_fw_report_state(client, "main",
@@ -168,8 +161,7 @@ static int golioth_desired_update(const struct coap_packet *update,
 		LOG_ERR("Failed to update to '%s' state: %d", "downloading", err);
 	}
 
-	err = golioth_fw_download(client, &dfu->fw_ctx, uri_p, uri_len,
-				  fw_reply, data_received);
+	err = golioth_fw_download(client, uri_p, uri_len, data_received, dfu);
 	if (err) {
 		LOG_ERR("Failed to request firmware: %d", err);
 		return err;
@@ -180,9 +172,7 @@ static int golioth_desired_update(const struct coap_packet *update,
 
 static void golioth_on_connect(struct golioth_client *client)
 {
-	struct coap_reply *reply;
 	int err;
-	int i;
 
 	err = golioth_fw_report_state(client, "main",
 				      current_version_str,
@@ -193,33 +183,10 @@ static void golioth_on_connect(struct golioth_client *client)
 		LOG_ERR("Failed to report firmware state: %d", err);
 	}
 
-	for (i = 0; i < ARRAY_SIZE(coap_replies); i++) {
-		coap_reply_clear(&coap_replies[i]);
-	}
-
-	reply = coap_reply_next_unused(coap_replies, ARRAY_SIZE(coap_replies));
-	if (!reply) {
-		LOG_ERR("No more reply handlers");
-	}
-
-	err = golioth_fw_observe_desired(client, reply, golioth_desired_update);
+	err = golioth_fw_observe_desired(client, golioth_desired_update, &update_ctx);
 	if (err) {
-		coap_reply_clear(reply);
+		LOG_ERR("Failed to start observation of desired FW: %d", err);
 	}
-}
-
-static void golioth_on_message(struct golioth_client *client,
-			       struct coap_packet *rx)
-{
-	uint16_t payload_len;
-	const uint8_t *payload;
-	uint8_t type;
-
-	type = coap_header_get_type(rx);
-	payload = coap_packet_get_payload(rx, &payload_len);
-
-	(void)coap_response_received(rx, NULL, coap_replies,
-				     ARRAY_SIZE(coap_replies));
 }
 
 void main(void)
@@ -248,6 +215,5 @@ void main(void)
 	}
 
 	client->on_connect = golioth_on_connect;
-	client->on_message = golioth_on_message;
 	golioth_system_client_start();
 }
