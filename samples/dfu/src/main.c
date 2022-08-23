@@ -21,6 +21,13 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 
 #define REBOOT_DELAY_SEC	1
 
+static void reboot_handler(struct k_work *work)
+{
+	sys_reboot(SYS_REBOOT_COLD);
+}
+
+K_WORK_DELAYABLE_DEFINE(reboot_work, reboot_handler);
+
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
 static struct coap_reply coap_replies[4];
@@ -89,9 +96,7 @@ static int data_received(struct golioth_blockwise_download_ctx *ctx,
 		/* Synchronize logs */
 		LOG_PANIC();
 
-		k_sleep(K_SECONDS(REBOOT_DELAY_SEC));
-
-		sys_reboot(SYS_REBOOT_COLD);
+		k_work_schedule(&reboot_work, K_SECONDS(REBOOT_DELAY_SEC));
 	}
 
 	return 0;
