@@ -1,4 +1,5 @@
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH
+  coap_req.c
   coap_utils.c
   golioth.c
   golioth_utils.c
