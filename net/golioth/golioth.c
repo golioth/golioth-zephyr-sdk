@@ -593,3 +593,15 @@ int golioth_register_message_callback(struct golioth_client *client,
 
 	return 0;
 }
+
+void golioth_poll_prepare(struct golioth_client *client, int64_t now,
+			  int *fd, int64_t *timeout)
+{
+	if (fd) {
+		*fd = client->sock;
+	}
+
+	if (timeout) {
+		*timeout = INT64_MAX;
+	}
+}
