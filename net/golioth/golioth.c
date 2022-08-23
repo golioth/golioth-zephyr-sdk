@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "coap_utils.h"
+#include "golioth_utils.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth, CONFIG_GOLIOTH_LOG_LEVEL);
@@ -513,32 +514,12 @@ static int golioth_recv(struct golioth_client *client, uint8_t *data,
 	return ret;
 }
 
-static enum coap_block_size max_block_size_from_payload_len(uint16_t payload_len)
-{
-	enum coap_block_size block_size = COAP_BLOCK_16;
-
-	payload_len /= 16;
-
-	while (payload_len > 1 && block_size < COAP_BLOCK_1024) {
-		block_size++;
-		payload_len /= 2;
-	}
-
-	return block_size;
-}
-
-static enum coap_block_size
-golioth_estimated_block_size(struct golioth_client *client)
-{
-	return max_block_size_from_payload_len(client->rx_buffer_len);
-}
-
 void golioth_blockwise_download_init(struct golioth_client *client,
 				     struct golioth_blockwise_download_ctx *ctx)
 {
 	ctx->client = client;
 	coap_block_transfer_init(&ctx->block_ctx,
-				 golioth_estimated_block_size(client), 0);
+				 golioth_estimated_coap_block_size(client), 0);
 
 	sys_put_be32(sys_rand32_get(), &ctx->token[0]);
 	sys_put_be32(sys_rand32_get(), &ctx->token[4]);
