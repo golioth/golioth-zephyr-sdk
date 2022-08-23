@@ -105,6 +105,11 @@ static inline void client_notify_timeout(void)
 	eventfd_write(fds[POLLFD_EVENT].fd, 1);
 }
 
+static void golioth_system_client_wakeup(struct golioth_client *client)
+{
+	eventfd_write(fds[POLLFD_EVENT].fd, 1);
+}
+
 static void eventfd_timeout_handle(struct k_work *work)
 {
 	client_notify_timeout();
@@ -232,6 +237,8 @@ static int client_initialize(struct golioth_client *client)
 
 	client->rx_buffer = rx_buffer;
 	client->rx_buffer_len = sizeof(rx_buffer);
+
+	client->wakeup = golioth_system_client_wakeup;
 
 	err = golioth_set_proto_coap_dtls(client, sec_tag_list,
 					  ARRAY_SIZE(sec_tag_list));
