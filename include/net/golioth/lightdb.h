@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <zephyr/net/coap.h>
+#include <net/golioth/req.h>
 
 /**
  * @defgroup golioth_lightdb Golioth LightDB
@@ -24,23 +25,43 @@ enum golioth_content_format;
 #define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
 
 /**
- * @brief Get value from Golioth's LightDB
+ * @brief Get value from Golioth's LightDB (callback based)
  *
- * Get value from LightDB and initialize passed CoAP reply handler.
+ * Asynchronously request value from Golioth's LightDB and let @p cb be invoked when such value is
+ * retrieved or some error condtition happens.
  *
- * @param client Client instance
- * @param path LightDB resource path
- * @param format Requested format of payload
- * @param reply CoAP reply handler object used for notifying about received
- *              value
- * @param reply_cb Reply handler callback
+ * @warning Experimental API
+ *
+ * @param[in] client Client instance
+ * @param[in] path LightDB resource path
+ * @param[in] format Requested format of payload
+ * @param[in] cb Callback executed on response received, timeout or error
+ * @param[in] user_data User data passed to @p cb
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_lightdb_get_cb(struct golioth_client *client, const uint8_t *path,
+			   enum golioth_content_format format,
+			   golioth_req_cb_t cb, void *user_data);
+
+/**
+ * @brief Get value from Golioth's LightDB (synchronous, into preallocated buffer)
+ *
+ * Synchronously get value from Golioth's LightDB and store it into preallocated buffer.
+ *
+ * @param[in] client Client instance
+ * @param[in] path LightDB resource path
+ * @param[in] format Requested format of payload
+ * @param[in] data Buffer for received data
+ * @param[in,out] len Size of buffer on input, size of response on output
  *
  * @retval 0 On success
  * @retval <0 On failure
  */
 int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 			enum golioth_content_format format,
-			struct coap_reply *reply, coap_reply_t reply_cb);
+			uint8_t *data, size_t *len);
 
 /**
  * @brief Set value to Golioth's LightDB
