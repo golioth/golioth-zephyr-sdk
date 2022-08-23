@@ -278,9 +278,6 @@ int golioth_set_proto_coap_dtls(struct golioth_client *client,
 	return 0;
 }
 
-#define QUERY_PREFIX		"id="
-#define QUERY_PREFIX_LEN	(sizeof(QUERY_PREFIX) - 1)
-
 static int golioth_send(struct golioth_client *client, uint8_t *data,
 			size_t len, int flags)
 {
