@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "coap_req.h"
 #include "coap_utils.h"
 #include "golioth_utils.h"
 
@@ -24,6 +25,9 @@ void golioth_init(struct golioth_client *client)
 
 	k_mutex_init(&client->lock);
 	client->sock = -1;
+
+	sys_dlist_init(&client->coap_reqs);
+	k_mutex_init(&client->coap_reqs_lock);
 }
 
 bool golioth_is_connected(struct golioth_client *client)
@@ -462,6 +466,8 @@ static int golioth_process_rx_data(struct golioth_client *client,
 		}
 	}
 
+	golioth_coap_req_process_rx(client, &client->rx_packet);
+
 	type = coap_header_get_type(&client->rx_packet);
 	if (type == COAP_TYPE_CON) {
 		golioth_ack_packet(client, &client->rx_packet);
@@ -583,6 +589,6 @@ void golioth_poll_prepare(struct golioth_client *client, int64_t now,
 	}
 
 	if (timeout) {
-		*timeout = INT64_MAX;
+		*timeout = golioth_coap_reqs_poll_prepare(client, now);
 	}
 }
