@@ -7,7 +7,11 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_FW_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_FW_H_
 
-#include <net/golioth.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <net/golioth/req.h>
+
+struct golioth_client;
 
 /**
  * @brief State of downloading or updating the firmware.
@@ -36,15 +40,6 @@ enum golioth_dfu_result {
 };
 
 /**
- * @brief Represents incoming firmware from Golioth.
- */
-struct golioth_fw_download_ctx {
-	struct golioth_blockwise_download_ctx blockwise_ctx;
-	char uri[64];
-	size_t uri_len;
-};
-
-/**
  * @brief Parse desired firmware description
  *
  * @param payload Pointer to CBOR encoded 'desired' description
@@ -68,38 +63,30 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
  * @brief Observe desired firmware
  *
  * @param client Client instance
- * @param reply CoAP reply handler object used for notifying about received
- *              desired firmware description
- * @param desired_cb Callback that will be executed when desired firmware
- *                   description is received
+ * @param cb Callback executed on response received, timeout or error
+ * @param user_data User data passed to @p cb
  *
  * @retval 0 On success
  * @retval <0 On failure
  */
 int golioth_fw_observe_desired(struct golioth_client *client,
-			       struct coap_reply *reply,
-			       coap_reply_t desired_cb);
+			       golioth_req_cb_t cb, void *user_data);
 
 /**
  * @brief Request firmware download from Golioth
  *
  * @param client Client instance
- * @param ctx Firmware download context
  * @param uri Pointer to URI string
  * @param uri_len Length of URI string
- * @param reply CoAP reply handler object used for notifying about received
- *              firmware blocks
- * @param received_cb Callback that will be executed with each incoming block of
- *                    firmware
+ * @param cb Callback executed on response received, timeout or error
+ * @param user_data User data passed to @p cb with each invocation
  *
  * @retval 0 On success
  * @retval <0 On failure
  */
 int golioth_fw_download(struct golioth_client *client,
-			struct golioth_fw_download_ctx *ctx,
-			const char *uri, size_t uri_len,
-			struct coap_reply *reply,
-			golioth_blockwise_download_received_t received_cb);
+			const uint8_t *uri, size_t uri_len,
+			golioth_req_cb_t cb, void *user_data);
 
 /**
  * @brief Report state of firmware
