@@ -325,6 +325,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 	int timeout;
 	int64_t recv_expiry = 0;
 	int64_t ping_expiry = 0;
+	int64_t golioth_timeout;
 	eventfd_t eventfd_value;
 	int err;
 	int ret;
@@ -353,7 +354,11 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 		timeout_occurred = false;
 
+		golioth_poll_prepare(client, k_uptime_get(), NULL, &golioth_timeout);
+
 		timeout = MIN(recv_expiry, ping_expiry) - k_uptime_get();
+		timeout = MIN(timeout, golioth_timeout);
+
 		if (timeout < 0) {
 			timeout = 0;
 		}
