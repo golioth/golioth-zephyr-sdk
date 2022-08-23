@@ -144,32 +144,28 @@ This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:01.080,000] <inf> golioth_system: Initializing
-   [00:00:01.080,000] <inf> net_config: Initializing network
-   [00:00:01.080,000] <inf> net_config: Waiting interface 1 (0x3ffb01d8) to be up...
-   [00:00:01.080,000] <inf> esp_event: WIFI_EVENT_STA_START
-   [00:00:01.080,000] <inf> net_config: Interface 1 (0x3ffb01d8) coming up
-   [00:00:01.080,000] <inf> net_config: Running dhcpv4 client...
-   [00:00:01.998,000] <inf> esp_event: WIFI_EVENT_STA_CONNECTED
-   [00:00:05.102,000] <inf> net_dhcpv4: Received: 192.168.0.180
-   [00:00:05.102,000] <inf> net_config: IPv4 address: 192.168.0.180
-   [00:00:05.102,000] <inf> net_config: Lease time: 7200 seconds
-   [00:00:05.102,000] <inf> net_config: Subnet: 255.255.255.0
-   [00:00:05.102,000] <inf> net_config: Router: 192.168.0.1
-   [00:00:05.102,000] <dbg> golioth_lightdb.main: Start LightDB get sample
-   [00:00:05.102,000] <inf> golioth_system: Starting connect
-   [00:00:05.102,000] <inf> golioth_system: Client connected!
-   [00:00:13.541,000] <dbg> golioth_lightdb.reply_callback: payload: {"counter":18}
-   [00:00:43.541,000] <err> golioth_system: RX client timeout!
-   [00:00:43.541,000] <inf> golioth_system: Reconnect request
-   [00:00:43.545,000] <inf> golioth_system: Starting connect
-   [00:00:43.545,000] <inf> golioth_system: Client connected!
-   [00:00:48.869,000] <dbg> golioth_lightdb.reply_callback: payload: {"counter":18}
-   [00:01:18.869,000] <err> golioth_system: RX client timeout!
-   [00:01:18.869,000] <inf> golioth_system: Reconnect request
-   [00:01:18.873,000] <inf> golioth_system: Starting connect
-   [00:01:18.873,000] <inf> golioth_system: Client connected!
-   [00:01:24.507,000] <dbg> golioth_lightdb.reply_callback: payload: {"counter":18}
+   [00:00:00.000,000] <inf> golioth_system: Initializing
+   [00:00:00.000,000] <inf> net_config: Initializing network
+   [00:00:00.000,000] <inf> net_config: IPv4 address: 192.0.2.1
+   [00:00:00.000,000] <dbg> golioth_lightdb: main: Start LightDB get sample
+   [00:00:00.000,000] <inf> golioth_system: Starting connect
+   [00:00:00.030,000] <inf> golioth_lightdb: Before request (async)
+   [00:00:00.030,000] <inf> golioth_lightdb: After request (async)
+   [00:00:00.030,000] <inf> golioth_system: Client connected!
+   [00:00:00.030,000] <inf> golioth_lightdb: Counter (async)
+                                             31 30                                            |10
+   [00:00:05.040,000] <inf> golioth_lightdb: Before request (sync)
+   [00:00:05.040,000] <inf> golioth_lightdb: Counter (sync)
+                                             31 30                                            |10
+   [00:00:05.040,000] <inf> golioth_lightdb: After request (sync)
+   [00:00:10.050,000] <inf> golioth_lightdb: Before request (async)
+   [00:00:10.050,000] <inf> golioth_lightdb: After request (async)
+   [00:00:10.050,000] <inf> golioth_lightdb: Counter (async)
+                                             31 31                                            |11
+   [00:00:15.060,000] <inf> golioth_lightdb: Before request (sync)
+   [00:00:15.060,000] <inf> golioth_lightdb: Counter (sync)
+                                             31 32                                            |12
+   [00:00:15.060,000] <inf> golioth_lightdb: After request (sync)
 
 Set counter value
 =====================
@@ -179,7 +175,9 @@ The value can be set with:
 
 .. code-block:: console
 
-   goliothctl lightdb set <device-name> /counter -b "{\"counter\":34}"
+   goliothctl lightdb set <device-name> /counter -b 10
+   goliothctl lightdb set <device-name> /counter -b 11
+   goliothctl lightdb set <device-name> /counter -b 12
 
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/3.0.0/guides/networking/qemu_setup.html#networking-with-qemu
