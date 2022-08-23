@@ -288,6 +288,18 @@ int golioth_register_message_callback(struct golioth_client *client,
 				      golioth_message_callback callback,
 				      void *user_arg);
 
+/**
+ * @brief Prepare for poll() system call on transport socket
+ *
+ * @param[in] client Client instance
+ * @param[in] now Timestamp in msec for current event loop (e.g. output of k_uptime_get())
+ * @param[out] fd File descriptor of transport socket (optional, can be NULL)
+ * @param[out] timeout Timeout till the next action needs to be taken, such as resending a packet
+ *                     (optional, can be NULL)
+ */
+void golioth_poll_prepare(struct golioth_client *client, int64_t now,
+			  int *fd, int64_t *timeout);
+
 /** @} */
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_H_ */
