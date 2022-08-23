@@ -82,6 +82,8 @@ struct golioth_client {
 	void (*on_connect)(struct golioth_client *client);
 	void (*on_message)(struct golioth_client *client, struct coap_packet *rx);
 
+	void (*wakeup)(struct golioth_client *client);
+
 	/* Storage for additional on_message callbacks */
 	struct golioth_message_callback_reg message_callbacks[GOLIOTH_MAX_NUM_MESSAGE_CALLBACKS];
 	size_t num_message_callbacks;
