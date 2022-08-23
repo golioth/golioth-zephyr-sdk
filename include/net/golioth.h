@@ -7,6 +7,7 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 
+#include <net/golioth/lightdb.h>
 #include <net/golioth/rpc.h>
 #include <net/golioth/settings.h>
 #include <stdint.h>
@@ -26,9 +27,6 @@
 #define GOLIOTH_EMPTY_PACKET_LEN	(16 + GOLIOTH_MAX_IDENTITY_LEN)
 
 #define GOLIOTH_MAX_NUM_MESSAGE_CALLBACKS 4
-
-#define GOLIOTH_LIGHTDB_PATH(x)		".d/" x
-#define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
 
 /**
  * @brief Set of Content-Format option values for Golioth APIs
@@ -258,75 +256,6 @@ int golioth_ping(struct golioth_client *client);
  * @retval <0 On failure
  */
 int golioth_send_hello(struct golioth_client *client);
-
-/**
- * @brief Get value from Golioth's Light DB
- *
- * Get value from Light DB and initialize passed CoAP reply handler.
- *
- * @param client Client instance
- * @param path Light DB resource path
- * @param format Requested format of payload
- * @param reply CoAP reply handler object used for notifying about received
- *              value
- * @param reply_cb Reply handler callback
- *
- * @retval 0 On success
- * @retval <0 On failure
- */
-int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
-			enum golioth_content_format format,
-			struct coap_reply *reply, coap_reply_t reply_cb);
-
-/**
- * @brief Set value to Golioth's Light DB
- *
- * Set new value to Light DB.
- *
- * @param client Client instance
- * @param path Light DB resource path
- * @param format Format of payload
- * @param data Payload data
- * @param data_len Payload length
- *
- * @retval 0 On success
- * @retval <0 On failure
- */
-int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
-			enum golioth_content_format format,
-			uint8_t *data, uint16_t data_len);
-
-/**
- * @brief Delete value in Golioth's Light DB
- *
- * Delete value in Light DB.
- *
- * @param client Client instance
- * @param path Light DB resource path
- *
- * @retval 0 On success
- * @retval <0 On failure
- */
-int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path);
-
-/**
- * @brief Observe value in Golioth's Light DB
- *
- * Observe value in Light DB and initialize passed CoAP reply handler.
- *
- * @param client Client instance
- * @param path Light DB resource path to be monitored
- * @param format Requested format of payload
- * @param reply CoAP reply handler object used for notifying about updated
- *              value
- * @param reply_cb Reply handler callback
- *
- * @retval 0 On success
- * @retval <0 On failure
- */
-int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
-			    enum golioth_content_format format,
-			    struct coap_reply *reply, coap_reply_t reply_cb);
 
 /**
  * @brief Process incoming data from Golioth
