@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/net/coap.h>
 #include <net/golioth.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/random/rand32.h>
