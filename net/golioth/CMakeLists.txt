@@ -1,4 +1,8 @@
-zephyr_library_sources_ifdef(CONFIG_GOLIOTH coap_utils.c golioth.c)
+zephyr_library_sources_ifdef(CONFIG_GOLIOTH
+  coap_utils.c
+  golioth.c
+  lightdb.c
+)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_FW fw.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_RPC rpc.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_SETTINGS settings.c)
