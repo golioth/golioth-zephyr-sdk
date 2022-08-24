@@ -27,7 +27,7 @@ static void counter_set(int counter)
 
 	err = golioth_lightdb_set(client,
 				  GOLIOTH_LIGHTDB_PATH("counter"),
-				  COAP_CONTENT_FORMAT_TEXT_PLAIN,
+				  COAP_CONTENT_FORMAT_APP_JSON,
 				  sbuf, strlen(sbuf));
 	if (err) {
 		LOG_WRN("Failed to update counter: %d", err);
