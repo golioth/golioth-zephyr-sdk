@@ -31,6 +31,15 @@
 #define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
 
 /**
+ * @brief Set of Content-Format option values for Golioth APIs
+ */
+enum golioth_content_format {
+	GOLIOTH_CONTENT_FORMAT_APP_OCTET_STREAM = COAP_CONTENT_FORMAT_APP_OCTET_STREAM,
+	GOLIOTH_CONTENT_FORMAT_APP_JSON = COAP_CONTENT_FORMAT_APP_JSON,
+	GOLIOTH_CONTENT_FORMAT_APP_CBOR = COAP_CONTENT_FORMAT_APP_CBOR,
+};
+
+/**
  * @brief (D)TLS credentials of Golioth client.
  */
 struct golioth_tls {
