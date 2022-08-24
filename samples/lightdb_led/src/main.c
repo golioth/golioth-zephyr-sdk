@@ -183,7 +183,7 @@ static void golioth_on_connect(struct golioth_client *client)
 	}
 
 	err = golioth_lightdb_observe(client, GOLIOTH_LIGHTDB_PATH("led"),
-				      COAP_CONTENT_FORMAT_APP_CBOR,
+				      GOLIOTH_CONTENT_FORMAT_APP_CBOR,
 				      observe_reply, golioth_led_handle);
 }
 

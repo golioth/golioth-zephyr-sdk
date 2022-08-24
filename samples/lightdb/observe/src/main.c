@@ -69,7 +69,7 @@ static void golioth_on_connect(struct golioth_client *client)
 	 */
 	err = golioth_lightdb_observe(client,
 				      GOLIOTH_LIGHTDB_PATH("counter"),
-				      COAP_CONTENT_FORMAT_APP_JSON,
+				      GOLIOTH_CONTENT_FORMAT_APP_JSON,
 				      observe_reply, on_update);
 
 	if (err) {

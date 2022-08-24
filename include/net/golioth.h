@@ -297,7 +297,7 @@ int golioth_send_hello(struct golioth_client *client);
  * @retval <0 On failure
  */
 int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
-			enum coap_content_format format,
+			enum golioth_content_format format,
 			struct coap_reply *reply, coap_reply_t reply_cb);
 
 /**
@@ -315,7 +315,7 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
  * @retval <0 On failure
  */
 int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
-			enum coap_content_format format,
+			enum golioth_content_format format,
 			uint8_t *data, uint16_t data_len);
 
 /**
@@ -347,7 +347,7 @@ int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path);
  * @retval <0 On failure
  */
 int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
-			    enum coap_content_format format,
+			    enum golioth_content_format format,
 			    struct coap_reply *reply, coap_reply_t reply_cb);
 
 /**

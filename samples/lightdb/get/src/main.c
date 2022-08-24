@@ -102,7 +102,7 @@ void main(void)
 			 */
 			err = golioth_lightdb_get(client,
 						  GOLIOTH_LIGHTDB_PATH("counter"),
-						  COAP_CONTENT_FORMAT_APP_JSON,
+						  GOLIOTH_CONTENT_FORMAT_APP_JSON,
 						  reply, reply_callback);
 			if (err) {
 				LOG_WRN("failed to get data from LightDB: %d", err);
