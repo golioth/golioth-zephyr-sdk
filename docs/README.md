@@ -37,14 +37,12 @@ Install Firebase following the official [Firebase docs](https://firebase.google.
 Serve locally, for testing:
 
 ```sh
-cd firebase
 firebase serve --only hosting
 ```
 
 Deploy to Firebase `golioth-zephyr-sdk-doxygen-dev`:
 
 ```sh
-cd firebase
 firebase login
 firebase deploy --only docs-dev
 ```
