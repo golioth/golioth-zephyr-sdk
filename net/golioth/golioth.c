@@ -16,8 +16,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth, CONFIG_GOLIOTH_LOG_LEVEL);
 
-#define COAP_BASIC_HEADER_SIZE	4
-
 #define GOLIOTH_HELLO		"hello"
 
 void golioth_init(struct golioth_client *client)
@@ -580,61 +578,6 @@ int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
 	reply->reply = reply_cb;
 
 	return golioth_send_coap(client, &packet);
-}
-
-static uint8_t coap_data_get_token_len(uint8_t *data)
-{
-	return data[0] & 0x0f;
-}
-
-static uint8_t coap_data_get_type(uint8_t *data)
-{
-	return (data[0] & 0x30) >> 4;
-}
-
-static uint8_t coap_data_get_code(uint8_t *data)
-{
-	return data[1];
-}
-
-/**
- * Check CoAP packet type based on raw data received.
- *
- * @retval -EINVAL invalid message
- * @retval -ENOMSG empty CoAP message (ping)
- * @retval 0 valid CoAP packet (to be parsed with)
- */
-static int coap_data_check_rx_packet_type(uint8_t *data, size_t len)
-{
-	uint8_t tkl;
-
-	if (!data) {
-		return -EINVAL;
-	}
-
-	if (len < COAP_BASIC_HEADER_SIZE) {
-		return -EINVAL;
-	}
-
-	/* Token lengths 9-15 are reserved. */
-	tkl = coap_data_get_token_len(data);
-	if (tkl > 8) {
-		LOG_DBG("Invalid RX");
-		return -EINVAL;
-	}
-
-	if (tkl == 0 &&
-	    len == COAP_BASIC_HEADER_SIZE &&
-	    coap_data_get_type(data) == COAP_TYPE_CON &&
-	    coap_data_get_code(data) == COAP_CODE_EMPTY) {
-		/* Empty packet */
-		LOG_DBG("RX Empty");
-		return -ENOMSG;
-	}
-
-	LOG_DBG("RX Non-empty");
-
-	return 0;
 }
 
 static int golioth_ack_packet(struct golioth_client *client,
