@@ -22,20 +22,18 @@ enum golioth_settings_status on_setting(
 {
 	LOG_DBG("Received setting: key = %s, type = %d", key, value->type);
 	if (strcmp(key, "LOOP_DELAY_S") == 0) {
-		/* TODO - change type to INT64 once backend support is merged to prod */
-
 		/* This setting is expected to be numeric, return an error if it's not */
-		if (value->type != GOLIOTH_SETTINGS_VALUE_TYPE_FLOAT) {
+		if (value->type != GOLIOTH_SETTINGS_VALUE_TYPE_INT64) {
 			return GOLIOTH_SETTINGS_VALUE_FORMAT_NOT_VALID;
 		}
 
 		/* This setting must be in range [1, 100], return an error if it's not */
-		if (value->f < 1.0f || value->f > 100.0f) {
+		if (value->i64 < 1 || value->i64 > 100) {
 			return GOLIOTH_SETTINGS_VALUE_OUTSIDE_RANGE;
 		}
 
 		/* Setting has passed all checks, so apply it to the loop delay */
-		_loop_delay_s = (int32_t)value->f;
+		_loop_delay_s = (int32_t)value->i64;
 		LOG_INF("Set loop delay to %d seconds", _loop_delay_s);
 
 		return GOLIOTH_SETTINGS_SUCCESS;
