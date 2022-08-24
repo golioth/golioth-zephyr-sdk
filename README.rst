@@ -1,3 +1,5 @@
+API documentation: https://zephyr-sdk-docs.golioth.io/
+
 Getting Started
 ***************
 
@@ -75,6 +77,16 @@ Sample applications
 - `Golioth Logging sample`_
 - `Golioth Settings sample`_
 
+Golioth Services
+****************
+
+- `Golioth Cloud`_
+- `LightDB state`_
+- `LightDB stream`_
+- `Logging`_
+- `OTA`_
+- `CoAP Authentication`_
+
 Device matrix
 *************
 
@@ -146,3 +158,10 @@ During release testing, all boards and services are verified using sample applic
 .. _Golioth Light DB stream sample: samples/lightdb_stream/README.rst
 .. _Golioth Logging sample: samples/logging/README.rst
 .. _Golioth Settings sample: samples/settings/README.rst
+
+.. _Golioth Cloud: https://docs.golioth.io/cloud
+.. _LightDB state: https://docs.golioth.io/reference/protocols/coap/lightdb
+.. _LightDB stream: https://docs.golioth.io/reference/protocols/coap/lightdb-stream
+.. _Logging: https://docs.golioth.io/reference/protocols/coap/logging
+.. _OTA: https://docs.golioth.io/reference/protocols/coap/ota
+.. _CoAP Authentication: https://docs.golioth.io/reference/protocols/coap/auth
