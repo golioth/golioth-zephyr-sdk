@@ -102,7 +102,7 @@ struct golioth_rpc_method {
 };
 
 /**
- * @brief Global/shared RPC state data, placed in @ref struct golioth_client
+ * @brief Global/shared RPC state data, placed in struct golioth_client
  */
 struct golioth_rpc {
 #if defined(CONFIG_GOLIOTH_RPC)

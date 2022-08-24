@@ -105,7 +105,7 @@ typedef enum golioth_settings_status (*golioth_settings_cb)(
 		const struct golioth_settings_value *value);
 
 /**
- * @brief Settings state data, placed in @ref struct golioth_client
+ * @brief Settings state data, placed in struct golioth_client
  */
 struct golioth_settings {
 #if defined(CONFIG_GOLIOTH_SETTINGS)
