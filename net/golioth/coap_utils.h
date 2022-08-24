@@ -12,6 +12,15 @@
 
 struct coap_packet;
 
+/**
+ * Check CoAP packet type based on raw data received.
+ *
+ * @retval -EINVAL invalid message
+ * @retval -ENOMSG empty CoAP message (ping)
+ * @retval 0 valid CoAP packet (to be parsed with)
+ */
+int coap_data_check_rx_packet_type(uint8_t *data, size_t len);
+
 int coap_packet_append_uri_path_from_string_range(struct coap_packet *packet,
 						  const char *begin, const char *end);
 

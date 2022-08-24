@@ -8,6 +8,59 @@
 
 #include <zephyr/net/coap.h>
 
+#include <zephyr/logging/log.h>
+LOG_MODULE_DECLARE(golioth);
+
+#define COAP_BASIC_HEADER_SIZE	4
+
+static inline uint8_t coap_data_get_token_len(uint8_t *data)
+{
+	return data[0] & 0x0f;
+}
+
+static inline uint8_t coap_data_get_type(uint8_t *data)
+{
+	return (data[0] & 0x30) >> 4;
+}
+
+static inline uint8_t coap_data_get_code(uint8_t *data)
+{
+	return data[1];
+}
+
+int coap_data_check_rx_packet_type(uint8_t *data, size_t len)
+{
+	uint8_t tkl;
+
+	if (!data) {
+		return -EINVAL;
+	}
+
+	if (len < COAP_BASIC_HEADER_SIZE) {
+		return -EINVAL;
+	}
+
+	/* Token lengths 9-15 are reserved. */
+	tkl = coap_data_get_token_len(data);
+	if (tkl > 8) {
+		LOG_DBG("Invalid RX");
+		return -EINVAL;
+	}
+
+	if (tkl == 0 &&
+	    len == COAP_BASIC_HEADER_SIZE &&
+	    coap_data_get_type(data) == COAP_TYPE_CON &&
+	    coap_data_get_code(data) == COAP_CODE_EMPTY) {
+		/* Empty packet */
+		LOG_DBG("RX Empty");
+		return -ENOMSG;
+	}
+
+	LOG_DBG("RX Non-empty");
+
+	return 0;
+}
+
 int coap_packet_append_uri_path_from_string_range(struct coap_packet *packet,
 						  const char *begin,
 						  const char *end)
