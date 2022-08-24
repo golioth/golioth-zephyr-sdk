@@ -424,7 +424,7 @@ int golioth_send_hello(struct golioth_client *client)
 }
 
 int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
-			enum coap_content_format format,
+			enum golioth_content_format format,
 			struct coap_reply *reply, coap_reply_t reply_cb)
 {
 	struct coap_packet packet;
@@ -464,7 +464,7 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 }
 
 int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
-			enum coap_content_format format,
+			enum golioth_content_format format,
 			uint8_t *data, uint16_t data_len)
 {
 	struct coap_packet packet;
@@ -549,7 +549,7 @@ static int golioth_coap_observe_init(struct coap_packet *packet,
 }
 
 int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
-			    enum coap_content_format format,
+			    enum golioth_content_format format,
 			    struct coap_reply *reply, coap_reply_t reply_cb)
 {
 	struct coap_packet packet;

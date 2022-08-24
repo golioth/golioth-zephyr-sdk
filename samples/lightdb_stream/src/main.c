@@ -96,7 +96,7 @@ void main(void)
 
 		err = golioth_lightdb_set(client,
 					  GOLIOTH_LIGHTDB_STREAM_PATH("temp"),
-					  COAP_CONTENT_FORMAT_APP_JSON,
+					  GOLIOTH_CONTENT_FORMAT_APP_JSON,
 					  str_temperature,
 					  strlen(str_temperature));
 		if (err) {
