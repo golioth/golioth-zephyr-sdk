@@ -192,10 +192,10 @@ int golioth_disconnect(struct golioth_client *client);
  * credentials to be used.
  *
  * @param client Client instance
- * @param sec_tag_list Secure tag array (see @ref sec_tag_t and
- *                      @ref TLS_SEC_TAG_LIST)
- * @param sec_tag_count Secure tag count (see @ref sec_tag_t and
- *                      @ref TLS_SEC_TAG_LIST)
+ * @param sec_tag_list Secure tag array (see sec_tag_t and
+ *                      TLS_SEC_TAG_LIST)
+ * @param sec_tag_count Secure tag count (see sec_tag_t and
+ *                      TLS_SEC_TAG_LIST)
  *
  * @retval 0 On success
  * @retval <0 On failure
@@ -227,7 +227,7 @@ int golioth_send_coap(struct golioth_client *client,
  * @param client Client instance
  * @param packet CoAP packet (without payload)
  * @param data Payload data
- * @param data Payload length
+ * @param data_len Payload length
  *
  * @retval 0 On success
  * @retval <0 On failure
@@ -332,7 +332,7 @@ int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
  * @brief Process incoming data from Golioth
  *
  * Process incoming data on network socket. It does not block when there is no
- * more data, so it is best to use it with @ref zsock_poll.
+ * more data, so it is best to use it with zsock_poll.
  *
  * @param client Client instance
  *
