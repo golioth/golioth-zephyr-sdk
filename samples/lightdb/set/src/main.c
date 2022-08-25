@@ -15,6 +15,13 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
+static K_SEM_DEFINE(connected, 0, 1);
+
+static void golioth_on_connect(struct golioth_client *client)
+{
+	k_sem_give(&connected);
+}
+
 /*
  * This function stores `counter` in lightdb at `/counter`.
  */
@@ -45,7 +52,10 @@ void main(void)
 		wifi_connect();
 	}
 
+	client->on_connect = golioth_on_connect;
 	golioth_system_client_start();
+
+	k_sem_take(&connected, K_FOREVER);
 
 	while (true) {
 		LOG_DBG("Setting counter to %d", counter);
