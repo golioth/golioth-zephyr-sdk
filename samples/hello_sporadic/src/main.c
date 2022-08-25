@@ -13,11 +13,11 @@ LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
-K_SEM_DEFINE(sys_client_conn_resolved, 0, 1);
+static K_SEM_DEFINE(connected, 0, 1);
 
 static void golioth_on_connect(struct golioth_client *client)
 {
-	k_sem_give(&sys_client_conn_resolved);
+	k_sem_give(&connected);
 }
 
 static void golioth_on_message(struct golioth_client *client,
@@ -53,7 +53,7 @@ void main(void)
 	while (true) {
 
 		golioth_system_client_start();
-		k_sem_take(&sys_client_conn_resolved, K_FOREVER);
+		k_sem_take(&connected, K_FOREVER);
 
 		LOG_INF("Sending hello! %d", counter);
 
