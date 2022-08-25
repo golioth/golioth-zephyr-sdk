@@ -16,6 +16,13 @@ LOG_MODULE_REGISTER(golioth_lightdb_stream, LOG_LEVEL_DBG);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
+static K_SEM_DEFINE(connected, 0, 1);
+
+static void golioth_on_connect(struct golioth_client *client)
+{
+	k_sem_give(&connected);
+}
+
 #if DT_NODE_HAS_STATUS(DT_ALIAS(temp0), okay)
 
 static int get_temperature(struct sensor_value *val)
@@ -79,7 +86,10 @@ void main(void)
 		wifi_connect();
 	}
 
+	client->on_connect = golioth_on_connect;
 	golioth_system_client_start();
+
+	k_sem_take(&connected, K_FOREVER);
 
 	while (true) {
 		err = get_temperature(&temp);
