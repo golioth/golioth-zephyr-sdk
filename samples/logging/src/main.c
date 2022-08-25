@@ -13,6 +13,13 @@ LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
+static K_SEM_DEFINE(connected, 0, 1);
+
+static void golioth_on_connect(struct golioth_client *client)
+{
+	k_sem_give(&connected);
+}
+
 static void golioth_on_message(struct golioth_client *client,
 			       struct coap_packet *rx)
 {
@@ -49,8 +56,11 @@ void main(void)
 		wifi_connect();
 	}
 
+	client->on_connect = golioth_on_connect;
 	client->on_message = golioth_on_message;
 	golioth_system_client_start();
+
+	k_sem_take(&connected, K_FOREVER);
 
 	while (true) {
 		LOG_DBG("Debug info! %d", counter);
