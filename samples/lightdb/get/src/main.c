@@ -18,6 +18,13 @@ static struct coap_reply coap_replies[1];
 
 K_MUTEX_DEFINE(coap_reply_mutex);
 
+static K_SEM_DEFINE(connected, 0, 1);
+
+static void golioth_on_connect(struct golioth_client *client)
+{
+	k_sem_give(&connected);
+}
+
 /*
  * This function is registered to be called when the reply
  * is received from the Golioth server.
@@ -82,8 +89,11 @@ void main(void)
 
 	coap_replies_clear(coap_replies, ARRAY_SIZE(coap_replies));
 
+	client->on_connect = golioth_on_connect;
 	client->on_message = golioth_on_message;
 	golioth_system_client_start();
+
+	k_sem_take(&connected, K_FOREVER);
 
 	while (true) {
 		k_mutex_lock(&coap_reply_mutex, K_FOREVER);
