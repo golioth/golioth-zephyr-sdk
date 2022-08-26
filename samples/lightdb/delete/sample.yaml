@@ -1,0 +1,23 @@
+sample:
+  description: Use LightDB delete
+  name: lightdb-delete
+common:
+  harness: pytest
+  tags: golioth lightdb socket goliothd
+tests:
+  sample.golioth.lightdb_delete.fast:
+    platform_allow: >
+      esp32
+      mimxrt1060_evkb
+      nrf52840dk_nrf52840
+      qemu_x86
+    extra_configs:
+      - CONFIG_LOG_BACKEND_GOLIOTH=y
+      - CONFIG_LOG_PROCESS_THREAD_STACK_SIZE=2048
+  sample.golioth.lightdb_delete.long_start:
+    platform_allow: nrf9160dk_nrf9160_ns
+    harness_config:
+      pytest_args: [ "--initial-timeout", "120" ]
+    extra_configs:
+      - CONFIG_LOG_BACKEND_GOLIOTH=y
+      - CONFIG_LOG_PROCESS_THREAD_STACK_SIZE=2048
