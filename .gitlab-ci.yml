@@ -142,7 +142,6 @@ twister-ncs:
   script:
     - >
       zephyr/scripts/twister
-      --board-root nrf/boards
       -p nrf9160dk_nrf9160_ns
       -o reports
       -T modules/lib/golioth
