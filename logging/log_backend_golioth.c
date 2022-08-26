@@ -25,22 +25,6 @@
 #define LOGS_URI_PATH		"logs"
 #define CBOR_SPACE_RESERVED	8
 
-/*
- * Compatibility macros for NCS, which does not have commit:
- * 9833ca61c990 ("logging: Removing v2 suffix from logging names")
- * in Zephyr fork yet.
- */
-#ifdef CONFIG_LOG_BACKEND_GOLIOTH_LOG_MSG2_COMPAT
-#define log_msg			log_msg2
-#define log_msg_get_source	log_msg2_get_source
-#define log_msg_get_domain	log_msg2_get_domain
-#define log_msg_get_level	log_msg2_get_level
-#define log_msg_get_timestamp	log_msg2_get_timestamp
-#define log_msg_get_package	log_msg2_get_package
-#define log_msg_get_data	log_msg2_get_data
-#define log_msg_generic		log_msg2_generic
-#endif
-
 struct golioth_cbor_ctx {
 	QCBOREncodeContext encode_ctx;
 	UsefulBuf encode_bufc;
