@@ -112,6 +112,7 @@ pre-commit:
     paths:
       - reports/*
       - twister-out/**/build.log
+      - twister-out/**/handler.log
     reports:
       junit: reports/twister.xml
 
