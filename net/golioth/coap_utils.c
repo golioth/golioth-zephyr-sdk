@@ -115,3 +115,26 @@ int coap_packet_append_uri_path_from_pathv(struct coap_packet *packet, const uin
 
 	return 0;
 }
+
+size_t coap_pathv_estimate_alloc_len(const uint8_t **pathv)
+{
+	size_t total = 0;
+
+	for (size_t i = 0; pathv[i]; i++) {
+		size_t path_len = strlen(pathv[i]);
+
+		/*
+		 * Exact delimiter length is dependent on path component length.
+		 *
+		 * The worst case is path components of 13 characters (see RFC 7252 "3.1 Option
+		 * Format"), as that results in 1 byte of delta and 1 byte of length for each
+		 * component, resulting in 13 + 1 + 1 = 15 bytes per component.
+		 *
+		 * Each '/' already counts as 1 byte calculated within strlen(). Such character can
+		 * be subtracted from above, giving 1 byte of overhead per 13 characters.
+		 */
+		total += path_len + (path_len / 13) + 1;
+	}
+
+	return total;
+}
