@@ -1,0 +1,4 @@
+tests:
+  net.golioth.coap_utils:
+    min_ram: 16
+    tags: golioth net
