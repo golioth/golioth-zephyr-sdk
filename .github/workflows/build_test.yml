@@ -50,3 +50,4 @@ jobs:
           path: |
             reports/*
             twister-out/**/build.log
+            twister-out/**/handler.log
