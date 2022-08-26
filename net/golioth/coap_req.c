@@ -520,6 +520,80 @@ free_req:
 	return err;
 }
 
+struct golioth_req_sync_data {
+	struct k_sem sem;
+	int err;
+
+	golioth_req_cb_t cb;
+	void *user_data;
+};
+
+static int golioth_req_sync_cb(struct golioth_req_rsp *rsp)
+{
+	struct golioth_req_sync_data *sync_data = rsp->user_data;
+	int err = 0;
+
+	if (rsp->err) {
+		sync_data->err = rsp->err;
+		goto finish_sync_call;
+	}
+
+	if (sync_data->cb) {
+		rsp->user_data = sync_data->user_data;
+
+		err = sync_data->cb(rsp);
+		if (err) {
+			goto finish_sync_call;
+		}
+	}
+
+	if (rsp->get_next) {
+		rsp->get_next(rsp->get_next_data, 0);
+		return 0;
+	}
+
+finish_sync_call:
+	k_sem_give(&sync_data->sem);
+
+	return err;
+}
+
+int golioth_coap_req_sync(struct golioth_client *client,
+			  enum coap_method method,
+			  const uint8_t **pathv,
+			  enum golioth_content_format format,
+			  const uint8_t *data, size_t data_len,
+			  golioth_req_cb_t cb, void *user_data,
+			  int flags)
+{
+	struct golioth_req_sync_data sync_data = {
+		.cb = cb,
+		.user_data = user_data,
+	};
+	int err;
+
+	k_sem_init(&sync_data.sem, 0, 1);
+
+	err = golioth_coap_req_cb(client, method, pathv, format,
+				  data, data_len,
+				  golioth_req_sync_cb, &sync_data,
+				  flags);
+	if (err) {
+		LOG_WRN("Failed to make CoAP request: %d", err);
+		return err;
+	}
+
+	k_sem_take(&sync_data.sem, K_FOREVER);
+
+	if (sync_data.err) {
+		LOG_WRN("req_sync finished with error %d", sync_data.err);
+
+		return sync_data.err;
+	}
+
+	return 0;
+}
+
 static uint32_t init_ack_timeout(void)
 {
 #if defined(CONFIG_COAP_RANDOMIZE_ACK_TIMEOUT)
