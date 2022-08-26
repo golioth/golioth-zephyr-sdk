@@ -101,3 +101,17 @@ int coap_packet_append_uri_path_from_string_range(struct coap_packet *packet,
 					 COAP_OPTION_URI_PATH,
 					 begin, p - begin);
 }
+
+int coap_packet_append_uri_path_from_pathv(struct coap_packet *packet, const uint8_t **pathv)
+{
+	int err;
+
+	for (size_t i = 0; pathv[i]; i++) {
+		err = coap_packet_append_uri_path_from_stringz(packet, pathv[i]);
+		if (err) {
+			return err;
+		}
+	}
+
+	return 0;
+}

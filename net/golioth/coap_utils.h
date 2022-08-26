@@ -36,4 +36,6 @@ static inline int coap_packet_append_uri_path_from_stringz(struct coap_packet *p
 	return coap_packet_append_uri_path_from_string_range(packet, path, (void *)UINTPTR_MAX);
 }
 
+int coap_packet_append_uri_path_from_pathv(struct coap_packet *packet, const uint8_t **pathv);
+
 #endif /* __NET_GOLIOTH_COAP_UTILS_H__ */
