@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Golioth, Inc.
+ * Copyright (c) 2021-2022 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,7 +9,6 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 #include <net/golioth/system_client.h>
 #include <samples/common/net_connect.h>
-#include <zephyr/net/coap.h>
 
 #include <stdlib.h>
 
@@ -22,23 +21,51 @@ static void golioth_on_connect(struct golioth_client *client)
 	k_sem_give(&connected);
 }
 
-/*
- * This function stores `counter` in lightdb at `/counter`.
- */
-static void counter_set(int counter)
+static int counter_set_handler(struct golioth_req_rsp *rsp)
+{
+	if (rsp->err) {
+		LOG_WRN("Failed to set counter: %d", rsp->err);
+		return rsp->err;
+	}
+
+	LOG_DBG("Counter successfully set");
+
+	return 0;
+}
+
+static void counter_set_async(int counter)
 {
 	char sbuf[sizeof("4294967295")];
 	int err;
 
 	snprintk(sbuf, sizeof(sbuf) - 1, "%d", counter);
 
-	err = golioth_lightdb_set(client,
-				  GOLIOTH_LIGHTDB_PATH("counter"),
+	err = golioth_lightdb_set_cb(client, "counter",
+				     GOLIOTH_CONTENT_FORMAT_APP_JSON,
+				     sbuf, strlen(sbuf),
+				     counter_set_handler, NULL);
+	if (err) {
+		LOG_WRN("Failed to set counter: %d", err);
+		return;
+	}
+}
+
+static void counter_set_sync(int counter)
+{
+	char sbuf[sizeof("4294967295")];
+	int err;
+
+	snprintk(sbuf, sizeof(sbuf) - 1, "%d", counter);
+
+	err = golioth_lightdb_set(client, "counter",
 				  GOLIOTH_CONTENT_FORMAT_APP_JSON,
 				  sbuf, strlen(sbuf));
 	if (err) {
-		LOG_WRN("Failed to update counter: %d", err);
+		LOG_WRN("Failed to set counter: %d", err);
+		return;
 	}
+
+	LOG_DBG("Counter successfully set");
 }
 
 void main(void)
@@ -58,10 +85,21 @@ void main(void)
 
 	while (true) {
 		LOG_DBG("Setting counter to %d", counter);
-		counter_set(counter);
+
+		LOG_DBG("Before request (async)");
+		counter_set_async(counter);
+		LOG_DBG("After request (async)");
 
 		counter++;
+		k_sleep(K_SECONDS(5));
 
+		LOG_DBG("Setting counter to %d", counter);
+
+		LOG_DBG("Before request (sync)");
+		counter_set_sync(counter);
+		LOG_DBG("After request (sync)");
+
+		counter++;
 		k_sleep(K_SECONDS(5));
 	}
 }
