@@ -38,4 +38,6 @@ static inline int coap_packet_append_uri_path_from_stringz(struct coap_packet *p
 
 int coap_packet_append_uri_path_from_pathv(struct coap_packet *packet, const uint8_t **pathv);
 
+size_t coap_pathv_estimate_alloc_len(const uint8_t **pathv);
+
 #endif /* __NET_GOLIOTH_COAP_UTILS_H__ */
