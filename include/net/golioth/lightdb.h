@@ -106,36 +106,38 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 			const uint8_t *data, size_t data_len);
 
 /**
+ * @brief Observe value in Golioth's LightDB (callback based)
+ *
+ * Asynchronously request to observe value in Golioth's LightDB and let @p cb be invoked when such
+ * value is retrieved (for the first time or after an update) or some error condition happens.
+ *
+ * @warning Experimental API
+ *
+ * @param[in] client Client instance
+ * @param[in] path LightDB resource path
+ * @param[in] format Requested format of payload
+ * @param[in] cb Callback executed on response received, timeout or error
+ * @param[in] user_data User data passed to @p cb
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_lightdb_observe_cb(struct golioth_client *client, const uint8_t *path,
+			       enum golioth_content_format format,
+			       golioth_req_cb_t cb, void *user_data);
+
+/**
  * @brief Delete value in Golioth's LightDB
  *
  * Delete value in LightDB.
  *
- * @param client Client instance
- * @param path LightDB resource path
+ * @param[in] client Client instance
+ * @param[in] path LightDB resource path
  *
  * @retval 0 On success
  * @retval <0 On failure
  */
 int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path);
-
-/**
- * @brief Observe value in Golioth's LightDB
- *
- * Observe value in LightDB and initialize passed CoAP reply handler.
- *
- * @param client Client instance
- * @param path LightDB resource path to be monitored
- * @param format Requested format of payload
- * @param reply CoAP reply handler object used for notifying about updated
- *              value
- * @param reply_cb Reply handler callback
- *
- * @retval 0 On success
- * @retval <0 On failure
- */
-int golioth_lightdb_observe(struct golioth_client *client, const uint8_t *path,
-			    enum golioth_content_format format,
-			    struct coap_reply *reply, coap_reply_t reply_cb);
 
 /** @} */
 

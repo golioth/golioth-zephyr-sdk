@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Golioth, Inc.
+ * Copyright (c) 2021-2022 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,8 +18,6 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 #include <qcbor/qcbor_spiffy_decode.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
-
-static struct coap_reply coap_replies[1];
 
 #define LED_GPIO_SPEC(i, _)						\
 	COND_CODE_1(DT_NODE_HAS_STATUS(DT_ALIAS(led##i), okay),		\
@@ -64,20 +62,19 @@ static void golioth_led_set_by_name(const char *name, bool value)
 	golioth_led_set(id, value);
 }
 
-static int golioth_led_handle(const struct coap_packet *response,
-			      struct coap_reply *reply,
-			      const struct sockaddr *from)
+static int golioth_led_handle(struct golioth_req_rsp *rsp)
 {
 	QCBORDecodeContext decode_ctx;
 	QCBORItem decoded_item;
-	UsefulBufC payload;
-	uint16_t payload_len;
+	UsefulBufC payload = { rsp->data, rsp->len };
 	QCBORError qerr;
 	char name[5];
 	bool value;
 
-	payload.ptr = coap_packet_get_payload(response, &payload_len);
-	payload.len = payload_len;
+	if (rsp->err) {
+		LOG_ERR("Failed to receive led value: %d", rsp->err);
+		return rsp->err;
+	}
 
 	QCBORDecode_Init(&decode_ctx, payload, QCBOR_DECODE_MODE_NORMAL);
 
@@ -172,42 +169,14 @@ static int golioth_led_handle(const struct coap_packet *response,
 
 static void golioth_on_connect(struct golioth_client *client)
 {
-	struct coap_reply *observe_reply;
 	int err;
-	int i;
 
-	for (i = 0; i < ARRAY_SIZE(coap_replies); i++) {
-		coap_reply_clear(&coap_replies[i]);
+	err = golioth_lightdb_observe_cb(client, "led",
+					 GOLIOTH_CONTENT_FORMAT_APP_CBOR,
+					 golioth_led_handle, NULL);
+	if (err) {
+		LOG_WRN("failed to observe lightdb path: %d", err);
 	}
-
-	observe_reply = coap_reply_next_unused(coap_replies,
-					       ARRAY_SIZE(coap_replies));
-	if (!observe_reply) {
-		LOG_ERR("No more reply handlers");
-		return;
-	}
-
-	err = golioth_lightdb_observe(client, GOLIOTH_LIGHTDB_PATH("led"),
-				      GOLIOTH_CONTENT_FORMAT_APP_CBOR,
-				      observe_reply, golioth_led_handle);
-}
-
-static void golioth_on_message(struct golioth_client *client,
-			       struct coap_packet *rx)
-{
-	uint16_t payload_len;
-	const uint8_t *payload;
-	uint8_t type;
-
-	type = coap_header_get_type(rx);
-	payload = coap_packet_get_payload(rx, &payload_len);
-
-	if (!IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH) && payload) {
-		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
-	}
-
-	(void)coap_response_received(rx, NULL, coap_replies,
-				     ARRAY_SIZE(coap_replies));
 }
 
 void main(void)
@@ -221,7 +190,6 @@ void main(void)
 	golioth_led_initialize();
 
 	client->on_connect = golioth_on_connect;
-	client->on_message = golioth_on_message;
 	golioth_system_client_start();
 
 	while (true) {

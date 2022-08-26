@@ -145,24 +145,20 @@ This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:01.079,000] <inf> golioth_system: Initializing
-   [00:00:01.080,000] <inf> net_config: Initializing network
-   [00:00:01.080,000] <inf> net_config: Waiting interface 1 (0x3ffb01d8) to be up...
-   [00:00:01.080,000] <inf> esp_event: WIFI_EVENT_STA_START
-   [00:00:01.080,000] <inf> net_config: Interface 1 (0x3ffb01d8) coming up
-   [00:00:01.080,000] <inf> net_config: Running dhcpv4 client...
-   [00:00:01.977,000] <inf> esp_event: WIFI_EVENT_STA_DISCONNECTED
-   [00:00:04.026,000] <inf> esp_event: WIFI_EVENT_STA_DISCONNECTED
-   [00:00:09.097,000] <inf> net_dhcpv4: Received: 192.168.0.180
-   [00:00:09.097,000] <inf> net_config: IPv4 address: 192.168.0.180
-   [00:00:09.097,000] <inf> net_config: Lease time: 7200 seconds
-   [00:00:09.097,000] <inf> net_config: Subnet: 255.255.255.0
-   [00:00:09.097,000] <inf> net_config: Router: 192.168.0.1
-   [00:00:09.097,000] <dbg> golioth_lightdb.main: Start LightDB observe sample
-   [00:00:09.097,000] <inf> golioth_system: Starting connect
-   [00:00:12.366,000] <inf> golioth_system: Client connected!
-   [00:00:12.422,000] <dbg> golioth_lightdb.on_update: payload: {"m":"original"}
-   [00:00:22.910,000] <dbg> golioth_lightdb.on_update: payload: {"m":"new"}
+   [00:00:00.000,000] <inf> golioth_system: Initializing
+   [00:00:00.000,000] <inf> net_config: Initializing network
+   [00:00:00.000,000] <inf> net_config: IPv4 address: 192.0.2.1
+   [00:00:00.000,000] <dbg> golioth_lightdb: main: Start LightDB observe sample
+   [00:00:00.000,000] <inf> golioth_system: Starting connect
+   [00:00:00.030,000] <inf> golioth_system: Client connected!
+   [00:00:00.030,000] <inf> golioth_lightdb: Counter
+                                             35                                               |5
+   [00:00:04.370,000] <inf> golioth_lightdb: Counter
+                                             31 30                                            |10
+   [00:00:06.120,000] <inf> golioth_lightdb: Counter
+                                             31 31                                            |11
+   [00:00:07.620,000] <inf> golioth_lightdb: Counter
+                                             31 32                                            |12
 
 Set the observed value
 ======================
@@ -172,7 +168,10 @@ retrieves it every time that it's updated. The value can be updates as such:
 
 .. code-block:: console
 
-   goliothctl lightdb set <device-name> /counter -b "{\"m\":\"new\"}"
+   goliothctl lightdb set <device-name> /counter -b 5
+   goliothctl lightdb set <device-name> /counter -b 10
+   goliothctl lightdb set <device-name> /counter -b 11
+   goliothctl lightdb set <device-name> /counter -b 12
 
 
 .. _Networking with QEMU: https://docs.zephyrproject.org/3.0.0/guides/networking/qemu_setup.html#networking-with-qemu

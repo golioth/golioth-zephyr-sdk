@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Golioth, Inc.
+ * Copyright (c) 2021-2022 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,34 +14,19 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 #include <stdlib.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
-static struct coap_reply coap_replies[1];
 
 /*
  * This function is registered to be called when the data
  * stored at `/counter` changes.
  */
-static int on_update(const struct coap_packet *response,
-		     struct coap_reply *reply,
-		     const struct sockaddr *from)
+static int counter_handler(struct golioth_req_rsp *rsp)
 {
-	char str[64];
-	uint16_t payload_len;
-	const uint8_t *payload;
-
-	payload = coap_packet_get_payload(response, &payload_len);
-	if (!payload) {
-		LOG_WRN("packet did not contain data");
-		return -ENOMSG;
+	if (rsp->err) {
+		LOG_ERR("Failed to receive counter value: %d", rsp->err);
+		return rsp->err;
 	}
 
-	if (payload_len + 1 > ARRAY_SIZE(str)) {
-		payload_len = ARRAY_SIZE(str) - 1;
-	}
-
-	memcpy(str, payload, payload_len);
-	str[payload_len] = '\0';
-
-	LOG_DBG("payload: %s", str);
+	LOG_HEXDUMP_INF(rsp->data, rsp->len, "Counter");
 
 	return 0;
 }
@@ -52,13 +37,7 @@ static int on_update(const struct coap_packet *response,
  */
 static void golioth_on_connect(struct golioth_client *client)
 {
-	struct coap_reply *observe_reply;
 	int err;
-
-	coap_replies_clear(coap_replies, ARRAY_SIZE(coap_replies));
-
-	observe_reply = coap_reply_next_unused(coap_replies,
-					       ARRAY_SIZE(coap_replies));
 
 	/*
 	 * Observe the data stored at `/counter` in LightDB.
@@ -67,29 +46,13 @@ static void golioth_on_connect(struct golioth_client *client)
 	 * This will get the value when first called, even if
 	 * the value doesn't change.
 	 */
-	err = golioth_lightdb_observe(client,
-				      GOLIOTH_LIGHTDB_PATH("counter"),
-				      GOLIOTH_CONTENT_FORMAT_APP_JSON,
-				      observe_reply, on_update);
+	err = golioth_lightdb_observe_cb(client, "counter",
+					 GOLIOTH_CONTENT_FORMAT_APP_JSON,
+					 counter_handler, NULL);
 
 	if (err) {
 		LOG_WRN("failed to observe lightdb path: %d", err);
 	}
-}
-
-/*
- * In the `main` function, this function is registered to be
- * called when the device receives a packet from the Golioth server.
- */
-static void golioth_on_message(struct golioth_client *client,
-			       struct coap_packet *rx)
-{
-	/*
-	 * In order for the observe callback to be called,
-	 * we need to call this function.
-	 */
-	coap_response_received(rx, NULL, coap_replies,
-			       ARRAY_SIZE(coap_replies));
 }
 
 void main(void)
@@ -101,7 +64,6 @@ void main(void)
 	}
 
 	client->on_connect = golioth_on_connect;
-	client->on_message = golioth_on_message;
 	golioth_system_client_start();
 
 	while (true) {
