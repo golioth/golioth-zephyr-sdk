@@ -145,16 +145,28 @@ This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:04.033,000] <inf> esp_event: WIFI_EVENT_STA_DISCONNECTED
-   [00:00:04.186,000] <inf> esp_event: WIFI_EVENT_STA_CONNECTED
-   [00:00:08.102,000] <inf> net_dhcpv4: Received: 192.168.0.180
-   [00:00:08.102,000] <inf> net_config: IPv4 address: 192.168.0.180
-   [00:00:08.102,000] <inf> net_config: Lease time: 7200 seconds
-   [00:00:08.102,000] <inf> net_config: Subnet: 255.255.255.0
-   [00:00:08.102,000] <inf> net_config: Router: 192.168.0.1
-   [00:00:08.102,000] <dbg> golioth_lightdb.main: Start LightDB set sample
-   [00:00:08.102,000] <inf> golioth_system: Starting connect
-   [00:00:08.103,000] <inf> golioth_system: Client connected!
+   [00:00:00.000,000] <inf> golioth_system: Initializing
+   [00:00:00.000,000] <inf> net_config: Initializing network
+   [00:00:00.000,000] <inf> net_config: IPv4 address: 192.0.2.1
+   [00:00:00.000,000] <dbg> golioth_lightdb: main: Start LightDB set sample
+   [00:00:00.010,000] <inf> golioth_system: Starting connect
+   [00:00:00.030,000] <dbg> golioth_lightdb: main: Setting counter to 0
+   [00:00:00.030,000] <dbg> golioth_lightdb: main: Before request (async)
+   [00:00:00.030,000] <dbg> golioth_lightdb: main: After request (async)
+   [00:00:00.030,000] <inf> golioth_system: Client connected!
+   [00:00:00.030,000] <dbg> golioth_lightdb: counter_set_handler: Counter successfully set
+   [00:00:05.040,000] <dbg> golioth_lightdb: main: Setting counter to 1
+   [00:00:05.040,000] <dbg> golioth_lightdb: main: Before request (sync)
+   [00:00:05.040,000] <dbg> golioth_lightdb: counter_set_sync: Counter successfully set
+   [00:00:05.040,000] <dbg> golioth_lightdb: main: After request (sync)
+   [00:00:10.050,000] <dbg> golioth_lightdb: main: Setting counter to 2
+   [00:00:10.050,000] <dbg> golioth_lightdb: main: Before request (async)
+   [00:00:10.050,000] <dbg> golioth_lightdb: main: After request (async)
+   [00:00:10.050,000] <dbg> golioth_lightdb: counter_set_handler: Counter successfully set
+   [00:00:15.060,000] <dbg> golioth_lightdb: main: Setting counter to 3
+   [00:00:15.060,000] <dbg> golioth_lightdb: main: Before request (sync)
+   [00:00:15.060,000] <dbg> golioth_lightdb: counter_set_sync: Counter successfully set
+   [00:00:15.060,000] <dbg> golioth_lightdb: main: After request (sync)
 
 Monitor counter value
 =====================

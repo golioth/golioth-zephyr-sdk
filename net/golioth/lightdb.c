@@ -110,36 +110,25 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 	return 0;
 }
 
+int golioth_lightdb_set_cb(struct golioth_client *client, const uint8_t *path,
+			   enum golioth_content_format format,
+			   const uint8_t *data, size_t data_len,
+			   golioth_req_cb_t cb, void *user_data)
+{
+	return golioth_coap_req_lightdb_cb(client, COAP_METHOD_POST, path, format,
+					   data, data_len,
+					   cb, user_data,
+					   GOLIOTH_COAP_REQ_NO_RESP_BODY);
+}
+
 int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 			enum golioth_content_format format,
-			uint8_t *data, uint16_t data_len)
+			const uint8_t *data, size_t data_len)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
-	int err;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_POST, coap_next_id());
-	if (err) {
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, path);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet");
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_CONTENT_FORMAT,
-				     format);
-	if (err) {
-		LOG_ERR("Unable add content format to packet");
-		return err;
-	}
-
-	return golioth_send_coap_payload(client, &packet, data, data_len);
+	return golioth_coap_req_lightdb_sync(client, COAP_METHOD_POST, path, format,
+					     data, data_len,
+					     NULL, NULL,
+					     GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
 
 static int golioth_coap_observe_init(struct coap_packet *packet,

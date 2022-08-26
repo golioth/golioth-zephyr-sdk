@@ -64,22 +64,46 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 			uint8_t *data, size_t *len);
 
 /**
- * @brief Set value to Golioth's LightDB
+ * @brief Set value to Golioth's LightDB (callback based)
  *
- * Set new value to LightDB.
+ * Asynchronously request to store new value to LightDB and let @p cb be invoked when such value is
+ * actually stored or some error condition happens.
  *
- * @param client Client instance
- * @param path LightDB resource path
- * @param format Format of payload
- * @param data Payload data
- * @param data_len Payload length
+ * @warning Experimental API
+ *
+ * @param[in] client Client instance
+ * @param[in] path LightDB resource path
+ * @param[in] format Requested format of payload
+ * @param[in] data Pointer to data to be set
+ * @param[in] data_len Length of data to be set
+ * @param[in] cb Callback executed on response received, timeout or error
+ * @param[in] user_data User data passed to @p cb
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_lightdb_set_cb(struct golioth_client *client, const uint8_t *path,
+			   enum golioth_content_format format,
+			   const uint8_t *data, size_t data_len,
+			   golioth_req_cb_t cb, void *user_data);
+
+/**
+ * @brief Set value to Golioth's LightDB (synchronously)
+ *
+ * Synchronously set new value to LightDB.
+ *
+ * @param[in] client Client instance
+ * @param[in] path LightDB resource path
+ * @param[in] format Format of payload
+ * @param[in] data Payload data
+ * @param[in] data_len Payload length
  *
  * @retval 0 On success
  * @retval <0 On failure
  */
 int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 			enum golioth_content_format format,
-			uint8_t *data, uint16_t data_len);
+			const uint8_t *data, size_t data_len);
 
 /**
  * @brief Delete value in Golioth's LightDB
