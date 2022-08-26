@@ -127,9 +127,28 @@ int golioth_lightdb_observe_cb(struct golioth_client *client, const uint8_t *pat
 			       golioth_req_cb_t cb, void *user_data);
 
 /**
- * @brief Delete value in Golioth's LightDB
+ * @brief Delete value in Golioth's LightDB (callback based)
  *
- * Delete value in LightDB.
+ * Asynchronously request to delete value in Golioth's LightDB and let @p cb be invoked when server
+ * acknowledges it or some error condition happens.
+ *
+ * @warning Experimental API
+ *
+ * @param[in] client Client instance
+ * @param[in] path LightDB resource path
+ * @param[in] cb Callback executed on acknowledgment received, timeout or error
+ * @param[in] user_data User data passed to @p cb
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_lightdb_delete_cb(struct golioth_client *client, const uint8_t *path,
+			      golioth_req_cb_t cb, void *user_data);
+
+/**
+ * @brief Delete value in Golioth's LightDB (synchronous)
+ *
+ * Synchronously delete value in Golioth's LightDB.
  *
  * @param[in] client Client instance
  * @param[in] path LightDB resource path

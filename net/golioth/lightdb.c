@@ -141,26 +141,21 @@ int golioth_lightdb_observe_cb(struct golioth_client *client, const uint8_t *pat
 					   GOLIOTH_COAP_REQ_OBSERVE);
 }
 
+int golioth_lightdb_delete_cb(struct golioth_client *client, const uint8_t *path,
+			      golioth_req_cb_t cb, void *user_data)
+{
+	return golioth_coap_req_lightdb_cb(client, COAP_METHOD_DELETE, path,
+					   GOLIOTH_CONTENT_FORMAT_APP_OCTET_STREAM /* not used */,
+					   NULL, 0,
+					   cb, user_data,
+					   GOLIOTH_COAP_REQ_NO_RESP_BODY);
+}
+
 int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
-	int err;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_DELETE, coap_next_id());
-	if (err) {
-		return err;
-	}
-
-	err = coap_packet_append_option(&packet, COAP_OPTION_URI_PATH,
-					path, strlen(path));
-	if (err) {
-		LOG_ERR("Unable add uri path to packet");
-		return err;
-	}
-
-	return golioth_send_coap(client, &packet);
+	return golioth_coap_req_lightdb_sync(client, COAP_METHOD_DELETE, path,
+					     GOLIOTH_CONTENT_FORMAT_APP_OCTET_STREAM /* not used */,
+					     NULL, 0,
+					     NULL, NULL,
+					     GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
