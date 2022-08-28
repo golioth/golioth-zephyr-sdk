@@ -10,6 +10,7 @@
 #include <net/golioth/lightdb.h>
 #include <net/golioth/rpc.h>
 #include <net/golioth/settings.h>
+#include <net/golioth/stream.h>
 #include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/coap.h>
