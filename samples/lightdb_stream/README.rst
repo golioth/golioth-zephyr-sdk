@@ -147,25 +147,34 @@ This is the output from the serial console:
 
 .. code-block:: console
 
-   [00:00:00.000,000] <inf> golioth_system: Initializing
-   [00:00:00.000,000] <inf> net_config: Initializing network
-   [00:00:00.000,000] <inf> net_config: IPv4 address: 192.0.2.1
-   [00:00:00.000,000] <dbg> golioth_lightdb_stream.main: Start LightDB Stream sample
-   [00:00:00.000,000] <dbg> golioth_lightdb_stream.main: Sending temperature 20.000000
-   [00:00:00.000,000] <inf> golioth_system: Starting connect
-   [00:00:00.010,000] <inf> golioth_system: Client connected!
-   [00:00:05.010,000] <dbg> golioth_lightdb_stream.main: Sending temperature 20.500000
-   [00:00:10.040,000] <dbg> golioth_lightdb_stream.main: Sending temperature 21.000000
-   [00:00:15.050,000] <dbg> golioth_lightdb_stream.main: Sending temperature 21.500000
-   [00:00:20.060,000] <dbg> golioth_lightdb_stream.main: Sending temperature 22.000000
-   [00:00:25.070,000] <dbg> golioth_lightdb_stream.main: Sending temperature 22.500000
-   [00:00:30.080,000] <dbg> golioth_lightdb_stream.main: Sending temperature 23.000000
-   [00:00:35.090,000] <dbg> golioth_lightdb_stream.main: Sending temperature 23.500000
-   [00:00:40.100,000] <dbg> golioth_lightdb_stream.main: Sending temperature 24.000000
-   [00:00:45.110,000] <dbg> golioth_lightdb_stream.main: Sending temperature 24.500000
-   [00:00:50.120,000] <dbg> golioth_lightdb_stream.main: Sending temperature 25.000000
-   [00:00:55.130,000] <dbg> golioth_lightdb_stream.main: Sending temperature 25.500000
-   [00:01:00.140,000] <dbg> golioth_lightdb_stream.main: Sending temperature 26.000000
+   [00:00:00.030,000] <inf> golioth_system: Initializing
+   [00:00:00.030,000] <inf> net_config: Initializing network
+   [00:00:00.030,000] <inf> net_config: IPv4 address: 192.0.2.1
+   [00:00:00.030,000] <dbg> golioth_lightdb_stream: main: Start LightDB Stream sample
+   [00:00:00.040,000] <inf> golioth_system: Starting connect
+   [00:00:00.060,000] <dbg> golioth_lightdb_stream: main: Sending temperature 20.000000
+   [00:00:00.060,000] <inf> golioth_system: Client connected!
+   [00:00:00.060,000] <dbg> golioth_lightdb_stream: temperature_push_sync: Temperature successfully pushed
+   [00:00:05.070,000] <dbg> golioth_lightdb_stream: main: Sending temperature 20.500000
+   [00:00:05.070,000] <dbg> golioth_lightdb_stream: temperature_push_handler: Temperature successfully pushed
+   [00:00:10.080,000] <dbg> golioth_lightdb_stream: main: Sending temperature 21.000000
+   [00:00:10.080,000] <dbg> golioth_lightdb_stream: temperature_push_sync: Temperature successfully pushed
+   [00:00:15.090,000] <dbg> golioth_lightdb_stream: main: Sending temperature 21.500000
+   [00:00:15.090,000] <dbg> golioth_lightdb_stream: temperature_push_handler: Temperature successfully pushed
+   [00:00:20.100,000] <dbg> golioth_lightdb_stream: main: Sending temperature 22.000000
+   [00:00:20.100,000] <dbg> golioth_lightdb_stream: temperature_push_sync: Temperature successfully pushed
+   [00:00:25.110,000] <dbg> golioth_lightdb_stream: main: Sending temperature 22.500000
+   [00:00:25.110,000] <dbg> golioth_lightdb_stream: temperature_push_handler: Temperature successfully pushed
+   [00:00:30.120,000] <dbg> golioth_lightdb_stream: main: Sending temperature 23.000000
+   [00:00:30.120,000] <dbg> golioth_lightdb_stream: temperature_push_sync: Temperature successfully pushed
+   [00:00:35.130,000] <dbg> golioth_lightdb_stream: main: Sending temperature 23.500000
+   [00:00:35.130,000] <dbg> golioth_lightdb_stream: temperature_push_handler: Temperature successfully pushed
+   [00:00:40.140,000] <dbg> golioth_lightdb_stream: main: Sending temperature 24.000000
+   [00:00:40.140,000] <dbg> golioth_lightdb_stream: temperature_push_sync: Temperature successfully pushed
+   [00:00:45.150,000] <dbg> golioth_lightdb_stream: main: Sending temperature 24.500000
+   [00:00:45.150,000] <dbg> golioth_lightdb_stream: temperature_push_handler: Temperature successfully pushed
+   [00:00:50.160,000] <dbg> golioth_lightdb_stream: main: Sending temperature 25.000000
+   [00:00:50.160,000] <dbg> golioth_lightdb_stream: temperature_push_sync: Temperature successfully pushed
 
 Monitor temperature value over time
 ===================================
@@ -176,7 +185,24 @@ LightDB Stream. Current value can be fetched using following command:
 .. code-block:: console
 
    $ goliothctl stream get <device-id> /temp
-   26
+   25
+
+Data can be be observed in realtime using following command:
+
+.. code-block:: console
+
+   $ goliothctl stream listen
+   {"timestamp":"2022-09-09T12:46:22.294832197Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":20}}
+   {"timestamp":"2022-09-09T12:46:27.301030227Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":20.5}}
+   {"timestamp":"2022-09-09T12:46:32.314922477Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":21}}
+   {"timestamp":"2022-09-09T12:46:37.321291988Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":21.5}}
+   {"timestamp":"2022-09-09T12:46:42.334931934Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":22}}
+   {"timestamp":"2022-09-09T12:46:47.344960716Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":22.5}}
+   {"timestamp":"2022-09-09T12:46:52.354604450Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":23}}
+   {"timestamp":"2022-09-09T12:46:57.362001530Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":23.5}}
+   {"timestamp":"2022-09-09T12:47:02.374861331Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":24}}
+   {"timestamp":"2022-09-09T12:47:07.384704973Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":24.5}}
+   {"timestamp":"2022-09-09T12:47:12.394896354Z", "deviceId":"6033cc457016b281d671df53", "data":{"temp":25}}
 
 Historical data can be queried using following command:
 
@@ -185,52 +211,48 @@ Historical data can be queried using following command:
    $ goliothctl stream query --interval 5m --field time --field temp | jq ''
    [
      {
-       "temp": 26,
-       "time": "2021-06-08 12:17:01.158 +0000 UTC"
-     },
-     {
-       "temp": 25.5,
-       "time": "2021-06-08 12:16:56.146 +0000 UTC"
-     },
-     {
-       "temp": 25,
-       "time": "2021-06-08 12:16:51.138 +0000 UTC"
-     },
-     {
-       "temp": 24.5,
-       "time": "2021-06-08 12:16:46.126 +0000 UTC"
-     },
-     {
-       "temp": 24,
-       "time": "2021-06-08 12:16:41.114 +0000 UTC"
-     },
-     {
-       "temp": 23.5,
-       "time": "2021-06-08 12:16:36.108 +0000 UTC"
-     },
-     {
-       "temp": 23,
-       "time": "2021-06-08 12:16:31.098 +0000 UTC"
-     },
-     {
-       "temp": 22.5,
-       "time": "2021-06-08 12:16:26.088 +0000 UTC"
-     },
-     {
-       "temp": 22,
-       "time": "2021-06-08 12:16:21.078 +0000 UTC"
-     },
-     {
-       "temp": 21.5,
-       "time": "2021-06-08 12:16:16.068 +0000 UTC"
-     },
-     {
-       "temp": 21,
-       "time": "2021-06-08 12:16:11.054 +0000 UTC"
+       "temp": 20,
+       "time": "2022-09-09 12:46:22.294 +0000 UTC"
      },
      {
        "temp": 20.5,
-       "time": "2021-06-08 12:16:06.049 +0000 UTC"
+       "time": "2022-09-09 12:46:27.301 +0000 UTC"
+     },
+     {
+       "temp": 21,
+       "time": "2022-09-09 12:46:32.314 +0000 UTC"
+     },
+     {
+       "temp": 21.5,
+       "time": "2022-09-09 12:46:37.321 +0000 UTC"
+     },
+     {
+       "temp": 22,
+       "time": "2022-09-09 12:46:42.334 +0000 UTC"
+     },
+     {
+       "temp": 22.5,
+       "time": "2022-09-09 12:46:47.344 +0000 UTC"
+     },
+     {
+       "temp": 23,
+       "time": "2022-09-09 12:46:52.354 +0000 UTC"
+     },
+     {
+       "temp": 23.5,
+       "time": "2022-09-09 12:46:57.362 +0000 UTC"
+     },
+     {
+       "temp": 24,
+       "time": "2022-09-09 12:47:02.374 +0000 UTC"
+     },
+     {
+       "temp": 24.5,
+       "time": "2022-09-09 12:47:07.384 +0000 UTC"
+     },
+     {
+       "temp": 25,
+       "time": "2022-09-09 12:47:12.394 +0000 UTC"
      }
    ]
 

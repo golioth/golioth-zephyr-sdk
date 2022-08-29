@@ -73,9 +73,55 @@ static int get_temperature(struct sensor_value *val)
 
 #endif
 
+static int temperature_push_handler(struct golioth_req_rsp *rsp)
+{
+	if (rsp->err) {
+		LOG_WRN("Failed to push temperature: %d", rsp->err);
+		return rsp->err;
+	}
+
+	LOG_DBG("Temperature successfully pushed");
+
+	return 0;
+}
+
+static void temperature_push_async(const struct sensor_value *temp)
+{
+	char sbuf[sizeof("-4294967295.123456")];
+	int err;
+
+	snprintk(sbuf, sizeof(sbuf), "%d.%06d", temp->val1, abs(temp->val2));
+
+	err = golioth_stream_push_cb(client, "temp",
+				     GOLIOTH_CONTENT_FORMAT_APP_JSON,
+				     sbuf, strlen(sbuf),
+				     temperature_push_handler, NULL);
+	if (err) {
+		LOG_WRN("Failed to push temperature: %d", err);
+		return;
+	}
+}
+
+static void temperature_push_sync(const struct sensor_value *temp)
+{
+	char sbuf[sizeof("-4294967295.123456")];
+	int err;
+
+	snprintk(sbuf, sizeof(sbuf), "%d.%06d", temp->val1, abs(temp->val2));
+
+	err = golioth_stream_push(client, "temp",
+				  GOLIOTH_CONTENT_FORMAT_APP_JSON,
+				  sbuf, strlen(sbuf));
+	if (err) {
+		LOG_WRN("Failed to push temperature: %d", err);
+		return;
+	}
+
+	LOG_DBG("Temperature successfully pushed");
+}
+
 void main(void)
 {
-	char str_temperature[32];
 	struct sensor_value temp;
 	int err;
 
@@ -91,26 +137,29 @@ void main(void)
 	k_sem_take(&connected, K_FOREVER);
 
 	while (true) {
+		/* Synchronous */
 		err = get_temperature(&temp);
 		if (err) {
 			k_sleep(K_SECONDS(1));
 			continue;
 		}
 
-		snprintk(str_temperature, sizeof(str_temperature),
-			 "%d.%06d", temp.val1, abs(temp.val2));
-		str_temperature[sizeof(str_temperature) - 1] = '\0';
+		LOG_DBG("Sending temperature %d.%06d", temp.val1, abs(temp.val2));
 
-		LOG_DBG("Sending temperature %s", str_temperature);
+		temperature_push_sync(&temp);
 
-		err = golioth_lightdb_set(client,
-					  GOLIOTH_LIGHTDB_STREAM_PATH("temp"),
-					  GOLIOTH_CONTENT_FORMAT_APP_JSON,
-					  str_temperature,
-					  strlen(str_temperature));
+		k_sleep(K_SECONDS(5));
+
+		/* Callback-based */
+		err = get_temperature(&temp);
 		if (err) {
-			LOG_WRN("Failed to send temperature: %d", err);
+			k_sleep(K_SECONDS(1));
+			continue;
 		}
+
+		LOG_DBG("Sending temperature %d.%06d", temp.val1, abs(temp.val2));
+
+		temperature_push_async(&temp);
 
 		k_sleep(K_SECONDS(5));
 	}
