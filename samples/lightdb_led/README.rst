@@ -153,11 +153,6 @@ This is the output from the serial console:
    [00:00:00.020,000] <inf> golioth_lightdb: Golioth client initialized
    [00:00:00.020,000] <inf> golioth_lightdb: Starting connect
    [00:00:00.040,000] <inf> golioth_lightdb: Client connected!
-   [00:00:00.040,000] <dbg> golioth_lightdb: Payload
-                                             a1 63 6d 73 67 62 4f 4b                          |.cmsgbOK
-   [00:00:00.040,000] <wrn> golioth_lightdb: Map key is not boolean
-   [00:00:00.040,000] <dbg> golioth_lightdb: Payload
-                                             a4 61 31 f4 61 32 f5 61  33 f5 61 30 f5          |.a1.a2.a 3.a0.
    [00:00:00.040,000] <inf> golioth_lightdb: LED 1 -> OFF
    [00:00:00.040,000] <inf> golioth_lightdb: LED 2 -> ON
    [00:00:00.040,000] <inf> golioth_lightdb: LED 3 -> ON
@@ -186,8 +181,6 @@ This request should result in following serial console output:
 
 .. code-block:: console
 
-   [00:00:04.050,000] <dbg> golioth_lightdb: Payload
-                                             a4 61 33 f5 61 30 f5 61  31 f4 61 32 f5          |.a3.a0.a 1.a2.
    [00:00:04.050,000] <inf> golioth_lightdb: LED 3 -> ON
    [00:00:04.050,000] <inf> golioth_lightdb: LED 0 -> ON
    [00:00:04.050,000] <inf> golioth_lightdb: LED 1 -> OFF
