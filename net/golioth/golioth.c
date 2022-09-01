@@ -583,7 +583,7 @@ int golioth_register_message_callback(struct golioth_client *client,
 {
 	if (client->num_message_callbacks >= GOLIOTH_MAX_NUM_MESSAGE_CALLBACKS) {
 		LOG_ERR("No more message callback registration slots");
-		return -1;
+		return -ENOBUFS;
 	}
 
 	struct golioth_message_callback_reg *new_reg =
