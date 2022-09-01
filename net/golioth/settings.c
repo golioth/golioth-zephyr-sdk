@@ -264,7 +264,7 @@ int golioth_settings_register_callback(struct golioth_client *client,
 {
 	if (!callback) {
 		LOG_ERR("Callback must not be NULL");
-		return -1;
+		return -EINVAL;
 	}
 
 	/*
