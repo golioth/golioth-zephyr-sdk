@@ -12,7 +12,9 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "coap_req.h"
 #include "coap_utils.h"
+#include "pathv.h"
 
 /*
  * Example settings request from cloud:
@@ -46,37 +48,11 @@ static int send_coap_response(struct golioth_client *client,
 			      uint8_t *coap_payload,
 			      size_t coap_payload_len)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
-	int err;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_POST, coap_next_id());
-	if (err) {
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_SETTINGS_STATUS_PATH);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet: %d", err);
-		return err;
-	}
-
-	err = coap_append_option_int(&packet,
-				     COAP_OPTION_CONTENT_FORMAT,
-				     COAP_CONTENT_FORMAT_APP_CBOR);
-	if (err) {
-		LOG_ERR("Unable add content format to packet: %d", err);
-		return err;
-	}
-
-	err = golioth_send_coap_payload(client, &packet, coap_payload, coap_payload_len);
-	if (err) {
-		LOG_ERR("Error in golioth_send_coap: %d", err);
-	}
-	return err;
+	return golioth_coap_req_cb(client, COAP_METHOD_POST, PATHV(GOLIOTH_SETTINGS_STATUS_PATH),
+				   COAP_CONTENT_FORMAT_APP_CBOR,
+				   coap_payload, coap_payload_len,
+				   NULL, NULL,
+				   GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
 
 static int send_status_report(struct golioth_client *client,
@@ -106,24 +82,23 @@ static int send_status_report(struct golioth_client *client,
 	return send_coap_response(client, response_buf, response_len);
 }
 
-static int on_setting(const struct coap_packet *response,
-		      struct coap_reply *reply,
-		      const struct sockaddr *from)
+static int on_setting(struct golioth_req_rsp *rsp)
 {
-	struct golioth_client *client =
-		CONTAINER_OF(reply, struct golioth_client, settings.observe_reply);
+	struct golioth_client *client = rsp->user_data;
 
-	uint16_t payload_len;
-	const uint8_t *payload = coap_packet_get_payload(response, &payload_len);
+	if (rsp->err) {
+		LOG_ERR("Error on Settings observation: %d", rsp->err);
+		return rsp->err;
+	}
 
-	LOG_HEXDUMP_INF(payload, payload_len, "Payload");
+	LOG_HEXDUMP_DBG(rsp->data, rsp->len, "Payload");
 
-	if (payload_len == 3 && payload[1] == 'O' && payload[2] == 'K') {
+	if (rsp->len == 3 && rsp->data[1] == 'O' && rsp->data[2] == 'K') {
 		/* Ignore "OK" response received after observing */
 		return 0;
 	}
 
-	UsefulBufC payload_buf = { payload, payload_len };
+	UsefulBufC payload_buf = { rsp->data, rsp->len };
 
 	QCBORDecodeContext decode_ctx;
 	QCBORItem decoded_item;
@@ -214,49 +189,11 @@ static int on_setting(const struct coap_packet *response,
 
 static int golioth_settings_observe(struct golioth_client *client)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
-	int err;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_GET, coap_next_id());
-	if (err) {
-		LOG_ERR("Failed to initialize packet");
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_OBSERVE, 0);
-	if (err) {
-		LOG_ERR("Unable to add observe option");
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_SETTINGS_PATH);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet");
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_ACCEPT, COAP_CONTENT_FORMAT_APP_CBOR);
-	if (err) {
-		LOG_ERR("Unable add content format to packet");
-		return err;
-	}
-
-	coap_reply_clear(&client->settings.observe_reply);
-	coap_reply_init(&client->settings.observe_reply, &packet);
-	client->settings.observe_reply.reply = on_setting;
-
-	return golioth_send_coap(client, &packet);
-}
-
-static void on_message(struct golioth_client *client,
-		       struct coap_packet *rx,
-		       void *user_arg)
-{
-	coap_response_received(rx, NULL, &client->settings.observe_reply, 1);
+	return golioth_coap_req_cb(client, COAP_METHOD_GET, PATHV(GOLIOTH_SETTINGS_PATH),
+				   COAP_CONTENT_FORMAT_APP_CBOR,
+				   NULL, 0,
+				   on_setting, client,
+				   GOLIOTH_COAP_REQ_OBSERVE);
 }
 
 int golioth_settings_register_callback(struct golioth_client *client,
@@ -274,13 +211,6 @@ int golioth_settings_register_callback(struct golioth_client *client,
 	 * in which case we need to make sure not to re-register the callback.
 	 */
 	if (!client->settings.initialized) {
-		int err = golioth_register_message_callback(client, on_message, NULL);
-
-		if (err) {
-			LOG_ERR("Failed to register message callback: %d", err);
-			return err;
-		}
-
 		client->settings.callback = callback;
 		client->settings.initialized = true;
 	}

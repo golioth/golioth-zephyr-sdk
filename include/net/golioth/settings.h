@@ -111,7 +111,6 @@ struct golioth_settings {
 #if defined(CONFIG_GOLIOTH_SETTINGS)
 	bool initialized;
 	golioth_settings_cb callback;
-	struct coap_reply observe_reply;
 #endif
 };
 
