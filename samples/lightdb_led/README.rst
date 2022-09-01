@@ -158,10 +158,10 @@ This is the output from the serial console:
    [00:00:00.040,000] <wrn> golioth_lightdb: Map key is not boolean
    [00:00:00.040,000] <dbg> golioth_lightdb: Payload
                                              a4 61 31 f4 61 32 f5 61  33 f5 61 30 f5          |.a1.a2.a 3.a0.
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 1 -> 0
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 2 -> 1
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 3 -> 1
-   [00:00:00.040,000] <inf> golioth_lightdb: LED 0 -> 1
+   [00:00:00.040,000] <inf> golioth_lightdb: LED 1 -> OFF
+   [00:00:00.040,000] <inf> golioth_lightdb: LED 2 -> ON
+   [00:00:00.040,000] <inf> golioth_lightdb: LED 3 -> ON
+   [00:00:00.040,000] <inf> golioth_lightdb: LED 0 -> ON
 
 Monitor counter value
 =====================
@@ -188,10 +188,10 @@ This request should result in following serial console output:
 
    [00:00:04.050,000] <dbg> golioth_lightdb: Payload
                                              a4 61 33 f5 61 30 f5 61  31 f4 61 32 f5          |.a3.a0.a 1.a2.
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 3 -> 1
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 0 -> 1
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 1 -> 0
-   [00:00:04.050,000] <inf> golioth_lightdb: LED 2 -> 1
+   [00:00:04.050,000] <inf> golioth_lightdb: LED 3 -> ON
+   [00:00:04.050,000] <inf> golioth_lightdb: LED 0 -> ON
+   [00:00:04.050,000] <inf> golioth_lightdb: LED 1 -> OFF
+   [00:00:04.050,000] <inf> golioth_lightdb: LED 2 -> ON
 
 Additionally board LEDs will be changed, if they are configured in device-tree
 as:

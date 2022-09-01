@@ -151,7 +151,7 @@ static int golioth_led_handle(const struct coap_packet *response,
 
 		value = (decoded_item.uDataType == QCBOR_TYPE_TRUE);
 
-		LOG_INF("LED %s -> %d", name, (int) value);
+		LOG_INF("LED %s -> %s", name, value ? "ON" : "OFF");
 
 		/*
 		 * Switch on/off requested LED based on label (LED name/id) and
