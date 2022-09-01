@@ -21,9 +21,6 @@
 struct golioth_client;
 enum golioth_content_format;
 
-#define GOLIOTH_LIGHTDB_PATH(x)		".d/" x
-#define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
-
 /**
  * @brief Get value from Golioth's LightDB (callback based)
  *
