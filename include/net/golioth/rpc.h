@@ -107,7 +107,6 @@ struct golioth_rpc_method {
 struct golioth_rpc {
 #if defined(CONFIG_GOLIOTH_RPC)
 	bool initialized;
-	struct coap_reply observe_reply;
 	struct golioth_rpc_method methods[CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS];
 	int num_methods;
 #endif

@@ -11,7 +11,9 @@
 #include <qcbor/qcbor_spiffy_decode.h>
 #include <stdio.h>
 
+#include "coap_req.h"
 #include "coap_utils.h"
+#include "pathv.h"
 
 /*
  * Request:
@@ -39,56 +41,30 @@ LOG_MODULE_DECLARE(golioth);
 static int send_response(struct golioth_client *client,
 			 uint8_t *coap_payload, size_t coap_payload_len)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
-	int err;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_POST, coap_next_id());
-	if (err) {
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_RPC_STATUS_PATH);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet: %d", err);
-		return err;
-	}
-
-	err = coap_append_option_int(&packet,
-				     COAP_OPTION_CONTENT_FORMAT,
-				     COAP_CONTENT_FORMAT_APP_CBOR);
-	if (err) {
-		LOG_ERR("Unable add content format to packet: %d", err);
-		return err;
-	}
-
-	err = golioth_send_coap_payload(client, &packet, coap_payload, coap_payload_len);
-	if (err) {
-		LOG_ERR("Error in golioth_send_coap: %d", err);
-	}
-	return err;
+	return golioth_coap_req_cb(client, COAP_METHOD_POST, PATHV(GOLIOTH_RPC_STATUS_PATH),
+				   COAP_CONTENT_FORMAT_APP_CBOR,
+				   coap_payload, coap_payload_len,
+				   NULL, NULL,
+				   GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
 
-static int on_rpc(const struct coap_packet *response,
-		  struct coap_reply *reply,
-		  const struct sockaddr *from)
+static int on_rpc(struct golioth_req_rsp *rsp)
 {
-	struct golioth_client *client =
-		CONTAINER_OF(reply, struct golioth_client, rpc.observe_reply);
-	uint16_t payload_len;
-	const uint8_t *payload = coap_packet_get_payload(response, &payload_len);
+	struct golioth_client *client = rsp->user_data;
 
-	LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
+	if (rsp->err) {
+		LOG_ERR("Error on RPC observation: %d", rsp->err);
+		return rsp->err;
+	}
 
-	if (payload_len == 3 && payload[1] == 'O' && payload[2] == 'K') {
+	LOG_HEXDUMP_DBG(rsp->data, rsp->len, "Payload");
+
+	if (rsp->len == 3 && rsp->data[1] == 'O' && rsp->data[2] == 'K') {
 		/* Ignore "OK" response received after observing */
 		return 0;
 	}
 
-	UsefulBufC payload_buf = { payload, payload_len };
+	UsefulBufC payload_buf = { rsp->data, rsp->len };
 
 	QCBORDecodeContext decode_ctx;
 	QCBORError qerr;
@@ -176,55 +152,11 @@ static int on_rpc(const struct coap_packet *response,
 
 static int golioth_rpc_observe(struct golioth_client *client)
 {
-	struct coap_packet packet;
-	uint8_t buffer[GOLIOTH_COAP_MAX_NON_PAYLOAD_LEN];
-	int err;
-
-	err = coap_packet_init(&packet, buffer, sizeof(buffer),
-			       COAP_VERSION_1, COAP_TYPE_CON,
-			       COAP_TOKEN_MAX_LEN, coap_next_token(),
-			       COAP_METHOD_GET, coap_next_id());
-	if (err) {
-		LOG_ERR("Failed to initialize packet");
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_OBSERVE, 0);
-	if (err) {
-		LOG_ERR("Unable to add observe option");
-		return err;
-	}
-
-	err = coap_packet_append_uri_path_from_stringz(&packet, GOLIOTH_RPC_PATH);
-	if (err) {
-		LOG_ERR("Unable add uri path to packet");
-		return err;
-	}
-
-	err = coap_append_option_int(&packet, COAP_OPTION_ACCEPT, COAP_CONTENT_FORMAT_APP_CBOR);
-	if (err) {
-		LOG_ERR("Unable add content format to packet");
-		return err;
-	}
-
-	k_mutex_lock(&client->rpc_mutex, K_FOREVER);
-
-	coap_reply_clear(&client->rpc.observe_reply);
-	coap_reply_init(&client->rpc.observe_reply, &packet);
-	client->rpc.observe_reply.reply = on_rpc;
-
-	k_mutex_unlock(&client->rpc_mutex);
-
-	return golioth_send_coap(client, &packet);
-}
-
-static void on_message(struct golioth_client *client,
-		       struct coap_packet *rx,
-		       void *user_arg)
-{
-	k_mutex_lock(&client->rpc_mutex, K_FOREVER);
-	coap_response_received(rx, NULL, &client->rpc.observe_reply, 1);
-	k_mutex_unlock(&client->rpc_mutex);
+	return golioth_coap_req_cb(client, COAP_METHOD_GET, PATHV(GOLIOTH_RPC_PATH),
+				   COAP_CONTENT_FORMAT_APP_CBOR,
+				   NULL, 0,
+				   on_rpc, client,
+				   GOLIOTH_COAP_REQ_OBSERVE);
 }
 
 int golioth_rpc_register(struct golioth_client *client,
@@ -256,7 +188,6 @@ int golioth_rpc_register(struct golioth_client *client,
 
 	client->rpc.num_methods++;
 	if (client->rpc.num_methods == 1) {
-		golioth_register_message_callback(client, on_message, NULL);
 		status = golioth_rpc_observe(client);
 	}
 
