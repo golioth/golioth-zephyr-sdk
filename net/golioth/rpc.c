@@ -244,7 +244,7 @@ int golioth_rpc_register(struct golioth_client *client,
 	if (client->rpc.num_methods >= CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS) {
 		LOG_ERR("Unable to register, can't register more than %d methods",
 			CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS);
-		status = -1;
+		status = -ENOBUFS;
 		goto cleanup;
 	}
 
