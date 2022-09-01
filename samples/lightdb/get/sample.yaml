@@ -1,5 +1,5 @@
 sample:
-  description: Use Light DB get
+  description: Use LightDB get
   name: lightdb-get
 common:
   harness: net

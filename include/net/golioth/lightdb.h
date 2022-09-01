@@ -24,12 +24,12 @@ enum golioth_content_format;
 #define GOLIOTH_LIGHTDB_STREAM_PATH(x)	".s/" x
 
 /**
- * @brief Get value from Golioth's Light DB
+ * @brief Get value from Golioth's LightDB
  *
- * Get value from Light DB and initialize passed CoAP reply handler.
+ * Get value from LightDB and initialize passed CoAP reply handler.
  *
  * @param client Client instance
- * @param path Light DB resource path
+ * @param path LightDB resource path
  * @param format Requested format of payload
  * @param reply CoAP reply handler object used for notifying about received
  *              value
@@ -43,12 +43,12 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 			struct coap_reply *reply, coap_reply_t reply_cb);
 
 /**
- * @brief Set value to Golioth's Light DB
+ * @brief Set value to Golioth's LightDB
  *
- * Set new value to Light DB.
+ * Set new value to LightDB.
  *
  * @param client Client instance
- * @param path Light DB resource path
+ * @param path LightDB resource path
  * @param format Format of payload
  * @param data Payload data
  * @param data_len Payload length
@@ -61,12 +61,12 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 			uint8_t *data, uint16_t data_len);
 
 /**
- * @brief Delete value in Golioth's Light DB
+ * @brief Delete value in Golioth's LightDB
  *
- * Delete value in Light DB.
+ * Delete value in LightDB.
  *
  * @param client Client instance
- * @param path Light DB resource path
+ * @param path LightDB resource path
  *
  * @retval 0 On success
  * @retval <0 On failure
@@ -74,12 +74,12 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path);
 
 /**
- * @brief Observe value in Golioth's Light DB
+ * @brief Observe value in Golioth's LightDB
  *
- * Observe value in Light DB and initialize passed CoAP reply handler.
+ * Observe value in LightDB and initialize passed CoAP reply handler.
  *
  * @param client Client instance
- * @param path Light DB resource path to be monitored
+ * @param path LightDB resource path to be monitored
  * @param format Requested format of payload
  * @param reply CoAP reply handler object used for notifying about updated
  *              value

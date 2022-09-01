@@ -79,7 +79,7 @@ void main(void)
 	struct sensor_value temp;
 	int err;
 
-	LOG_DBG("Start Light DB stream sample");
+	LOG_DBG("Start LightDB stream sample");
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");

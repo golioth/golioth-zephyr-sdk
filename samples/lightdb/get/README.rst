@@ -1,10 +1,10 @@
-Golioth Light DB Get Sample
+Golioth LightDB Get Sample
 ###########################
 
 Overview
 ********
 
-This sample demonstrates how to connect to Golioth and get values from LigthDB.
+This sample demonstrates how to connect to Golioth and get values from LightDB.
 
 Requirements
 ************
@@ -156,7 +156,7 @@ This is the output from the serial console:
    [00:00:05.102,000] <inf> net_config: Lease time: 7200 seconds
    [00:00:05.102,000] <inf> net_config: Subnet: 255.255.255.0
    [00:00:05.102,000] <inf> net_config: Router: 192.168.0.1
-   [00:00:05.102,000] <dbg> golioth_lightdb.main: Start Light DB get sample
+   [00:00:05.102,000] <dbg> golioth_lightdb.main: Start LightDB get sample
    [00:00:05.102,000] <inf> golioth_system: Starting connect
    [00:00:05.102,000] <inf> golioth_system: Client connected!
    [00:00:13.541,000] <dbg> golioth_lightdb.reply_callback: payload: {"counter":18}

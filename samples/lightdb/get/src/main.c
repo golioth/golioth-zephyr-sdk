@@ -80,7 +80,7 @@ void main(void)
 	int err;
 	struct coap_reply *reply;
 
-	LOG_DBG("Start Light DB get sample");
+	LOG_DBG("Start LightDB get sample");
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");
