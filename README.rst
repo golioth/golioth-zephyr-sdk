@@ -73,7 +73,7 @@ Sample applications
 - `Golioth LightDB observe sample`_
 - `Golioth LightDB set sample`_
 - `Golioth LightDB LED sample`_
-- `Golioth LightDB stream sample`_
+- `Golioth LightDB Stream sample`_
 - `Golioth Logging sample`_
 - `Golioth Settings sample`_
 
@@ -82,7 +82,7 @@ Golioth Services
 
 - `Golioth Cloud`_
 - `LightDB state`_
-- `LightDB stream`_
+- `LightDB Stream`_
 - `Logging`_
 - `OTA`_
 - `CoAP Authentication`_
@@ -155,13 +155,13 @@ During release testing, all boards and services are verified using sample applic
 .. _Golioth LightDB observe sample: samples/lightdb/observe/README.rst
 .. _Golioth LightDB set sample: samples/lightdb/set/README.rst
 .. _Golioth LightDB LED sample: samples/lightdb_led/README.rst
-.. _Golioth LightDB stream sample: samples/lightdb_stream/README.rst
+.. _Golioth LightDB Stream sample: samples/lightdb_stream/README.rst
 .. _Golioth Logging sample: samples/logging/README.rst
 .. _Golioth Settings sample: samples/settings/README.rst
 
 .. _Golioth Cloud: https://docs.golioth.io/cloud
 .. _LightDB state: https://docs.golioth.io/reference/protocols/coap/lightdb
-.. _LightDB stream: https://docs.golioth.io/reference/protocols/coap/lightdb-stream
+.. _LightDB Stream: https://docs.golioth.io/reference/protocols/coap/lightdb-stream
 .. _Logging: https://docs.golioth.io/reference/protocols/coap/logging
 .. _OTA: https://docs.golioth.io/reference/protocols/coap/ota
 .. _CoAP Authentication: https://docs.golioth.io/reference/protocols/coap/auth

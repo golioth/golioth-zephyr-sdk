@@ -1,5 +1,5 @@
 sample:
-  description: Send data to Golioth LightDB stream
+  description: Send data to Golioth LightDB Stream
   name: lightdb stream
 common:
   harness: net
