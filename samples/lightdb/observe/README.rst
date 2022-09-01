@@ -1,4 +1,4 @@
-Golioth Light DB Observe Sample
+Golioth LightDB Observe Sample
 ###############################
 
 Overview
@@ -158,7 +158,7 @@ This is the output from the serial console:
    [00:00:09.097,000] <inf> net_config: Lease time: 7200 seconds
    [00:00:09.097,000] <inf> net_config: Subnet: 255.255.255.0
    [00:00:09.097,000] <inf> net_config: Router: 192.168.0.1
-   [00:00:09.097,000] <dbg> golioth_lightdb.main: Start Light DB observe sample
+   [00:00:09.097,000] <dbg> golioth_lightdb.main: Start LightDB observe sample
    [00:00:09.097,000] <inf> golioth_system: Starting connect
    [00:00:12.366,000] <inf> golioth_system: Client connected!
    [00:00:12.422,000] <dbg> golioth_lightdb.on_update: payload: {"m":"original"}

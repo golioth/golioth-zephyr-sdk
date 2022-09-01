@@ -207,7 +207,7 @@ static void golioth_on_message(struct golioth_client *client,
 
 void main(void)
 {
-	LOG_DBG("Start Light DB LED sample");
+	LOG_DBG("Start LightDB LED sample");
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");

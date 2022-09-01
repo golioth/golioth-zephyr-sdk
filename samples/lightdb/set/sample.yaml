@@ -1,5 +1,5 @@
 sample:
-  description: Use Light DB set
+  description: Use LightDB set
   name: lightdb-set
 common:
   harness: net

@@ -1,5 +1,5 @@
 sample:
-  description: Use Light DB observe
+  description: Use LightDB observe
   name: lightdb-observe
 common:
   harness: net

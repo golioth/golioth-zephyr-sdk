@@ -1,5 +1,5 @@
 sample:
-  description: Access Golioth Light DB to control LEDs
+  description: Access Golioth LightDB to control LEDs
   name: lightdb-led
 common:
   harness: net

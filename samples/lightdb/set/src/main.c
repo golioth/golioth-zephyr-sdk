@@ -45,7 +45,7 @@ void main(void)
 {
 	int counter = 0;
 
-	LOG_DBG("Start Light DB set sample");
+	LOG_DBG("Start LightDB set sample");
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");

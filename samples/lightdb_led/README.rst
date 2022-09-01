@@ -1,11 +1,11 @@
-Golioth Light DB LED sample
+Golioth LightDB LED sample
 ###########################
 
 Overview
 ********
 
-This Light DB application demonstrates how to connect with Golioth and access
-Light DB.
+This LightDB application demonstrates how to connect with Golioth and access
+LightDB.
 
 Requirements
 ************
@@ -148,7 +148,7 @@ This is the output from the serial console:
    [00:00:00.010,000] <wrn> net_sock_tls: No entropy device on the system, TLS communication may be insecure!
    [00:00:00.010,000] <inf> net_config: Initializing network
    [00:00:00.010,000] <inf> net_config: IPv4 address: 192.0.2.1
-   [00:00:00.010,000] <dbg> golioth_lightdb.main: Start Light DB LED sample
+   [00:00:00.010,000] <dbg> golioth_lightdb.main: Start LightDB LED sample
    [00:00:00.020,000] <inf> golioth_lightdb: Initializing golioth client
    [00:00:00.020,000] <inf> golioth_lightdb: Golioth client initialized
    [00:00:00.020,000] <inf> golioth_lightdb: Starting connect
@@ -166,7 +166,7 @@ This is the output from the serial console:
 Monitor counter value
 =====================
 
-Device increments counter every 5s and updates ``/counter`` resource in Light DB
+Device increments counter every 5s and updates ``/counter`` resource in LightDB
 with its value. Current value can be fetched using following command:
 
 .. code-block:: console
