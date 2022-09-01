@@ -43,21 +43,6 @@ enum golioth_settings_status on_setting(
 	return GOLIOTH_SETTINGS_KEY_NOT_RECOGNIZED;
 }
 
-static void golioth_on_message(struct golioth_client *client,
-			       struct coap_packet *rx)
-{
-	uint16_t payload_len;
-	const uint8_t *payload;
-	uint8_t type;
-
-	type = coap_header_get_type(rx);
-	payload = coap_packet_get_payload(rx, &payload_len);
-
-	if (!IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH) && payload) {
-		LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
-	}
-}
-
 static void golioth_on_connect(struct golioth_client *client)
 {
 	if (IS_ENABLED(CONFIG_GOLIOTH_SETTINGS)) {
@@ -80,7 +65,6 @@ void main(void)
 		net_connect();
 	}
 
-	client->on_message = golioth_on_message;
 	client->on_connect = golioth_on_connect;
 	golioth_system_client_start();
 

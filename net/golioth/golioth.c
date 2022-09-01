@@ -454,10 +454,6 @@ static int golioth_process_rx_data(struct golioth_client *client,
 		return err;
 	}
 
-	if (client->on_message) {
-		client->on_message(client, &client->rx_packet);
-	}
-
 	golioth_coap_req_process_rx(client, &client->rx_packet);
 
 	type = coap_header_get_type(&client->rx_packet);
