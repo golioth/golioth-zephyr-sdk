@@ -74,6 +74,7 @@ static int golioth_led_handle(const struct coap_packet *response,
 	uint16_t payload_len;
 	QCBORError qerr;
 	char name[5];
+	bool value;
 
 	payload.ptr = coap_packet_get_payload(response, &payload_len);
 	payload.len = payload_len;
@@ -148,11 +149,15 @@ static int golioth_led_handle(const struct coap_packet *response,
 		memcpy(name, decoded_item.label.string.ptr, decoded_item.label.string.len);
 		name[decoded_item.label.string.len] = '\0';
 
+		value = (decoded_item.uDataType == QCBOR_TYPE_TRUE);
+
+		LOG_INF("LED %s -> %d", name, (int) value);
+
 		/*
 		 * Switch on/off requested LED based on label (LED name/id) and
 		 * value (requested LED state).
 		 */
-		golioth_led_set_by_name(name, decoded_item.uDataType == QCBOR_TYPE_TRUE);
+		golioth_led_set_by_name(name, value);
 	}
 
 	QCBORDecode_ExitMap(&decode_ctx);
