@@ -10,6 +10,8 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 #include <net/golioth/fw.h>
 #include <net/golioth/system_client.h>
 #include <samples/common/wifi.h>
+#include <zephyr/net/net_if.h>
+#include <zephyr/net/dhcpv4.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -246,6 +248,9 @@ void main(void)
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");
 		wifi_connect();
+	}
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_DHCP_START)) {
+		net_dhcpv4_start(net_if_get_default());
 	}
 
 	client->on_connect = golioth_on_connect;
