@@ -11,6 +11,13 @@ menuconfig GOLIOTH_SAMPLES_COMMON
 
 if GOLIOTH_SAMPLES_COMMON
 
+config GOLIOTH_SAMPLE_DHCP_START
+	bool "DHCP for samples"
+	depends on NET_L2_ETHERNET
+	depends on NET_DHCPV4
+	help
+	  Obtain an IPv4 address from the DHCP server.
+
 config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
 	bool "Automatically load settings before main()"
 	depends on SETTINGS
@@ -58,13 +65,5 @@ config GOLIOTH_SAMPLE_WIFI_PSK
 	  unsecure (open) AP.
 
 endif # (GOLIOTH_SAMPLE_WIFI && !GOLIOTH_SAMPLE_WIFI_SETTINGS) || WIFI_ESP32
-
-config GOLIOTH_SAMPLE_DHCP_START
-	bool "DHCP for samples"
-	depends on NET_L2_ETHERNET
-	depends on NET_MGMT
-	depends on NET_DHCPV4
-	help
-	  Aquire an IP address from the DHCP server.
 
 endif # GOLIOTH_SAMPLES_COMMON

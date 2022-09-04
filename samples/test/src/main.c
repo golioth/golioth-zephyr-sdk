@@ -10,7 +10,7 @@ LOG_MODULE_REGISTER(test, LOG_LEVEL_DBG);
 #include <zephyr/ztest.h>
 
 #include <net/golioth/system_client.h>
-#include <samples/common/wifi.h>
+#include <samples/common/net_connect.h>
 
 struct test_golioth_fixture {
 };
@@ -22,9 +22,8 @@ K_SEM_DEFINE(_connected_sem, 0, 1);
 
 static void *test_golioth_suite_setup(void)
 {
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
-		LOG_INF("Connecting to WiFi");
-		wifi_connect();
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
+		net_connect();
 	}
 
 	return &_fixture;
