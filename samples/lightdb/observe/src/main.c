@@ -8,9 +8,7 @@
 LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 #include <net/golioth/system_client.h>
-#include <samples/common/wifi.h>
-#include <zephyr/net/net_if.h>
-#include <zephyr/net/dhcpv4.h>
+#include <samples/common/net_connect.h>
 #include <zephyr/net/coap.h>
 
 #include <stdlib.h>
@@ -98,12 +96,8 @@ void main(void)
 {
 	LOG_DBG("Start LightDB observe sample");
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
-		LOG_INF("Connecting to WiFi");
-		wifi_connect();
-	}
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_DHCP_START)) {
-		net_dhcpv4_start(net_if_get_default());
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
+		net_connect();
 	}
 
 	client->on_connect = golioth_on_connect;

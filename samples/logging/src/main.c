@@ -7,9 +7,7 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_logging, LOG_LEVEL_DBG);
 
-#include <samples/common/wifi.h>
-#include <zephyr/net/net_if.h>
-#include <zephyr/net/dhcpv4.h>
+#include <samples/common/net_connect.h>
 #include <net/golioth/system_client.h>
 #include <zephyr/net/coap.h>
 
@@ -53,12 +51,8 @@ void main(void)
 
 	LOG_DBG("Start Logging sample");
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
-		LOG_INF("Connecting to WiFi");
-		wifi_connect();
-	}
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_DHCP_START)) {
-		net_dhcpv4_start(net_if_get_default());
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
+		net_connect();
 	}
 
 	client->on_connect = golioth_on_connect;
