@@ -86,5 +86,15 @@ void main(void)
 		LOG_INF("After request (sync)");
 
 		k_sleep(K_SECONDS(5));
+
+#if 0
+		err = golioth_lightdb_get_auto(client, "counter", &counter);
+		if (err && err != -ERANGE) {
+			LOG_WRN("failed to get counter from LightDB: %d", err);
+		} else {
+			LOG_INF("Counter value: %d%s", (int) counter,
+				err == -ERANGE ? " (clamped)" : "");
+		}
+#endif
 	}
 }
