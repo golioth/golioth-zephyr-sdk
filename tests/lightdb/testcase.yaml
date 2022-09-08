@@ -1,0 +1,4 @@
+tests:
+  net.golioth.lightdb:
+    platform_allow: qemu_x86
+    tags: golioth net lightdb goliothd
