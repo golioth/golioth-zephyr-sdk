@@ -57,6 +57,7 @@ jobs:
   #  2. Has nrfjprog already installed
   #  3. Has an environment variable defined for the serial port: CI_NRF52840DK_PORT
   #  4. Has credentials defined in the file $HOME/credentials_nrf52840.yml
+  #  5. Has an environment variabled defined for the JTAG serial number of the nRF52.
   #
   # It is the responsibility of the self-hosted runner admin to ensure
   # these pre-conditions are met.
@@ -68,7 +69,7 @@ jobs:
   #   https://www.segger.com/downloads/jlink/
   #   https://www.nordicsemi.com/Products/Development-tools/nrf-command-line-tools/download
   #
-  # For item 3, this environment variable can be added to $HOME/actions-runner/runsvc.sh:
+  # For item 3, this environment variable can be added to $HOME/runner_env.sh:
   #   export CI_NRF52840DK_PORT=/dev/ttyACM0
   #
   # For item 4, the file needs to have contents like:
@@ -79,6 +80,11 @@ jobs:
   #   "golioth/psk-id": "device@project",
   #   "golioth/psk": "supersecret"
   # }
+  #
+  # For item 5, you can discover the serial number of the nRF52 using this command:
+  #   nrfjprog --ids
+  # Once you know the serial number, you can add this to $HOME/runner_env.sh:
+  #   export CI_NRF52840DK_SNR=723769314
   hw_flash_and_test:
     needs: build_for_hw_test
     runs-on: [self-hosted, has_nrf52840dk]
@@ -105,8 +111,9 @@ jobs:
       - name: Flash and Verify Test Results
         run: |
           cd samples/test
-          nrfjprog --program build/zephyr/zephyr.hex --sectoranduicrerase --verify -f NRF52 --snr $(nrfjprog --ids)
-          nrfjprog --pinresetenable -f NRF52 --snr $(nrfjprog --ids)
-          nrfjprog --pinreset -f NRF52 --snr $(nrfjprog --ids)
+          source $HOME/runner_env.sh
+          nrfjprog --program build/zephyr/zephyr.hex --sectoranduicrerase --verify -f NRF52 --snr $CI_NRF52840DK_SNR
+          nrfjprog --pinresetenable -f NRF52 --snr $CI_NRF52840DK_SNR
+          nrfjprog --pinreset -f NRF52 --snr $CI_NRF52840DK_SNR
           sleep 3
           python verify.py $CI_NRF52840DK_PORT
