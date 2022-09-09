@@ -5,7 +5,7 @@ from time import time
 import re
 import yaml
 
-def wait_for_regex_in_line(ser, regex, timeout_s=20, log=True):
+def wait_for_regex_in_line(ser, regex, timeout_s=200, log=True):
     start_time = time()
     while True:
         line = ser.readline().decode('utf-8', errors='replace').replace("\r\n", "")
@@ -19,9 +19,9 @@ def wait_for_regex_in_line(ser, regex, timeout_s=20, log=True):
 
 def set_setting(ser, key, value):
     ser.write('\r\n'.encode())
-    wait_for_regex_in_line(ser, 'uart:', log=False)
+    wait_for_regex_in_line(ser, 'uart:', log=True)
     ser.write('settings set {} {}\r\n'.format(key, value).encode())
-    wait_for_regex_in_line(ser, 'saved', log=False)
+    wait_for_regex_in_line(ser, 'saved', log=True)
 
 def set_credentials(ser):
     with open('credentials.yml', 'r') as f:
