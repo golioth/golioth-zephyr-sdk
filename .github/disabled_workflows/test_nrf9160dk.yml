@@ -11,7 +11,6 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
 
 jobs:
   build_for_hw_test:
@@ -118,3 +117,4 @@ jobs:
           nrfjprog --program build/zephyr/merged.hex --sectorerase --verify -f NRF91 --snr $CI_NRF9160DK_SNR
           nrfjprog --pinreset -f NRF91 --snr $CI_NRF9160DK_SNR
           python verify.py $CI_NRF9160DK_PORT
+          jjggj
