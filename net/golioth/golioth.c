@@ -520,17 +520,6 @@ static int golioth_recv(struct golioth_client *client, uint8_t *data,
 	return ret;
 }
 
-void golioth_blockwise_download_init(struct golioth_client *client,
-				     struct golioth_blockwise_download_ctx *ctx)
-{
-	ctx->client = client;
-	coap_block_transfer_init(&ctx->block_ctx,
-				 golioth_estimated_coap_block_size(client), 0);
-
-	sys_put_be32(sys_rand32_get(), &ctx->token[0]);
-	sys_put_be32(sys_rand32_get(), &ctx->token[4]);
-}
-
 int golioth_process_rx(struct golioth_client *client)
 {
 	int ret;
