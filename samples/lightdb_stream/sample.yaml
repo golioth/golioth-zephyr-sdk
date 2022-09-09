@@ -2,7 +2,7 @@ sample:
   description: Send data to Golioth LightDB Stream
   name: lightdb stream
 common:
-  harness: net
+  harness: pytest
   platform_allow: >
     esp32
     nrf52840dk_nrf52840
