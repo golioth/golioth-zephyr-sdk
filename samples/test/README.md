@@ -1,3 +1,5 @@
+Dummy test
+
 # samples/test
 
 Sample app that runs automated tests on the target hardware.
