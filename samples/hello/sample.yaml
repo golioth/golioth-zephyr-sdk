@@ -2,16 +2,23 @@ sample:
   description: Say Hello to Golioth server
   name: hello
 common:
-  harness: net
-  platform_allow: >
-    esp32
-    nrf52840dk_nrf52840
-    nrf9160dk_nrf9160_ns
-    qemu_x86
-  tags: golioth socket
+  harness: console
+  harness_config:
+    type: one_line
+    regex:
+      - "(.*)Client connected!"
+  tags: golioth socket goliothd
 tests:
-  sample.golioth.hello.psk: {}
+  sample.golioth.hello.psk.fast:
+    platform_allow: >
+      esp32
+      nrf52840dk_nrf52840
+      qemu_x86
+  sample.golioth.hello.psk.long_start:
+    platform_allow: nrf9160dk_nrf9160_ns
+    timeout: 120
   sample.golioth.hello.cert:
+    build_only: true
     extra_args: OVERLAY_CONFIG="overlay-auth-cert.conf"
     extra_configs:
       # Make it build by providing path that can be resolved
