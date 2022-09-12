@@ -57,6 +57,7 @@ jobs:
   #  2. Has installed JLink software
   #  3. Has an environment variable defined for the serial port: CI_MIMXRT1060_PORT
   #  4. Has credentials defined in the file $HOME/credentials_mimxrt1060.yml
+  #  5. Has an environment variabled defined for the JTAG serial number of the mimxrt1060_evkb.
   #
   # It is the responsibility of the self-hosted runner admin to ensure
   # these pre-conditions are met.
@@ -113,6 +114,6 @@ jobs:
           readDP 1
           q
           EOF
-          JLinkExe -nogui 1 -if swd -speed auto -device MIMXRT1062xxx6A -CommanderScript commander_script.jlink -nogui 1
+          JLinkExe -usb $CI_MIMXRT1060_SNR -nogui 1 -if swd -speed auto -device MIMXRT1062xxx6A -CommanderScript commander_script.jlink -nogui 1
           sleep 3
           python verify.py $CI_MIMXRT1060_PORT
