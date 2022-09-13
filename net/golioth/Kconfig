@@ -151,8 +151,7 @@ config GOLIOTH_SYSTEM_SERVER_HOST
 
 config GOLIOTH_SYSTEM_SERVER_PORT
 	int "Server Port"
-	default 5684 if NET_SOCKETS_SOCKOPT_TLS
-	default 5683
+	default 5684
 	help
 	  Defines port number of Golioth server.
 
