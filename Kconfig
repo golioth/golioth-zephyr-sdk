@@ -5,6 +5,8 @@
 
 menu "Golioth options"
 
+rsource "samples/common/Kconfig.defconfig"
+
 rsource "logging/Kconfig"
 rsource "net/Kconfig"
 rsource "samples/common/Kconfig"
