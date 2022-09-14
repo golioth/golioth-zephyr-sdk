@@ -28,8 +28,7 @@ static int cmd_settings_set(const struct shell *shell, size_t argc, char *argv[]
 	bool json_output;
 
 	if (argc < 3) {
-		shell_fprintf(shell, SHELL_WARNING,
-			      "Wrong number of arguments\n");
+		shell_warn(shell, "Wrong number of arguments");
 		shell_help(shell);
 		return -ENOEXEC;
 	}
@@ -47,18 +46,18 @@ static int cmd_settings_set(const struct shell *shell, size_t argc, char *argv[]
 
 	int err;
 
-	shell_fprintf(shell, SHELL_NORMAL, "Setting %s to %s\n", name, val);
+	shell_print(shell, "Setting %s to %s", name, val);
 
 #ifdef CONFIG_SETTINGS_RUNTIME
 	err = settings_runtime_set(name, val, val_len);
 	if (err) {
 		if (json_output) {
-			shell_fprintf(shell, SHELL_VT100_COLOR_RED,
+			shell_error(shell,
 				"{\"status\": \"failed\", "
-				"\"msg\": \"Failed to set runtime setting: %s:%s\"}\n", name, val);
+				"\"msg\": \"Failed to set runtime setting: %s:%s\"}", name, val);
 		} else {
-			shell_fprintf(shell, SHELL_ERROR,
-				      "Failed to set runtime setting: %s:%s\n", name, val);
+			shell_error(shell,
+				      "Failed to set runtime setting: %s:%s", name, val);
 		}
 
 		return -ENOEXEC;
@@ -68,24 +67,24 @@ static int cmd_settings_set(const struct shell *shell, size_t argc, char *argv[]
 	err = settings_save_one(name, val, val_len);
 	if (err) {
 		if (json_output) {
-			shell_fprintf(shell, SHELL_VT100_COLOR_RED,
+			shell_error(shell,
 				"{\"status\": \"failed\", "
-				"\"msg\": \"failed to save setting %s:%s\"}\n", name, val);
+				"\"msg\": \"failed to save setting %s:%s\"}", name, val);
 		} else {
-			shell_fprintf(shell, SHELL_ERROR,
-				      "Failed to save setting %s:%s\n", name, val);
+			shell_error(shell,
+				    "Failed to save setting %s:%s", name, val);
 		}
 
 		return -ENOEXEC;
 	}
 
 	if (json_output) {
-		shell_fprintf(shell, SHELL_VT100_COLOR_GREEN,
-			"{\"status\": \"success\", \"msg\": \"setting %s saved as %s\"}\n",
+		shell_print(shell,
+			"{\"status\": \"success\", \"msg\": \"setting %s saved as %s\"}",
 			name, val);
 	} else {
-		shell_fprintf(shell, SHELL_NORMAL,
-			      "Setting %s saved as %s\n", name, val);
+		shell_print(shell,
+			    "Setting %s saved as %s", name, val);
 	}
 
 	return 0;
@@ -111,9 +110,9 @@ static int settings_read_callback(const char *key,
 
 	if (num_read_bytes < 0) {
 		if (params->json_output) {
-			shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_RED,
+			shell_error(params->shell_ptr,
 				"{\"status\": \"failed\", "
-				"\"msg\": \"failed to read value: %d\"}\n",
+				"\"msg\": \"failed to read value: %d\"}",
 				(int)num_read_bytes);
 		} else {
 			shell_error(params->shell_ptr, "Failed to read value: %d",
@@ -127,10 +126,10 @@ static int settings_read_callback(const char *key,
 	buffer[num_read_bytes] = 0x00;
 
 	if (params->json_output) {
-		shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN,
-			"{\"status\": \"success\", \"value\": \"%s\"}\n", buffer);
+		shell_print(params->shell_ptr,
+			"{\"status\": \"success\", \"value\": \"%s\"}", buffer);
 	} else {
-		shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN, "%s\n", buffer);
+		shell_print(params->shell_ptr, "%s", buffer);
 	}
 
 	if (len > SETTINGS_MAX_VAL_LEN) {
@@ -165,16 +164,16 @@ static int cmd_settings_get(const struct shell *shell, size_t argc,
 
 	if (err) {
 		if (json_output) {
-			shell_fprintf(shell, SHELL_VT100_COLOR_RED,
+			shell_error(shell,
 				"{\"status\": \"failed\", "
-				"\"msg\": \"failed to load settings: %d\"}\n", err);
+				"\"msg\": \"failed to load settings: %d\"}", err);
 		} else {
 			shell_error(shell, "Failed to load settings: %d", err);
 		}
 	} else if (!params.value_found) {
 		if (json_output) {
-			shell_fprintf(shell, SHELL_VT100_COLOR_RED,
-				"{\"status\": \"failed\", \"msg\": \"setting not found\"}\n");
+			shell_error(shell,
+				"{\"status\": \"failed\", \"msg\": \"setting not found\"}");
 		} else {
 			shell_error(shell, "Setting not found");
 		}
@@ -191,7 +190,7 @@ static int settings_list_callback(const char *key,
 {
 	struct settings_list_callback_params *params = param;
 
-	shell_fprintf(params->shell_ptr, SHELL_VT100_COLOR_GREEN, "%s\n", key);
+	shell_print(params->shell_ptr, "%s", key);
 
 	return 0;
 }
