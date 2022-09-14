@@ -137,7 +137,13 @@ static int golioth_desired_update(const struct coap_packet *update,
 	err = golioth_fw_desired_parse(payload, payload_len,
 				       dfu->version, &version_len,
 				       uri, &uri_len);
-	if (err) {
+	switch (err) {
+	case 0:
+		break;
+	case -ENOENT:
+		LOG_INF("No release rolled out yet");
+		return 0;
+	default:
 		LOG_ERR("Failed to parse desired version: %d", err);
 		return err;
 	}

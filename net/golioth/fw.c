@@ -97,7 +97,14 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
 				   &manifest_sequence_number);
 
 	qerr = QCBORDecode_GetError(&decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
+	switch (qerr) {
+	case QCBOR_SUCCESS:
+		break;
+	case QCBOR_ERR_LABEL_NOT_FOUND:
+		LOG_DBG("No sequence-number found in manifest");
+		err = -ENOENT;
+		goto exit_root_map;
+	default:
 		LOG_ERR("Failed to get manifest bstr: %d (%s)", qerr, qcbor_err_to_str(qerr));
 		err = qcbor_error_to_posix(qerr);
 		goto exit_root_map;
