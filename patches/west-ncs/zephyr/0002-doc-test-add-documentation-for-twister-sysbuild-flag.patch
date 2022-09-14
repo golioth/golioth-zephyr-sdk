@@ -1,0 +1,33 @@
+From b3bee76eded0e1b3c2d773c39341966348eb9a87 Mon Sep 17 00:00:00 2001
+From: Daniel DeGrasse <daniel.degrasse@nxp.com>
+Date: Thu, 25 Aug 2022 13:24:50 -0500
+Subject: [PATCH] doc: test: add documentation for twister sysbuild flag
+
+Add sysbuild flag to twister supported options, with documentation on
+how Kconfig and devicetree will be parsed
+
+Signed-off-by: Daniel DeGrasse <daniel.degrasse@nxp.com>
+---
+ doc/develop/test/twister.rst | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/doc/develop/test/twister.rst b/doc/develop/test/twister.rst
+index fb84fb9f3b..06135e7211 100644
+--- a/doc/develop/test/twister.rst
++++ b/doc/develop/test/twister.rst
+@@ -356,6 +356,12 @@ harness_config: <harness configuration options>
+     ordered: <True|False> (default False)
+         Check the regular expression strings in orderly or randomly fashion
+ 
++    sysbuild: <True|False> (default False)
++        Build the project using sysbuild infrastructure. Only the main project's
++        generated devicetree and Kconfig will be used for filtering tests.
++        on device testing must use the hardware map, or west flash to load
++        the images onto the target.
++
+     repeat: <integer>
+         Number of times to validate the repeated regex expression
+ 
+-- 
+2.37.3
+
