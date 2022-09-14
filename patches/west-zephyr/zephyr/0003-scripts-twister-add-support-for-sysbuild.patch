@@ -1,0 +1,155 @@
+From d1a5494238ccb0dd976ce64b40293c5dd1de782d Mon Sep 17 00:00:00 2001
+From: Daniel DeGrasse <daniel.degrasse@nxp.com>
+Date: Wed, 24 Aug 2022 18:37:06 -0500
+Subject: [PATCH] scripts: twister: add support for sysbuild
+
+Add support for building with sysbuild using twister, via the "sysbuild"
+yaml property in testsuites. This will currently disable Kconfig and
+devicetree filtering.
+
+Signed-off-by: Daniel DeGrasse <daniel.degrasse@nxp.com>
+[Marcin: use -S{canonical_zephyr_base}/share/sysbuild]
+Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
+---
+ .../pylib/twister/twisterlib/config_parser.py |  3 +-
+ scripts/pylib/twister/twisterlib/runner.py    | 36 ++++++++++++++++---
+ scripts/schemas/twister/testsuite-schema.yaml |  6 ++++
+ scripts/twister                               |  5 +++
+ 4 files changed, 45 insertions(+), 5 deletions(-)
+
+diff --git a/scripts/pylib/twister/twisterlib/config_parser.py b/scripts/pylib/twister/twisterlib/config_parser.py
+index 4edc3cbd78..612ce22634 100644
+--- a/scripts/pylib/twister/twisterlib/config_parser.py
++++ b/scripts/pylib/twister/twisterlib/config_parser.py
+@@ -36,7 +36,8 @@ class TwisterConfigParser:
+                        "filter": {"type": "str"},
+                        "harness": {"type": "str", "default": "test"},
+                        "harness_config": {"type": "map", "default": {}},
+-                       "seed": {"type": "int", "default": 0}
++                       "seed": {"type": "int", "default": 0},
++                       "sysbuild": {"type": "bool", "default": False}
+                        }
+ 
+     def __init__(self, filename, schema):
+diff --git a/scripts/pylib/twister/twisterlib/runner.py b/scripts/pylib/twister/twisterlib/runner.py
+index 9c23c9a3f9..130f67c7a6 100644
+--- a/scripts/pylib/twister/twisterlib/runner.py
++++ b/scripts/pylib/twister/twisterlib/runner.py
+@@ -14,6 +14,7 @@ import queue
+ import time
+ import multiprocessing
+ import traceback
++import scl
+ from colorama import Fore
+ from multiprocessing import Lock, Process, Value
+ from multiprocessing.managers import BaseManager
+@@ -249,7 +250,6 @@ class CMake:
+         logger.debug("Running cmake on %s for %s" % (self.source_dir, self.platform.name))
+         cmake_args = [
+             f'-B{self.build_dir}',
+-            f'-S{self.source_dir}',
+             f'-DTC_RUNID={self.instance.run_id}',
+             f'-DEXTRA_CFLAGS={cflags}',
+             f'-DEXTRA_AFLAGS={aflags}',
+@@ -258,6 +258,18 @@ class CMake:
+             f'-G{self.env.generator}'
+         ]
+ 
++        if self.testsuite.sysbuild:
++            logger.debug("Building %s using sysbuild" % (self.source_dir))
++            source_args = [
++                f'-S{canonical_zephyr_base}/share/sysbuild',
++                f'-DAPP_DIR={self.source_dir}'
++            ]
++        else:
++            source_args = [
++                f'-S{self.source_dir}'
++            ]
++        cmake_args.extend(source_args)
++
+         cmake_args.extend(args)
+ 
+         cmake_opts = ['-DBOARD={}'.format(self.platform.name)]
+@@ -315,8 +327,24 @@ class FilterBuilder(CMake):
+         if self.platform.name == "unit_testing":
+             return {}
+ 
+-        cmake_cache_path = os.path.join(self.build_dir, "CMakeCache.txt")
+-        defconfig_path = os.path.join(self.build_dir, "zephyr", ".config")
++        if self.testsuite.sysbuild:
++            # We must parse the domains.yaml file to determine the
++            # default sysbuild application
++            domain_path = os.path.join(self.build_dir, "domains.yaml")
++            domain_yaml = scl.yaml_load(domain_path)
++            logger.debug("Loaded sysbuild domain data from %s" % (domain_path))
++            default_domain = domain_yaml['default']
++            for domain in domain_yaml['domains']:
++                if domain['name'] == default_domain:
++                    domain_build = domain['build_dir']
++            cmake_cache_path = os.path.join(domain_build, "CMakeCache.txt")
++            defconfig_path = os.path.join(domain_build, "zephyr", ".config")
++            edt_pickle = os.path.join(domain_build, "zephyr", "edt.pickle")
++        else:
++            cmake_cache_path = os.path.join(self.build_dir, "CMakeCache.txt")
++            defconfig_path = os.path.join(self.build_dir, "zephyr", ".config")
++            edt_pickle = os.path.join(self.build_dir, "zephyr", "edt.pickle")
++
+ 
+         with open(defconfig_path, "r") as fp:
+             defconfig = {}
+@@ -349,7 +377,6 @@ class FilterBuilder(CMake):
+         filter_data.update(self.defconfig)
+         filter_data.update(self.cmake_cache)
+ 
+-        edt_pickle = os.path.join(self.build_dir, "zephyr", "edt.pickle")
+         if self.testsuite and self.testsuite.filter:
+             try:
+                 if os.path.exists(edt_pickle):
+@@ -364,6 +391,7 @@ class FilterBuilder(CMake):
+                     "Failed processing %s\n" % self.testsuite.yamlfile)
+                 raise se
+ 
++
+             if not res:
+                 return {os.path.join(self.platform.name, self.testsuite.name): True}
+             else:
+diff --git a/scripts/schemas/twister/testsuite-schema.yaml b/scripts/schemas/twister/testsuite-schema.yaml
+index ba7938092d..bf7164ffa8 100644
+--- a/scripts/schemas/twister/testsuite-schema.yaml
++++ b/scripts/schemas/twister/testsuite-schema.yaml
+@@ -130,6 +130,9 @@ mapping:
+       "slow":
+         type: bool
+         required: false
++      "sysbuild":
++        type: bool
++        required: false
+   # The sample descriptor, if present
+   "sample":
+     type: map
+@@ -278,3 +281,6 @@ mapping:
+           "slow":
+             type: bool
+             required: false
++          "sysbuild":
++            type: bool
++            required: false
+diff --git a/scripts/twister b/scripts/twister
+index 928cfbd0f8..79fbf2fb90 100755
+--- a/scripts/twister
++++ b/scripts/twister
+@@ -44,6 +44,11 @@ pairs:
+     Extra configuration options to be merged with a master prj.conf
+     when building or running the test case.
+ 
++  sysbuild: <True|False> (default False)
++    If true, build the sample using the sysbuild infrastructure. Filtering
++    will only be enabled for the main project, and is not supported for
++    other projects included by sysbuild.
++
+   build_only: <True|False> (default False)
+     If true, don't try to run the test even if the selected platform
+     supports it.
+-- 
+2.37.3
+
