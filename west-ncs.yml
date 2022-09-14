@@ -11,3 +11,6 @@ manifest:
     path: modules/lib/golioth
     west-commands: scripts/west-commands.yml
     import: west-external.yml
+    userdata:
+      patches_dirs:
+        - patches/west-ncs
