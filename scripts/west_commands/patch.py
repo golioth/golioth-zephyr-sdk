@@ -25,20 +25,33 @@ class Patch(_ProjectCommand):
         return parser
 
     def do_run(self, args, ignored):
-        manifest_project_path = Path(self.manifest.projects[MANIFEST_PROJECT_INDEX].abspath)
+        manifest_project = self.manifest.projects[MANIFEST_PROJECT_INDEX]
+        manifest_project_path = Path(manifest_project.abspath)
         am = 'apply' if args.apply else 'am --keep-cr'
         failed = []
         for project in self._cloned_projects(args):
-            patches_path = manifest_project_path / 'patches' / project.name
-            if not patches_path.exists():
+            patches = []
+
+            try:
+                patches_dirs = manifest_project.userdata['patches_dirs']
+            except (TypeError, AttributeError, KeyError):
+                patches_dirs = ['patches']
+
+            for patches_dir in patches_dirs:
+                patches_path = manifest_project_path / patches_dir / project.name
+                if not patches_path.exists():
+                    continue
+
+                patches += sorted(filter(Path.is_file, patches_path.glob('*.patch')))
+
+            if not patches:
                 continue
 
             log.banner(f'patching {project.name_and_path}):')
-            patches = filter(Path.is_file, patches_path.glob('*.patch'))
 
-            for patch in sorted(patches):
+            for patch in patches:
                 try:
-                    log.inf(f'git {am} {patch.name}')
+                    log.inf(f'git {am} {patch.relative_to(manifest_project_path)}')
                     project.git(am.split() + [str(patch)])
                 except subprocess.CalledProcessError:
                     failed.append(project)
