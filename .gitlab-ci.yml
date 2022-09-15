@@ -119,8 +119,18 @@ pre-commit:
 twister:
   extends: .twister
   script:
+    # Build and run all non-goliothd samples/tests
     - >
       zephyr/scripts/twister
+      -e goliothd
+      -p nrf52840dk_nrf52840
+      -p qemu_x86
+      -o reports
+      -T modules/lib/golioth
+    # Build-only all goliothd samples/tests
+    - >
+      zephyr/scripts/twister
+      -t goliothd -b
       -p nrf52840dk_nrf52840
       -p qemu_x86
       -o reports

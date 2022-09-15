@@ -34,11 +34,22 @@ jobs:
           west update -o=--depth=1 -n
           west patch --apply
 
-      - name: Run twister
+      - name: Run twister (non goliothd)
         run: >
           zephyr/scripts/twister
+          -e goliothd
           -p nrf52840dk_nrf52840
           -p qemu_x86
+          -o reports
+          -T modules/lib/golioth
+
+      - name: Run twister (goliothd)
+        run: >
+          zephyr/scripts/twister
+          -t goliothd -b
+          -p nrf52840dk_nrf52840
+          -p qemu_x86
+          -o reports
           -T modules/lib/golioth
 
       - name: Upload artifacts
