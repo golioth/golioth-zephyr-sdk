@@ -116,6 +116,67 @@ pre-commit:
     reports:
       junit: reports/twister.xml
 
+#
+# Job depends on following environment variables:
+# - GOLIOTH_PROJECT_ID: used by 'goliothctl' (in this job script)
+# - GOLIOTH_DEVICE_NAME: used by 'goliothctl' (in tests scripts)
+#
+# - GOLIOTH_SYSTEM_SERVER_HOST: used by 'goliothctl' (in this job script) and by device firmware
+# - GOLIOTH_SYSTEM_SERVER_API_PORT: used by 'goliothctl' (in this job script)
+#
+# - GOLIOTH_SYSTEM_CLIENT_PSK_ID: used by device firmware
+# - GOLIOTH_SYSTEM_CLIENT_PSK: used by device firmware
+#
+# It is also assumed that a self-hosted goliothd is used and there is no authentication required by
+# 'goliothctl' at api URL http://${GOLIOTH_SYSTEM_SERVER_HOST}:${GOLIOTH_SYSTEM_SERVER_API_PORT}.
+#
+# Project with id ${GOLIOTH_PROJECT_ID} needs to exist and device with ${GOLIOTH_DEVICE_NAME} name
+# needs to be provisioned with ${GOLIOTH_SYSTEM_CLIENT_PSK_ID} and ${GOLIOTH_SYSTEM_CLIENT_PSK} as
+# DTLS credentials.
+#
+twister-qemu-goliothd:
+  extends: .twister
+  tags: [dev-tun]
+  resource_group: goliothd
+  script:
+    # Download 'goliothctl' and expose to $PATH
+    - mkdir -p bin
+    - >
+      wget https://storage.googleapis.com/golioth-cli-releases/goliothctl/latest/goliothctl_latest_linux_64bit.tar.gz
+      -O goliothctl.tar.gz
+    - tar -xzf goliothctl.tar.gz -C bin goliothctl
+    - PATH=$PWD/bin:$PATH
+    # Login to goliothd
+    - >
+      goliothctl --apiUrl "http://${GOLIOTH_SYSTEM_SERVER_HOST}:${GOLIOTH_SYSTEM_SERVER_API_PORT}"
+      config set projectId ${GOLIOTH_PROJECT_ID}
+    - goliothctl project list
+    # Install samples/tests requirements
+    - pip3 install -r modules/lib/golioth/scripts/requirements-tests.txt
+    # Start QEMU networking utilities
+    - make -C tools/net-tools tunslip6
+    - tools/net-tools/loop-socat.sh &
+    - sleep 1
+    - sudo tools/net-tools/loop-slip-tap.sh &
+    - sleep 1
+    # Setup port forwarding for external network access and start network traffic recording
+    - apt-get update && apt-get install -y iptables tshark
+    - modules/lib/golioth/scripts/nat_config.py tap0
+    - mkdir -p reports
+    - tshark -f 'port 5684' -w reports/traffic.pcapng &
+    # Run tests
+    - >
+      zephyr/scripts/twister
+      -vvv
+      -t goliothd
+      -j 1
+      -p qemu_x86
+      -o reports
+      -T modules/lib/golioth
+  artifacts:
+    reports:
+      junit: reports/twister_report.xml
+
 twister:
   extends: .twister
   script:
