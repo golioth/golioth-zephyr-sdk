@@ -67,7 +67,7 @@ void main(void)
 		func_2(counter);
 		LOG_WRN("Warn: %d", counter);
 		LOG_ERR("Err: %d", counter);
-		LOG_HEXDUMP_INF(&counter, sizeof(counter), "Counter hexdump");
+		LOG_HEXDUMP_INF(&(uint32_t){sys_cpu_to_le32(counter)}, 4, "Counter hexdump");
 
 		counter++;
 
