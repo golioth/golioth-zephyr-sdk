@@ -5,6 +5,7 @@ common:
   harness: net
   platform_allow: >
     esp32
+    mimxrt1060_evkb
     nrf52840dk_nrf52840
     nrf9160dk_nrf9160_ns
     qemu_x86

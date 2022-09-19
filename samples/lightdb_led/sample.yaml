@@ -8,6 +8,7 @@ tests:
   sample.golioth.lightdb_led.fast:
     platform_allow: >
       esp32
+      mimxrt1060_evkb
       nrf52840dk_nrf52840
       qemu_x86
     extra_configs:
