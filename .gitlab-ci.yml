@@ -1,4 +1,4 @@
-image: zephyrprojectrtos/ci:v0.23.3
+image: zephyrprojectrtos/ci:v0.24.2
 
 variables:
   WEST_MANIFEST: west-zephyr.yml
@@ -139,7 +139,7 @@ twister:
 twister-esp:
   extends: .twister
   script:
-    - west espressif update
+    - west blobs fetch hal_espressif
     - >
       zephyr/scripts/twister
       -p esp32
@@ -148,6 +148,7 @@ twister-esp:
 
 twister-ncs:
   extends: .twister
+  image: zephyrprojectrtos/ci:v0.23.3
   variables:
     WEST_MANIFEST: west-ncs.yml
   script:
