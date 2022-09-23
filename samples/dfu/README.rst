@@ -138,25 +138,6 @@ sample application (i.e., ``samples/dfu``) and type:
 
    $ west build -b nrf52840dk_nrf52840 samples/dfu
 
-ESP32
-~~~~~
-
-Configure the following Kconfig options based on your WiFi AP credentials
-by adding these lines to configuration file (e.g. ``prj.conf`` or
-``board/esp32.conf``):
-
-.. code-block:: cfg
-
-   CONFIG_GOLIOTH_SAMPLE_WIFI_SSID="my-wifi"
-   CONFIG_GOLIOTH_SAMPLE_WIFI_PSK="my-psk"
-
-On your host computer open a terminal window, locate the source code of this
-sample application (i.e., ``samples/dfu``) and type:
-
-.. code-block:: console
-
-   $ west build -b esp32 samples/dfu
-
 Signing the sample image
 ========================
 
@@ -218,7 +199,8 @@ slot (primary area):
 Configure credentials
 =====================
 
-(``nRF52840 DK + ESP32-WROOM-32`` only) Configure WiFi SSID and PSK using the device shell:
+(``nRF52840 DK + ESP32-WROOM-32`` and ``ESP32`` only) Configure WiFi SSID and PSK using the device
+shell:
 
 .. code-block:: console
 
