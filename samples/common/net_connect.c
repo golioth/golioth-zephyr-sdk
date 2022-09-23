@@ -14,13 +14,15 @@ LOG_MODULE_REGISTER(golioth_samples, LOG_LEVEL_DBG);
 
 void net_connect(void)
 {
+	struct net_if *iface = net_if_get_default();
+
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_WIFI)) {
 		LOG_INF("Connecting to WiFi");
-		wifi_connect();
+		wifi_connect(iface);
 	}
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_DHCP_START)) {
 		LOG_INF("Starting DHCP to obtain IP address");
-		net_dhcpv4_start(net_if_get_default());
+		net_dhcpv4_start(iface);
 	}
 }
