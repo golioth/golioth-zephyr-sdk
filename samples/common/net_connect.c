@@ -62,6 +62,13 @@ static void wait_for_iface_up(struct net_if *iface)
 	}
 }
 
+static void wait_for_dhcp_bound(struct net_if *iface)
+{
+	(void)net_mgmt_event_wait_on_iface(iface, NET_EVENT_IPV4_DHCP_BOUND,
+					   NULL, NULL, NULL,
+					   K_FOREVER);
+}
+
 void net_connect(void)
 {
 	struct net_if *iface = net_if_get_default();
@@ -74,8 +81,9 @@ void net_connect(void)
 		wifi_connect(iface);
 	}
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_DHCP_START)) {
+	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLE_DHCP_BIND)) {
 		LOG_INF("Starting DHCP to obtain IP address");
 		net_dhcpv4_start(iface);
+		wait_for_dhcp_bound(iface);
 	}
 }
