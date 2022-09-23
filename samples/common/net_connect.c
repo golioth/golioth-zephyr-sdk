@@ -55,6 +55,16 @@ static void wait_for_iface_up_poll(struct net_if *iface)
 
 static void wait_for_iface_up(struct net_if *iface)
 {
+	if (IS_ENABLED(CONFIG_WIFI_ESP32)) {
+		/*
+		 * Workaround for ESP32 WiFi interface being always UP (even though it is not ready
+		 * to handle any requests).
+		 *
+		 * See https://github.com/zephyrproject-rtos/zephyr/pull/50597
+		 */
+		k_sleep(K_MSEC(100));
+	}
+
 	if (IS_ENABLED(CONFIG_NET_MGMT_EVENT)) {
 		wait_for_iface_up_event(iface);
 	} else {
