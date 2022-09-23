@@ -7,13 +7,15 @@
 #ifndef __GOLIOTH_INCLUDE_GOLIOTH_WIFI_H__
 #define __GOLIOTH_INCLUDE_GOLIOTH_WIFI_H__
 
+#include <zephyr/net/net_if.h>
+
 /**
  * @defgroup wifi Golioth Wifi
  * @ingroup net
  * @{
  */
 
-void wifi_connect(void);
+void wifi_connect(struct net_if *iface);
 
 /** @} */
 

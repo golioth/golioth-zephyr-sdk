@@ -113,7 +113,7 @@ static size_t wifi_psk_len = sizeof(CONFIG_GOLIOTH_SAMPLE_WIFI_PSK) - 1;
 
 #endif /* defined(CONFIG_GOLIOTH_SAMPLE_WIFI_SETTINGS) */
 
-void wifi_connect(void)
+void wifi_connect(struct net_if *iface)
 {
 	struct wifi_connect_req_params params = {
 		.ssid = wifi_ssid,
@@ -136,7 +136,7 @@ void wifi_connect(void)
 	net_mgmt_add_event_callback(&wifi.wifi_mgmt_cb);
 
 	while (attempts--) {
-		err = net_mgmt(NET_REQUEST_WIFI_CONNECT, net_if_get_default(),
+		err = net_mgmt(NET_REQUEST_WIFI_CONNECT, iface,
 			       &params, sizeof(params));
 		if (err == -EALREADY) {
 			LOG_INF("Already connected to WiFi");
