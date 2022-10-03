@@ -1,0 +1,1 @@
+zephyr_library_sources_ifdef(CONFIG_NET_SOCKETS_OFFLOAD_POLL_WRAPPER sockets_offload_poll_wrapper.c)
