@@ -29,8 +29,11 @@
  * Example settings response from device:
  *
  * {
- *   "error_code": 0 // Define error codes
- *   "version": 1652109801583 // Report 0 for errors or ignored for errors
+ *   "version": 1652109801583 // timestamp, copied from request
+ *   "errors": [ // if no errors, then omit
+ *      { "setting_key": "string", "error_code": integer, "details": "string" },
+ *      ...
+ *   ]
  * }
  */
 
@@ -40,7 +43,14 @@ LOG_MODULE_DECLARE(golioth);
 #define GOLIOTH_SETTINGS_PATH ".c"
 #define GOLIOTH_SETTINGS_STATUS_PATH ".c/status"
 #define GOLIOTH_SETTINGS_MAX_NAME_LEN 63 /* not including NULL */
-#define GOLIOTH_SETTINGS_MAX_RESPONSE_LEN 64
+#define GOLIOTH_SETTINGS_MAX_RESPONSE_LEN 256
+
+struct settings_response {
+	QCBOREncodeContext encode_ctx;
+	UsefulBuf useful_buf;
+	uint8_t buf[GOLIOTH_SETTINGS_MAX_RESPONSE_LEN];
+	size_t num_errors;
+};
 
 static int send_coap_response(struct golioth_client *client,
 			      uint8_t *coap_payload,
@@ -79,31 +89,58 @@ static int send_coap_response(struct golioth_client *client,
 	return err;
 }
 
-static int send_status_report(struct golioth_client *client,
-			      int64_t version,
-			      enum golioth_settings_status status)
+static void init_response(struct settings_response *response, int64_t version)
 {
-	uint8_t response_buf[GOLIOTH_SETTINGS_MAX_RESPONSE_LEN];
+	memset(response, 0, sizeof(*response));
+	response->useful_buf = (UsefulBuf){ response->buf, sizeof(response->buf) };
+	QCBOREncode_Init(&response->encode_ctx, response->useful_buf);
+
+	/* Initialize the map and add the "version" */
+	QCBOREncode_OpenMap(&response->encode_ctx);
+	QCBOREncode_AddInt64ToMap(&response->encode_ctx, "version", version);
+}
+
+static void add_error_to_response(struct settings_response *response,
+				  const char *key,
+				  enum golioth_settings_status code)
+{
+	if (response->num_errors == 0) {
+		QCBOREncode_OpenArrayInMap(&response->encode_ctx, "errors");
+	}
+
+	QCBOREncode_OpenMap(&response->encode_ctx);
+	QCBOREncode_AddSZStringToMap(&response->encode_ctx, "setting_key", key);
+	QCBOREncode_AddInt64ToMap(&response->encode_ctx, "error_code", code);
+	QCBOREncode_CloseMap(&response->encode_ctx);
+
+	response->num_errors++;
+}
+
+static int finalize_and_send_response(struct golioth_client *client,
+				      struct settings_response *response)
+{
+	/*
+	 * If there were errors, then the "errors" array is still open,
+	 * so we need to close it.
+	 */
+	if (response->num_errors > 0) {
+		QCBOREncode_CloseArray(&response->encode_ctx);
+	}
+
+	/* Close the root map */
+	QCBOREncode_CloseMap(&response->encode_ctx);
+
 	size_t response_len;
-	QCBOREncodeContext encode_ctx;
-	UsefulBuf response_usefulbuf = { response_buf, sizeof(response_buf) };
-
-	QCBOREncode_Init(&encode_ctx, response_usefulbuf);
-	QCBOREncode_OpenMap(&encode_ctx);
-	QCBOREncode_AddInt64ToMap(&encode_ctx, "version", version);
-	QCBOREncode_AddInt64ToMap(&encode_ctx, "error_code", status);
-	QCBOREncode_CloseMap(&encode_ctx);
-
-	QCBORError qerr = QCBOREncode_FinishGetSize(&encode_ctx, &response_len);
+	QCBORError qerr = QCBOREncode_FinishGetSize(&response->encode_ctx, &response_len);
 
 	if (qerr != QCBOR_SUCCESS) {
 		LOG_ERR("QCBOREncode_FinishGetSize error: %d (%s)", qerr, qcbor_err_to_str(qerr));
 		return qcbor_error_to_posix(qerr);
 	}
 
-	LOG_HEXDUMP_DBG(response_buf, response_len, "Response");
+	LOG_HEXDUMP_DBG(response->buf, response_len, "Response");
 
-	return send_coap_response(client, response_buf, response_len);
+	return send_coap_response(client, response->buf, response_len);
 }
 
 static int on_setting(const struct coap_packet *response,
@@ -116,7 +153,7 @@ static int on_setting(const struct coap_packet *response,
 	uint16_t payload_len;
 	const uint8_t *payload = coap_packet_get_payload(response, &payload_len);
 
-	LOG_HEXDUMP_INF(payload, payload_len, "Payload");
+	LOG_HEXDUMP_DBG(payload, payload_len, "Payload");
 
 	if (payload_len == 3 && payload[1] == 'O' && payload[2] == 'K') {
 		/* Ignore "OK" response received after observing */
@@ -143,6 +180,10 @@ static int on_setting(const struct coap_packet *response,
 
 	QCBORDecode_EnterMapFromMapSZ(&decode_ctx, "settings");
 
+	struct settings_response settings_response;
+
+	init_response(&settings_response, version);
+
 	/*
 	 * We don't know how many items are in the settings map, so we will
 	 * iterate until we get an error from QCBOR
@@ -150,7 +191,6 @@ static int on_setting(const struct coap_packet *response,
 	qerr = QCBORDecode_GetNext(&decode_ctx, &decoded_item);
 
 	bool has_more_settings = (qerr == QCBOR_SUCCESS);
-	enum golioth_settings_status cumulative_status = GOLIOTH_SETTINGS_SUCCESS;
 
 	while (has_more_settings) {
 		/* Handle item */
@@ -189,6 +229,9 @@ static int on_setting(const struct coap_packet *response,
 		} else {
 			LOG_WRN("Unrecognized data type: %d", data_type);
 			data_type_valid = false;
+			add_error_to_response(&settings_response,
+					      key,
+					      GOLIOTH_SETTINGS_VALUE_FORMAT_NOT_VALID);
 		}
 
 		if (data_type_valid) {
@@ -196,7 +239,7 @@ static int on_setting(const struct coap_packet *response,
 				client->settings.callback(key, &value);
 
 			if (setting_status != GOLIOTH_SETTINGS_SUCCESS) {
-				cumulative_status = setting_status;
+				add_error_to_response(&settings_response, key, setting_status);
 			}
 		}
 
@@ -209,7 +252,7 @@ static int on_setting(const struct coap_packet *response,
 	QCBORDecode_ExitMap(&decode_ctx); /* root */
 	QCBORDecode_Finish(&decode_ctx);
 
-	return send_status_report(client, version, cumulative_status);
+	return finalize_and_send_response(client, &settings_response);
 }
 
 static int golioth_settings_observe(struct golioth_client *client)
