@@ -34,10 +34,15 @@ jobs:
           west update -o=--depth=1 -n
           west patch --apply
 
+      - name: Download binary blobs
+        run: |
+          west blobs fetch hal_espressif
+
       - name: Run twister (non goliothd)
         run: >
           zephyr/scripts/twister
           -e goliothd
+          -p esp32
           -p nrf52840dk_nrf52840
           -p qemu_x86
           -o reports
@@ -47,6 +52,7 @@ jobs:
         run: >
           zephyr/scripts/twister
           -t goliothd -b
+          -p esp32
           -p nrf52840dk_nrf52840
           -p qemu_x86
           -o reports
