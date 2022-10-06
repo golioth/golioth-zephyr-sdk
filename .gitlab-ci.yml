@@ -180,10 +180,12 @@ twister-qemu-goliothd:
 twister:
   extends: .twister
   script:
+    - west blobs fetch hal_espressif
     # Build and run all non-goliothd samples/tests
     - >
       zephyr/scripts/twister
       -e goliothd
+      -p esp32
       -p nrf52840dk_nrf52840
       -p qemu_x86
       -o reports
@@ -192,18 +194,9 @@ twister:
     - >
       zephyr/scripts/twister
       -t goliothd -b
+      -p esp32
       -p nrf52840dk_nrf52840
       -p qemu_x86
-      -o reports
-      -T modules/lib/golioth
-
-twister-esp:
-  extends: .twister
-  script:
-    - west blobs fetch hal_espressif
-    - >
-      zephyr/scripts/twister
-      -p esp32
       -o reports
       -T modules/lib/golioth
 
