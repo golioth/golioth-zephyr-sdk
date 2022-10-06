@@ -16,9 +16,6 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/atomic.h>
 
-#define USE_EVENTFD							\
-	IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_CLIENT_TIMEOUT_USING_EVENTFD)
-
 #define RX_BUFFER_SIZE		CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 
 #ifdef CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID
@@ -99,17 +96,13 @@ static atomic_t flags;
 static inline void client_request_reconnect(void)
 {
 	if (!atomic_test_and_set_bit(&flags, FLAG_RECONNECT)) {
-		if (USE_EVENTFD) {
-			eventfd_write(fds[POLLFD_EVENT].fd, 1);
-		}
+		eventfd_write(fds[POLLFD_EVENT].fd, 1);
 	}
 }
 
 static inline void client_notify_timeout(void)
 {
-	if (USE_EVENTFD) {
-		eventfd_write(fds[POLLFD_EVENT].fd, 1);
-	}
+	eventfd_write(fds[POLLFD_EVENT].fd, 1);
 }
 
 static void eventfd_timeout_handle(struct k_work *work)
@@ -247,10 +240,8 @@ static int client_initialize(struct golioth_client *client)
 		return err;
 	}
 
-	if (USE_EVENTFD) {
-		fds[POLLFD_EVENT].fd = eventfd(0, EFD_NONBLOCK);
-		fds[POLLFD_EVENT].events = ZSOCK_POLLIN;
-	}
+	fds[POLLFD_EVENT].fd = eventfd(0, EFD_NONBLOCK);
+	fds[POLLFD_EVENT].events = ZSOCK_POLLIN;
 
 	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
 		log_backend_golioth_init(client);
@@ -308,13 +299,11 @@ static int client_connect(struct golioth_client *client)
 
 static void client_disconnect(struct golioth_client *client)
 {
+	struct k_work_sync sync;
+
 	(void)golioth_disconnect(client);
 
-	if (USE_EVENTFD) {
-		struct k_work_sync sync;
-
-		k_work_cancel_delayable_sync(&eventfd_timeout, &sync);
-	}
+	k_work_cancel_delayable_sync(&eventfd_timeout, &sync);
 }
 
 K_SEM_DEFINE(sys_client_started, 0, 1);
@@ -353,11 +342,8 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 				continue;
 			}
 
-			if (USE_EVENTFD) {
-				/* Flush reconnect requests */
-				(void)eventfd_read(fds[POLLFD_EVENT].fd,
-						   &eventfd_value);
-			}
+			/* Flush reconnect requests */
+			(void)eventfd_read(fds[POLLFD_EVENT].fd, &eventfd_value);
 
 			LOG_INF("Client connected!");
 
@@ -374,13 +360,9 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 		LOG_DBG("Next timeout: %d", timeout);
 
-		if (USE_EVENTFD) {
-			k_work_reschedule(&eventfd_timeout, K_MSEC(timeout));
+		k_work_reschedule(&eventfd_timeout, K_MSEC(timeout));
 
-			ret = zsock_poll(fds, ARRAY_SIZE(fds), -1);
-		} else {
-			ret = zsock_poll(&fds[POLLFD_SOCKET], 1, timeout);
-		}
+		ret = zsock_poll(fds, ARRAY_SIZE(fds), -1);
 
 		if (ret < 0) {
 			LOG_ERR("Error in poll:%d", errno);
@@ -392,7 +374,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 			timeout_occurred = true;
 		}
 
-		if (USE_EVENTFD && fds[POLLFD_EVENT].revents) {
+		if (fds[POLLFD_EVENT].revents) {
 			(void)eventfd_read(fds[POLLFD_EVENT].fd,
 					   &eventfd_value);
 			LOG_DBG("Timeout in eventfd");
@@ -460,9 +442,7 @@ void golioth_system_client_stop(void)
 	k_sem_take(&sys_client_started, K_NO_WAIT);
 
 	if (!atomic_test_and_set_bit(&flags, FLAG_STOP_CLIENT)) {
-		if (USE_EVENTFD) {
-			eventfd_write(fds[POLLFD_EVENT].fd, 1);
-		}
+		eventfd_write(fds[POLLFD_EVENT].fd, 1);
 	}
 }
 
