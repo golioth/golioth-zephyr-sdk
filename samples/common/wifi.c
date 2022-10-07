@@ -23,11 +23,15 @@ static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb,
 	struct wifi_data *wifi = CONTAINER_OF(cb, struct wifi_data, wifi_mgmt_cb);
 	const struct wifi_status *status = cb->info;
 
-	LOG_DBG("wifi event: %x", (unsigned int) mgmt_event);
-
 	switch (mgmt_event) {
 	case NET_EVENT_WIFI_CONNECT_RESULT:
+		LOG_INF("%s with status: %d", "Connected", status->status);
 		wifi->connect_status = status->status;
+		k_sem_give(&wifi->connect_sem);
+		break;
+	case NET_EVENT_WIFI_DISCONNECT_RESULT:
+		LOG_INF("%s with status: %d", "Disconnected", status->status);
+		wifi->connect_status = -EFAULT;
 		k_sem_give(&wifi->connect_sem);
 		break;
 	default:
@@ -132,7 +136,8 @@ void wifi_connect(struct net_if *iface)
 
 	net_mgmt_init_event_callback(&wifi.wifi_mgmt_cb,
 				     wifi_mgmt_event_handler,
-				     NET_EVENT_WIFI_CONNECT_RESULT);
+				     (NET_EVENT_WIFI_CONNECT_RESULT |
+				      NET_EVENT_WIFI_DISCONNECT_RESULT));
 	net_mgmt_add_event_callback(&wifi.wifi_mgmt_cb);
 
 	while (attempts--) {
