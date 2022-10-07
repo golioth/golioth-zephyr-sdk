@@ -131,6 +131,7 @@ void wifi_connect(struct net_if *iface)
 	struct wifi_data wifi;
 	int err;
 	int attempts = 10;
+	int timeout_msec = 500;
 
 	k_sem_init(&wifi.connect_sem, 0, 1);
 
@@ -169,7 +170,11 @@ void wifi_connect(struct net_if *iface)
 		}
 
 	retry:
-		k_sleep(K_SECONDS(5));
+		k_sleep(K_MSEC(timeout_msec));
+
+		/* Exponential backoff, but max 30s */
+		timeout_msec = MIN(timeout_msec * 2,
+				   30 * 1000);
 	}
 
 	net_mgmt_del_event_callback(&wifi.wifi_mgmt_cb);
