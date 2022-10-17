@@ -119,7 +119,7 @@ int golioth_coap_req_schedule(struct golioth_coap_req *req);
  * @param[in] format Content type
  * @param[in] data CoAP request payload (NULL if no payload should be appended)
  * @param[in] data_len Length of CoAP request payload
- * @param[in] cb Callback executed on response received, timeout or error
+ * @param[in] cb Callback executed on response received, timeout or error. Can be NULL.
  * @param[in] user_data User data passed to @p cb
  * @param[in] flags Flags (@sa golioth_coap_req_flags)
  *
