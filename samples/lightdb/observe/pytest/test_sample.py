@@ -7,7 +7,6 @@ from contextlib import suppress
 import json
 import logging
 import os
-import re
 import subprocess
 import time
 
@@ -57,7 +56,6 @@ def goliothctl_readline(goliothctl, timeout):
 def test_lightdb_counter_observe(initial_timeout):
     magic_value = 8664100
     expected_updates = 5
-    payload_pattern = re.compile(r"Counter.*|(\d+)")
 
     try:
         args = goliothctl_args() + ["logs", "listen", "--json", device_name()]
@@ -86,7 +84,6 @@ def test_lightdb_counter_observe(initial_timeout):
 
             assert "message" in entry, f"No 'message' in {entry}"
 
-            payload = payload_pattern.match(entry["message"])
             if "Counter" not in entry["message"]:
                 continue
 
