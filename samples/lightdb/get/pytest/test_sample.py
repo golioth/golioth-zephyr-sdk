@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import base64
 from contextlib import suppress
 import json
 import logging
@@ -56,7 +57,6 @@ def goliothctl_readline(goliothctl, timeout):
 def test_lightdb_counter_get(initial_timeout):
     magic_value = 8664100
     expected_updates = 5
-    payload_pattern = re.compile(r"payload: (\d+)")
 
     try:
         counter_expected = magic_value
@@ -79,11 +79,11 @@ def test_lightdb_counter_get(initial_timeout):
 
             assert "message" in entry, f"No 'message' in {entry}"
 
-            payload = payload_pattern.match(entry["message"])
-            if not payload:
+            if "Counter" not in entry["message"]:
                 continue
 
-            counter_logged = int(payload[1])
+            binary_value = base64.decodebytes(entry["metadata"]["hexdump"].encode())
+            counter_logged = int(binary_value.decode())
 
             logging.info("Logged %s (expected %s)", counter_logged, counter_expected)
 
