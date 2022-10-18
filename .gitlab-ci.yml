@@ -167,6 +167,7 @@ twister-qemu-goliothd:
     # Run tests
     - >
       zephyr/scripts/twister
+      --force-color
       -vvv
       -t goliothd
       -j 1
@@ -184,6 +185,7 @@ twister:
     # Build and run all non-goliothd samples/tests
     - >
       zephyr/scripts/twister
+      --force-color
       -e goliothd
       -p esp32
       -p nrf52840dk_nrf52840
@@ -193,6 +195,7 @@ twister:
     # Build-only all goliothd samples/tests
     - >
       zephyr/scripts/twister
+      --force-color
       -t goliothd -b
       -p esp32
       -p nrf52840dk_nrf52840
@@ -208,6 +211,7 @@ twister-ncs:
   script:
     - >
       zephyr/scripts/twister
+      --force-color
       -p nrf9160dk_nrf9160_ns
       -o reports
       -T modules/lib/golioth
