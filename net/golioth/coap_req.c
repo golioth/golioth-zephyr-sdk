@@ -354,12 +354,6 @@ void golioth_coap_req_process_rx(struct golioth_client *client, const struct coa
 	k_mutex_unlock(&client->coap_reqs_lock);
 }
 
-/* Default request callback, in case the caller does not specify one */
-static int default_req_cb(struct golioth_req_rsp *rsp)
-{
-	return 0;
-}
-
 static int golioth_coap_req_init(struct golioth_coap_req *req,
 				 struct golioth_client *client,
 				 enum coap_method method,
@@ -378,7 +372,7 @@ static int golioth_coap_req_init(struct golioth_coap_req *req,
 	}
 
 	req->client = client;
-	req->cb = (cb ? cb : default_req_cb);
+	req->cb = (cb ? cb : golioth_req_rsp_default_handler);
 	req->user_data = user_data;
 	req->request_wo_block2.offset = 0;
 	req->reply.age = 0;

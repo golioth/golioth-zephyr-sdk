@@ -42,6 +42,8 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(golioth);
 
+#include "golioth_utils.h"
+
 #define GOLIOTH_SETTINGS_PATH ".c"
 #define GOLIOTH_SETTINGS_STATUS_PATH ".c/status"
 #define GOLIOTH_SETTINGS_MAX_NAME_LEN 63 /* not including NULL */
@@ -61,7 +63,7 @@ static int send_coap_response(struct golioth_client *client,
 	return golioth_coap_req_cb(client, COAP_METHOD_POST, PATHV(GOLIOTH_SETTINGS_STATUS_PATH),
 				   COAP_CONTENT_FORMAT_APP_CBOR,
 				   coap_payload, coap_payload_len,
-				   NULL, NULL,
+				   golioth_req_rsp_default_handler, "Settings response ACK",
 				   GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
 
