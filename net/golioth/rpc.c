@@ -34,6 +34,8 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(golioth);
 
+#include "golioth_utils.h"
+
 #define GOLIOTH_RPC_PATH ".rpc"
 #define GOLIOTH_RPC_STATUS_PATH ".rpc/status"
 #define GOLIOTH_RPC_MAX_RESPONSE_LEN 256
@@ -44,7 +46,7 @@ static int send_response(struct golioth_client *client,
 	return golioth_coap_req_cb(client, COAP_METHOD_POST, PATHV(GOLIOTH_RPC_STATUS_PATH),
 				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
 				   coap_payload, coap_payload_len,
-				   NULL, NULL,
+				   golioth_req_rsp_default_handler, "RPC response ACK",
 				   GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
 
