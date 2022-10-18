@@ -20,7 +20,10 @@ DEFAULT_TIMEOUT = 30
 
 @pytest.fixture()
 def initial_timeout(request):
-    return request.config.getoption('--initial-timeout', DEFAULT_TIMEOUT)
+    timeout = request.config.getoption('--initial-timeout')
+    if timeout is None:
+        timeout = DEFAULT_TIMEOUT
+    return timeout
 
 
 def device_name():
