@@ -42,7 +42,7 @@ static int send_response(struct golioth_client *client,
 			 uint8_t *coap_payload, size_t coap_payload_len)
 {
 	return golioth_coap_req_cb(client, COAP_METHOD_POST, PATHV(GOLIOTH_RPC_STATUS_PATH),
-				   COAP_CONTENT_FORMAT_APP_CBOR,
+				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
 				   coap_payload, coap_payload_len,
 				   NULL, NULL,
 				   GOLIOTH_COAP_REQ_NO_RESP_BODY);
@@ -153,7 +153,7 @@ static int on_rpc(struct golioth_req_rsp *rsp)
 static int golioth_rpc_observe(struct golioth_client *client)
 {
 	return golioth_coap_req_cb(client, COAP_METHOD_GET, PATHV(GOLIOTH_RPC_PATH),
-				   COAP_CONTENT_FORMAT_APP_CBOR,
+				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
 				   NULL, 0,
 				   on_rpc, client,
 				   GOLIOTH_COAP_REQ_OBSERVE);
