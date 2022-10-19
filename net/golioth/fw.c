@@ -179,17 +179,6 @@ free_req:
 	return err;
 }
 
-static int golioth_fw_report_state_cb(struct golioth_req_rsp *rsp)
-{
-	if (rsp->err) {
-		LOG_ERR("Failed to report FW state: %d", rsp->err);
-	} else {
-		LOG_INF("Successfully reported FW state");
-	}
-
-	return 0;
-}
-
 int golioth_fw_report_state(struct golioth_client *client,
 			    const char *package_name,
 			    const char *current_version,
@@ -224,10 +213,10 @@ int golioth_fw_report_state(struct golioth_client *client,
 		return qcbor_error_to_posix(qerr);
 	}
 
-	return golioth_coap_req_cb(client, COAP_METHOD_POST,
-				   PATHV(GOLIOTH_FW_REPORT_STATE, package_name),
-				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
-				   encode_bufc.ptr, encoded_len,
-				   golioth_fw_report_state_cb, NULL,
-				   0);
+	return golioth_coap_req_sync(client, COAP_METHOD_POST,
+				     PATHV(GOLIOTH_FW_REPORT_STATE, package_name),
+				     GOLIOTH_CONTENT_FORMAT_APP_CBOR,
+				     encode_bufc.ptr, encoded_len,
+				     NULL, NULL,
+				     0);
 }
