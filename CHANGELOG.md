@@ -4,6 +4,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2022-10-19
+### Added
+- offloaded sockets wrapper for using interruptible `poll()` with drivers implementing offloaded
+  variant of this system call (workarounds limitations of nRF91 offloaded sockets)
+- runtime tests with twister for most samples
+- runtime `qemu_x86` tests in GitLab CI
+- LightDB DELETE sample
+- shared `coap_req` module used by LightDB, LightDB Stream, FW, RPC and Settings services
+- CoAP packet retransmission as part of `coap_req` module implementation
+- handling of DISCONNECT_RESULT WiFi management event, mainly to handle buggy WiFi drivers
+  signalling such event for failed connection attempt
+- exponential backoff mechanism for subsequent reconnect attempts in samples
+- `qemu_x86` platform overlay for Settings sample
+
+### Breaking Changes
+- reworked LightDB, LightDB Stream and FW APIs to be CoAP agnostic; see following commits for how to
+  migrate:
+  - [a5400990dbfa ("fw: rework on top of 'coap_req'")](https://github.com/golioth/golioth-zephyr-sdk/commit/a5400990dbfa4dde009601dbf3e15c15c8a08d9c)
+  - [1660ba7bf840 ("samples: dfu: report FW state and reboot from main thread")](https://github.com/golioth/golioth-zephyr-sdk/commit/1660ba7bf84077fcd2fc71fbf92b381a2389445d)
+  - [ef3775601f6d ("fw: change golioth_fw_report_state() API to be synchronous")](https://github.com/golioth/golioth-zephyr-sdk/commit/ef3775601f6d953f37e213ffdc61141914b9e20b)
+  - [5796567cb134 ("lightdb: rework golioth_lightdb_get() on top of coap_req")](https://github.com/golioth/golioth-zephyr-sdk/commit/5796567cb1340e0539a4155c27fdc574c25cbf56)
+  - [10dc6f1757de ("lightdb: rework golioth_lightdb_set() on top of coap_req")](https://github.com/golioth/golioth-zephyr-sdk/commit/10dc6f1757ded74d20547460a78cbc22ec7fee92)
+  - [8f9a2fef5052 ("lightdb: rework golioth_lightdb_observe*() on top of coap_req")](https://github.com/golioth/golioth-zephyr-sdk/commit/8f9a2fef5052920f53996a27e5d69401f2758203)
+  - [1d04427adddc ("lightdb: rework golioth_lightdb_delete() on top of coap_req")](https://github.com/golioth/golioth-zephyr-sdk/commit/1d04427adddce9776992fc657563247ccadb06eb)
+  - [369ec2a16788 ("samples: lightdb_stream: update to new API")](https://github.com/golioth/golioth-zephyr-sdk/commit/369ec2a167885e8a03fd88743bb83add12e2229e)
+- added dedicated APIs for LightDB Stream (`golioth_stream_*`), with no need to use
+  `GOLIOTH_LIGHTDB_STREAM_PATH()` helper macro
+- removed `GOLIOTH_LIGHTDB()` macro, which is no longer required with new LightDB APIs
+
+### Changed
+- samples wait for network interface UP and DHCP BOUND events, before returning from net_connect()
+  helper function
+- verified with Zephyr v3.2.0
+- verified with NCS v2.1.0
+- changed error reporting in Settings service to contain array with errors
+- use eventfd mechanism in `system_client` for nRF91 family
+- reworked internal RPC and Settings services to use shared `coap_req` (for code deduplication and
+  packet retransmission)
+
+### Removed
+- CoAP message callback registration using `golioth_register_message_callback()` (no longer needed
+  with CoAP agnostic APIs)
+- `client->on_message()` callback (no longer needed with CoAP agnostic APIs)
+
 ## [0.3.1] - 2022-09-26
 ### Fixed
 - added missing `boards/esp32.overlay` in `samples/hello/`
