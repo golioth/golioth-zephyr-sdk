@@ -19,14 +19,11 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 
 #include "flash.h"
 
+K_SEM_DEFINE(sem_connected, 0, 1);
+K_SEM_DEFINE(sem_downloading, 0, 1);
+K_SEM_DEFINE(sem_downloaded, 0, 1);
+
 #define REBOOT_DELAY_SEC	1
-
-static void reboot_handler(struct k_work *work)
-{
-	sys_reboot(SYS_REBOOT_COLD);
-}
-
-K_WORK_DELAYABLE_DEFINE(reboot_work, reboot_handler);
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
@@ -66,38 +63,7 @@ static int data_received(struct golioth_req_rsp *rsp)
 	}
 
 	if (last) {
-		err = golioth_fw_report_state(client, "main",
-					      current_version_str,
-					      dfu->version,
-					      GOLIOTH_FW_STATE_DOWNLOADED,
-					      GOLIOTH_DFU_RESULT_INITIAL);
-		if (err) {
-			LOG_ERR("Failed to update to '%s' state: %d", "downloaded", err);
-		}
-
-		err = golioth_fw_report_state(client, "main",
-					      current_version_str,
-					      dfu->version,
-					      GOLIOTH_FW_STATE_UPDATING,
-					      GOLIOTH_DFU_RESULT_INITIAL);
-		if (err) {
-			LOG_ERR("Failed to update to '%s' state: %d", "updating", err);
-		}
-
-		LOG_INF("Requesting upgrade");
-
-		err = boot_request_upgrade(BOOT_UPGRADE_TEST);
-		if (err) {
-			LOG_ERR("Failed to request upgrade: %d", err);
-			return err;
-		}
-
-		LOG_INF("Rebooting in %d second(s)", REBOOT_DELAY_SEC);
-
-		/* Synchronize logs */
-		LOG_PANIC();
-
-		k_work_schedule(&reboot_work, K_SECONDS(REBOOT_DELAY_SEC));
+		k_sem_give(&sem_downloaded);
 	}
 
 	if (rsp->get_next) {
@@ -158,14 +124,7 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 
 	uri_p = uri_strip_leading_slash(uri, &uri_len);
 
-	err = golioth_fw_report_state(client, "main",
-				      current_version_str,
-				      dfu->version,
-				      GOLIOTH_FW_STATE_DOWNLOADING,
-				      GOLIOTH_DFU_RESULT_INITIAL);
-	if (err) {
-		LOG_ERR("Failed to update to '%s' state: %d", "downloading", err);
-	}
+	k_sem_give(&sem_downloading);
 
 	err = golioth_fw_download(client, uri_p, uri_len, data_received, dfu);
 	if (err) {
@@ -180,14 +139,7 @@ static void golioth_on_connect(struct golioth_client *client)
 {
 	int err;
 
-	err = golioth_fw_report_state(client, "main",
-				      current_version_str,
-				      NULL,
-				      GOLIOTH_FW_STATE_IDLE,
-				      dfu_initial_result);
-	if (err) {
-		LOG_ERR("Failed to report firmware state: %d", err);
-	}
+	k_sem_give(&sem_connected);
 
 	err = golioth_fw_observe_desired(client, golioth_desired_update, &update_ctx);
 	if (err) {
@@ -222,4 +174,63 @@ void main(void)
 
 	client->on_connect = golioth_on_connect;
 	golioth_system_client_start();
+
+	k_sem_take(&sem_connected, K_FOREVER);
+
+	err = golioth_fw_report_state(client, "main",
+				      current_version_str,
+				      NULL,
+				      GOLIOTH_FW_STATE_IDLE,
+				      dfu_initial_result);
+	if (err) {
+		LOG_ERR("Failed to report firmware state: %d", err);
+	}
+
+	k_sem_take(&sem_downloading, K_FOREVER);
+
+	err = golioth_fw_report_state(client, "main",
+				      current_version_str,
+				      update_ctx.version,
+				      GOLIOTH_FW_STATE_DOWNLOADING,
+				      GOLIOTH_DFU_RESULT_INITIAL);
+	if (err) {
+		LOG_ERR("Failed to update to '%s' state: %d", "downloading", err);
+	}
+
+	k_sem_take(&sem_downloaded, K_FOREVER);
+
+	err = golioth_fw_report_state(client, "main",
+				      current_version_str,
+				      update_ctx.version,
+				      GOLIOTH_FW_STATE_DOWNLOADED,
+				      GOLIOTH_DFU_RESULT_INITIAL);
+	if (err) {
+		LOG_ERR("Failed to update to '%s' state: %d", "downloaded", err);
+	}
+
+	err = golioth_fw_report_state(client, "main",
+				      current_version_str,
+				      update_ctx.version,
+				      GOLIOTH_FW_STATE_UPDATING,
+				      GOLIOTH_DFU_RESULT_INITIAL);
+	if (err) {
+		LOG_ERR("Failed to update to '%s' state: %d", "updating", err);
+	}
+
+	LOG_INF("Requesting upgrade");
+
+	err = boot_request_upgrade(BOOT_UPGRADE_TEST);
+	if (err) {
+		LOG_ERR("Failed to request upgrade: %d", err);
+		return;
+	}
+
+	LOG_INF("Rebooting in %d second(s)", REBOOT_DELAY_SEC);
+
+	/* Synchronize logs */
+	LOG_PANIC();
+
+	k_sleep(K_SECONDS(REBOOT_DELAY_SEC));
+
+	sys_reboot(SYS_REBOOT_COLD);
 }
