@@ -1,0 +1,17 @@
+sample:
+  description: Handle RPC method from Golioth server
+  name: rpc
+common:
+  harness: pytest
+  tags: golioth socket goliothd
+tests:
+  sample.golioth.rpc.fast:
+    platform_allow: >
+      esp32
+      mimxrt1060_evkb
+      nrf52840dk_nrf52840
+      qemu_x86
+  sample.golioth.rpc.long_start:
+    platform_allow: nrf9160dk_nrf9160_ns
+    harness_config:
+      pytest_args: [ "--initial-timeout", "120" ]
