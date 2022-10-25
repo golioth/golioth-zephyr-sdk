@@ -153,6 +153,7 @@ twister-qemu-goliothd:
     - goliothctl project list
     # Install samples/tests requirements
     - pip3 install -r modules/lib/golioth/scripts/requirements-tests.txt
+    - pip3 install modules/lib/golioth/scripts/python/golioth
     # Start QEMU networking utilities
     - make -C tools/net-tools tunslip6
     - tools/net-tools/loop-socat.sh &
