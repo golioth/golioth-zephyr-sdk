@@ -34,6 +34,9 @@ def goliothctl_args():
     args = []
 
     with suppress(KeyError):
+        args += ['-c', os.environ["GOLIOTHCTL_CONFIG"]]
+
+    with suppress(KeyError):
         args += pexpect.split_command_line(os.environ["GOLIOTHCTL_OPTS"])
 
     return args
