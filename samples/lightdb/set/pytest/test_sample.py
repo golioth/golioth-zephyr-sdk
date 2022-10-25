@@ -22,6 +22,18 @@ def initial_timeout(request):
     return timeout
 
 
+def goliothctl_args():
+    args = []
+
+    with suppress(KeyError):
+        args += ['-c', os.environ["GOLIOTHCTL_CONFIG"]]
+
+    with suppress(KeyError):
+        args += pexpect.split_command_line(os.environ["GOLIOTHCTL_OPTS"])
+
+    return args
+
+
 def goliothctl_readline(goliothctl, timeout):
     index = goliothctl.expect([goliothctl.crlf, goliothctl.delimiter],
                               timeout=timeout)
@@ -35,12 +47,7 @@ def test_lightdb_counter_received(initial_timeout):
     expected_updates = 5
 
     try:
-        args = []
-
-        with suppress(KeyError):
-            args += pexpect.split_command_line(os.environ["GOLIOTHCTL_OPTS"])
-
-        args += ["lightdb", "listen"]
+        args = goliothctl_args() + ["lightdb", "listen"]
 
         with suppress(KeyError):
             args.append(os.environ["GOLIOTH_DEVICE_NAME"])

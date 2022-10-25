@@ -22,6 +22,18 @@ def initial_timeout(request):
     return timeout
 
 
+def goliothctl_args():
+    args = []
+
+    with suppress(KeyError):
+        args += ['-c', os.environ["GOLIOTHCTL_CONFIG"]]
+
+    with suppress(KeyError):
+        args += pexpect.split_command_line(os.environ["GOLIOTHCTL_OPTS"])
+
+    return args
+
+
 def goliothctl_readline(goliothctl, timeout):
     index = goliothctl.expect([goliothctl.crlf, goliothctl.delimiter],
                               timeout=timeout)
@@ -33,12 +45,7 @@ def goliothctl_readline(goliothctl, timeout):
 
 def test_stream_events_received(initial_timeout):
     try:
-        args = []
-
-        with suppress(KeyError):
-            args += pexpect.split_command_line(os.environ["GOLIOTHCTL_OPTS"])
-
-        args += ["stream", "listen"]
+        args = goliothctl_args() + ["stream", "listen"]
 
         with suppress(KeyError):
             args.append(os.environ["GOLIOTH_DEVICE_NAME"])
