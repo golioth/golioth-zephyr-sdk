@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "golioth"
+version = "0.1.0"
+authors = [
+    { name="Marcin Niestroj", email="m.niestroj@emb.dev" }
+]
+description = "Golioth client Python library"
+license = "Apache-2.0"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "anyio",
+    "asyncclick",
+    "colorama",
+    "httpx",
+    "pyyaml",
+    "rich",
+    "trio",
+    "trio-websocket",
+]
+
+[project.scripts]
+golioth = "golioth.cli:main"
+
+[project.utils]
+"Homepage" = "https://github.com/golioth/golioth-zephyr-sdk"
+"Bug Tracker" = "https://github.com/golioth/golioth-zephyr-sdk/issues"
