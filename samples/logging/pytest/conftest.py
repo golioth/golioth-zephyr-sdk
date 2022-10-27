@@ -5,6 +5,10 @@
 
 import pytest
 
+@pytest.fixture(scope='session')
+def anyio_backend():
+    return 'trio'
+
 # add option "--comdopt" to pytest, or it will report "unknown option"
 # this option is passed from twister.
 def pytest_addoption(parser):
