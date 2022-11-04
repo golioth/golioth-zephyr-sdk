@@ -30,6 +30,7 @@ static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 struct dfu_ctx {
 	struct flash_img_context flash;
 	char version[65];
+	bool downloading_started;
 };
 
 static struct dfu_ctx update_ctx;
@@ -99,6 +100,15 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 
 	LOG_HEXDUMP_DBG(rsp->data, rsp->len, "Desired");
 
+	/*
+	 * Make sure that we don't start new firmware download and don't overwrite desired version
+	 * which is accessed by main thread.
+	 */
+	if (dfu->downloading_started) {
+		LOG_WRN("Ignoring new desired firmware, as downloading already started");
+		return 0;
+	}
+
 	err = golioth_fw_desired_parse(rsp->data, rsp->len,
 				       dfu->version, &version_len,
 				       uri, &uri_len);
@@ -125,6 +135,7 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 	uri_p = uri_strip_leading_slash(uri, &uri_len);
 
 	k_sem_give(&sem_downloading);
+	dfu->downloading_started = true;
 
 	err = golioth_fw_download(client, uri_p, uri_len, data_received, dfu);
 	if (err) {
