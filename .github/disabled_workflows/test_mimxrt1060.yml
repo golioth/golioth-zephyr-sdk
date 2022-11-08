@@ -76,6 +76,8 @@ jobs:
   #   "golioth/psk-id": "device@project",
   #   "golioth/psk": "supersecret"
   # }
+  #
+  # The golioth credentials need to match a device on coap.golioth.dev
   hw_flash_and_test:
     needs: build_for_hw_test
     runs-on: [self-hosted, has_mimxrt1060]

@@ -16,6 +16,9 @@ settings:
   golioth/psk: supersecret
 ```
 
+The sample will connect to `coap.golioth.dev` by default, so ensure that the
+Golioth PSK-ID and PSK matches an existing device from `coap.golioth.dev`.
+
 ### Install pre-requisities
 
 ```sh
