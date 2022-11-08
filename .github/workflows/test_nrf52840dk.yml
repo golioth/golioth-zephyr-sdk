@@ -80,6 +80,8 @@ jobs:
   #   "golioth/psk": "supersecret"
   # }
   #
+  # The golioth credentials need to match a device on coap.golioth.dev
+  #
   # For item 5, you can discover the serial number of the nRF52 using this command:
   #   nrfjprog --ids
   # Once you know the serial number, you can add this to $HOME/runner_env.sh:
