@@ -10,7 +10,6 @@ config GOLIOTH
 	select COAP
 	select MBEDTLS
 	select MBEDTLS_DTLS
-	select MBEDTLS_CIPHER_GCM_ENABLED if MBEDTLS_BUILTIN
 	select NET_SOCKETS
 	select NET_UDP
 	imply DNS_RESOLVER if NET_NATIVE
@@ -45,6 +44,8 @@ endchoice
 config GOLIOTH_AUTH_PSK_MBEDTLS_DEPS
 	bool "mbedTLS dependencies for PSK auth"
 	depends on MBEDTLS_BUILTIN
+	# Select at least one server supported cipher
+	imply MBEDTLS_CIPHER_GCM_ENABLED if (!MBEDTLS_CIPHER_CCM_ENABLED && !MBEDTLS_CIPHER_CBC_MODE_ENABLED)
 	select MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
 	help
 	  Select mbedTLS dependencies for PSK based authentication.
@@ -57,6 +58,8 @@ config GOLIOTH_AUTH_CERT_MBEDTLS_DEPS
 	depends on MBEDTLS_BUILTIN
 	# At least one ECP needs to be selected. This was chosen arbitrarily.
 	imply MBEDTLS_ECP_DP_SECP256R1_ENABLED if MBEDTLS_BUILTIN
+	# Select at least one server supported cipher
+	imply MBEDTLS_CIPHER_GCM_ENABLED if !MBEDTLS_CIPHER_CCM_ENABLED
 	select MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED if MBEDTLS_BUILTIN
 	help
 	  Select mbedTLS dependencies for certificate based authentication.
