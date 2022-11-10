@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <mbedtls/ssl_ciphersuites.h>
 #include <net/golioth.h>
-#include <zephyr/net/socket.h>
-#include <zephyr/random/rand32.h>
 #include <stdio.h>
 #include <string.h>
+#include <zephyr/net/socket.h>
+#include <zephyr/random/rand32.h>
+
+#include <golioth_ciphersuites.h>
 
 #include "coap_req.h"
 #include "coap_utils.h"
@@ -18,6 +21,13 @@
 LOG_MODULE_REGISTER(golioth, CONFIG_GOLIOTH_LOG_LEVEL);
 
 #define GOLIOTH_HELLO		"hello"
+
+/* Use mbedTLS macros which are IANA ciphersuite names prepended with MBEDTLS_ */
+#define GOLIOTH_CIPHERSUITE_ENTRY(x) _CONCAT(MBEDTLS_, x)
+
+static int golioth_ciphersuites[] = {
+	FOR_EACH_NONEMPTY_TERM(GOLIOTH_CIPHERSUITE_ENTRY, (,), GOLIOTH_CIPHERSUITES)
+};
 
 void golioth_init(struct golioth_client *client)
 {
@@ -69,6 +79,14 @@ static int golioth_setsockopt_dtls(struct golioth_client *client, int sock,
 		 * change.
 		 */
 		ret = zsock_setsockopt(sock, SOL_TLS, TLS_HOSTNAME, host, strlen(host));
+		if (ret < 0) {
+			return -errno;
+		}
+	}
+
+	if (sizeof(golioth_ciphersuites) > 0) {
+		ret = zsock_setsockopt(sock, SOL_TLS, TLS_CIPHERSUITE_LIST,
+				       golioth_ciphersuites, sizeof(golioth_ciphersuites));
 		if (ret < 0) {
 			return -errno;
 		}
