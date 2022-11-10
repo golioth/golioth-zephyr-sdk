@@ -24,3 +24,16 @@ if(CONFIG_GOLIOTH_AUTH_METHOD_CERT)
       ${ZEPHYR_BINARY_DIR}/include/generated/golioth-systemclient-${type}.inc)
   endforeach()
 endif()
+
+if(CONFIG_GOLIOTH_CIPHERSUITES)
+  string(REGEX MATCHALL "[^,; ]+" ciphersuites ${CONFIG_GOLIOTH_CIPHERSUITES})
+  string(JOIN ", \\\n\t" ciphersuites_macro_value ${ciphersuites})
+
+  set(ciphersuites_generated "#define GOLIOTH_CIPHERSUITES \\\n\t${ciphersuites_macro_value}\n")
+else()
+  set(ciphersuites_generated "#define GOLIOTH_CIPHERSUITES\n")
+endif()
+
+file(WRITE
+  ${ZEPHYR_BINARY_DIR}/include/generated/golioth_ciphersuites.h
+  "${ciphersuites_generated}")
