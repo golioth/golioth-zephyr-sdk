@@ -1,2 +1,2 @@
-add_subdirectory(golioth)
+add_subdirectory_ifdef(CONFIG_GOLIOTH golioth)
 add_subdirectory(sockets)
