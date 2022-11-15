@@ -172,7 +172,7 @@ class Project(ApiNodeMixin):
             yield LogsMonitor(ws)
 
     async def logs_iter(self, lines: int = 0, params: dict = {}) -> Iterable[LogEntry]:
-        async with self.logs_websocket(params) as ws:
+        async with self.logs_monitor(params) as monitor:
             old_logs = []
 
             if lines != 0:
@@ -187,9 +187,7 @@ class Project(ApiNodeMixin):
             # TODO: do not reprint logs from 'old_logs'
 
             while True:
-                msg = await ws.get_message()
-                msg = json.loads(msg)
-                log = LogEntry(msg['result']['data'])
+                log = await monitor.get()
 
                 if log in old_logs:
                     continue
