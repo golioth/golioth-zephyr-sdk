@@ -23,8 +23,8 @@ $ golioth --help
 Usage: golioth [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --config-path PATH  Path to goliothctl configuration
-  --help              Show this message and exit.
+  -c, --config-path PATH  Path to goliothctl configuration
+  --help                  Show this message and exit.
 
 Commands:
   call      Call RPC method on device.
