@@ -28,9 +28,10 @@ Options:
   --help                  Show this message and exit.
 
 Commands:
-  call      Call RPC method on device.
-  logs      Logging service related commands.
-  settings  Settings service related commands.
+  call         Call RPC method on device.
+  certificate  Certificates related commands.
+  logs         Logging service related commands.
+  settings     Settings service related commands.
 ```
 
 or for each subcommand like `golioth logs --help`.

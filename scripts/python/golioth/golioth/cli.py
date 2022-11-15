@@ -66,6 +66,69 @@ async def call(config, device_name, method, params):
 
 
 @cli.group()
+def certificate():
+    """Certificates related commands."""
+    pass
+
+
+@certificate.command()
+@pass_config
+async def list(config):
+    """Get certificates."""
+    with console.status('Getting certificates...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        certs = await project.certificates.get_all()
+
+        console.print([c.info for c in certs])
+
+
+@certificate.command()
+@click.argument('id')
+@pass_config
+async def info(config, id):
+    """Get certificate by ID."""
+    with console.status('Getting certificate...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        resp = await project.certificates.get(id)
+
+        console.print(resp.info)
+
+
+@certificate.command()
+@click.option('-t', '--cert_type', type=click.Choice(['root', 'intermediate']), default='root')
+@click.argument('cert_file', type=Path)
+@pass_config
+async def add(config, cert_type, cert_file):
+    """Add certificate."""
+    with console.status('Adding certificate...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        with cert_file.open('rb') as fp:
+            resp = await project.certificates.add(cert_pem=fp.read(), cert_type=cert_type)
+
+        console.print(resp)
+
+
+@certificate.command()
+@click.argument('id')
+@pass_config
+async def delete(config, id):
+    """Delete certificate by ID."""
+    with console.status(f'Deleting certificate {id}...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        resp = await project.certificates.delete(cert_id=id)
+
+        console.print(resp)
+
+
+@cli.group()
 def logs():
     """Logging service related commands."""
     pass

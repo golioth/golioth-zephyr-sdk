@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from base64 import b64encode
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntEnum
@@ -7,7 +8,7 @@ import functools
 import json
 from pathlib import Path
 import re
-from typing import Any, Callable, Dict, Iterable, Optional, Union
+from typing import Any, Callable, Dict, Iterable, Literal, Optional, Union
 
 import httpx
 import yaml
@@ -175,6 +176,7 @@ class Project(ApiNodeMixin):
         self.client = client
         self.info: dict[str, Any] = info
         self.base_url: str = f'{client.base_url}/projects/{self.id}'
+        self.certificates: ProjectCertificates = ProjectCertificates(self)
         self.settings: ProjectSettings = ProjectSettings(self)
 
     @property
@@ -360,6 +362,60 @@ class DeviceRPC(ApiNodeMixin):
             return await self.call(name, params)
 
         return call_method
+
+
+class Certificate(ApiNodeMixin):
+    def __init__(self, project: Project, info: dict[str, Any]):
+        self.project = project
+        self.info = info
+        self.base_url = f'{project.base_url}/certificates/{self.id}'
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.project.headers
+
+    @property
+    def id(self):
+        return self.info['id']
+
+    @property
+    def enabled(self):
+        return self.info['enabled']
+
+    def __repr__(self):
+        return f'Certificate <{self.id}, enabled={self.enabled}>'
+
+
+class ProjectCertificates(ApiNodeMixin):
+    def __init__(self, project: Project):
+        self.project = project
+        self.base_url = self.project.base_url
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.project.headers
+
+    async def get_all(self) -> list:
+        resp = await self.project.get('certificates')
+        return [Certificate(self, d) for d in resp.json()['list']]
+
+    async def get(self, cert_id: str):
+        resp = await self.project.get(f'certificates/{cert_id}')
+        return Certificate(self.project, resp.json()['data'])
+
+    async def add(self, cert_pem: bytes, cert_type: Literal['root', 'intermediate']):
+        json = {
+            'certFile': b64encode(cert_pem).decode(),
+            'certType': cert_type,
+        }
+
+        response = await self.project.post('certificates', json=json)
+
+        return response.json()
+
+    async def delete(self, cert_id: str):
+        response = await self.project.delete(f'certificates/{cert_id}')
+        return response.json()
 
 
 class ProjectSettings:
