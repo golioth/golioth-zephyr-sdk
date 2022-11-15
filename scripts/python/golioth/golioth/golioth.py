@@ -3,21 +3,26 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from enum import Enum, IntEnum
+import functools
 import json
 from pathlib import Path
 import re
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import httpx
 import yaml
 from trio_websocket import open_websocket_url, WebSocketConnection
 
 
-class ProjectNotFound(RuntimeError):
+class ApiException(RuntimeError):
     pass
 
 
-class DeviceNotFound(RuntimeError):
+class ProjectNotFound(ApiException):
+    pass
+
+
+class DeviceNotFound(ApiException):
     pass
 
 
@@ -41,7 +46,7 @@ class RPCStatusCode(IntEnum):
     UNAUTHENTICATED = 16
 
 
-class RPCError(RuntimeError):
+class RPCError(ApiException):
     pass
 
 
@@ -56,24 +61,45 @@ class RPCTimeout(RPCError):
         super().__init__('RPC timeout')
 
 
+class Forbidden(ApiException):
+    def __init__(self, msg):
+        super().__init__(f'Forbidden ({msg})')
+
+
+def check_resp(func: Callable[..., httpx.Response]):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        resp: httpx.Response = await func(*args, **kwargs)
+        if resp.status_code == httpx.codes.FORBIDDEN:
+            raise Forbidden(resp.json())
+        resp.raise_for_status()
+        return resp
+
+    return wrapper
+
+
 class ApiNodeMixin:
     @property
     def http_client(self):
         return httpx.AsyncClient(base_url=self.base_url,
                                  headers=self.headers)
 
+    @check_resp
     async def get(self, *args, **kwargs):
         async with self.http_client as c:
             return await c.get(*args, **kwargs)
 
+    @check_resp
     async def post(self, *args, **kwargs):
         async with self.http_client as c:
             return await c.post(*args, **kwargs)
 
+    @check_resp
     async def put(self, *args, **kwargs):
         async with self.http_client as c:
             return await c.put(*args, **kwargs)
 
+    @check_resp
     async def delete(self, *args, **kwargs):
         async with self.http_client as c:
             return await c.delete(*args, **kwargs)
