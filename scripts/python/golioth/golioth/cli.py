@@ -187,7 +187,7 @@ async def get(config, key):
 @pass_config
 async def get_all(config):
     """Get all settings values."""
-    with console.status(f'Getting settings...'):
+    with console.status('Getting settings...'):
         client = Client(config.config_path)
         project = await client.default_project()
 

@@ -53,7 +53,7 @@ class RPCResultError(RPCError):
 
 class RPCTimeout(RPCError):
     def __init__(self):
-        super().__init__(f'RPC timeout')
+        super().__init__('RPC timeout')
 
 
 class ApiNodeMixin:
