@@ -24,6 +24,7 @@ Usage: golioth [OPTIONS] COMMAND [ARGS]...
 
 Options:
   -c, --config-path PATH  Path to goliothctl configuration
+  --api-key TEXT          Api key
   --help                  Show this message and exit.
 
 Commands:
@@ -38,10 +39,51 @@ or for each subcommand like `golioth logs --help`.
 
 `golioth` CLI tool is just complementary tool to `goliothctl` (for now). Hence
 it uses it's configuration format. `goliothctl` default configuration file is at
-`~/.golioth/.goliothctl.yaml`. As of now this package does not implement
-authentication to `api.golioth.io`, so it's only use-case is with self-hosted
-version of Golioth server. For that, a separate configuration file might be
-useful with following contents:
+`~/.golioth/.goliothctl.yaml`.
+
+#### Default hosted (`api.golioth.io`) backend
+
+In order to use this package with `api.golioth.io` an API key needs to be generated. This can be
+achieved with `goliothctl apikeys create`:
+
+``` sh
+$ goliothctl apikeys create
+id:"SOME_ID"  key:"MY_KEY" type:API_KEY
+```
+
+or an existing key can be listed at any point with:
+
+``` sh
+$ goliothctl apikeys list
+id:"SOME_ID"  key:"MY_KEY"  policy_id:"SOME_POLICY_ID"  roles:"apikey" type:API_KEY
+```
+
+Then to use such API key use `--api-key MY_KEY`. As an example, invoke following command to list
+devices with Python CLI tool:
+
+``` sh
+$ golioth --api-key MY_KEY device list
+[
+    {
+        'id': 'device-id',
+        'hardwareIds': ['device-hardware-id'],
+        'name': 'device-name',
+        'createdAt': '2022-11-15T14:40:48.243Z',
+        'updatedAt': '2022-11-15T14:40:48.243Z',
+        'tagIds': [],
+        'data': None,
+        'lastReport': None,
+        'status': '-',
+        'metadata': {'status': '-', 'lastReport': None, 'lastSeenOnline': None, 'lastSeenOffline': None, 'lastSettingsStatus': None},
+        'enabled': True
+    }
+]
+```
+
+#### Self-hosted backend
+
+With self-hosted backend there is no API key authentication required by default. However a separate
+configuration file might be useful with following contents:
 
 ``` yaml
 apiurl: http://localhost:9090

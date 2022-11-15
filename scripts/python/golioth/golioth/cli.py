@@ -17,15 +17,18 @@ console = Console()
 class Config:
     def __init__(self):
         self.config_path: Optional[Path] = None
+        self.api_key: Optional[str] = None
 
 pass_config = click.make_pass_decorator(Config, ensure=True)
 
 @click.group()
 @click.option('-c', '--config-path', type=Path,
               help='Path to goliothctl configuration')
+@click.option('--api-key', help='Api key')
 @pass_config
-def cli(config, config_path):
+def cli(config, config_path, api_key):
     config.config_path = config_path
+    config.api_key = api_key
 
 
 def rpc_params(params: str) -> Union[list, dict]:
@@ -48,7 +51,7 @@ async def call(config, device_name, method, params):
 
     try:
         with console.status(f'Waiting for reply from method {method}...'):
-            client = Client(config.config_path)
+            client = Client(config.config_path, api_key=config.api_key)
             project = await client.default_project()
             # console.log(f'client: {client}')
             device = await project.device_by_name(device_name)
@@ -136,7 +139,7 @@ def print_log_default(log: LogEntry):
 @pass_config
 async def tail(config, device_name, follow, lines, format):
     """Show the most recent log entries."""
-    client = Client(config.config_path)
+    client = Client(config.config_path, api_key=config.api_key)
     project = await client.default_project()
 
     if device_name:
@@ -172,7 +175,7 @@ async def get(config, key):
     """Get setting value of KEY."""
     try:
         with console.status(f'Getting setting value of {key}...'):
-            client = Client(config.config_path)
+            client = Client(config.config_path, api_key=config.api_key)
             project = await client.default_project()
 
             resp = await project.settings.get(key)
@@ -188,7 +191,7 @@ async def get(config, key):
 async def get_all(config):
     """Get all settings values."""
     with console.status('Getting settings...'):
-        client = Client(config.config_path)
+        client = Client(config.config_path, api_key=config.api_key)
         project = await client.default_project()
 
         resp = await project.settings.get_all()
@@ -204,7 +207,7 @@ async def set(config, key, value):
     """Set setting value of KEY to VALUE."""
     try:
         with console.status(f'Setting {key} to {value}...'):
-            client = Client(config.config_path)
+            client = Client(config.config_path, api_key=config.api_key)
             project = await client.default_project()
 
             resp = await project.settings.set(key, value)
@@ -222,7 +225,7 @@ async def delete(config, key):
     """Delete KEY from settings."""
     try:
         with console.status(f'Deleting {key} from settings...'):
-            client = Client(config.config_path)
+            client = Client(config.config_path, api_key=config.api_key)
             project = await client.default_project()
 
             await project.settings.delete(key)

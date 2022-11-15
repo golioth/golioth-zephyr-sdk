@@ -6,7 +6,7 @@ from enum import Enum, IntEnum
 import json
 from pathlib import Path
 import re
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Dict, Iterable, Optional, Union
 
 import httpx
 import yaml
@@ -59,7 +59,8 @@ class RPCTimeout(RPCError):
 class ApiNodeMixin:
     @property
     def http_client(self):
-        return httpx.AsyncClient(base_url=self.base_url)
+        return httpx.AsyncClient(base_url=self.base_url,
+                                 headers=self.headers)
 
     async def get(self, *args, **kwargs):
         async with self.http_client as c:
@@ -79,7 +80,9 @@ class ApiNodeMixin:
 
 
 class Client(ApiNodeMixin):
-    def __init__(self, config_path: Optional[Union[Path, str]] = None):
+    def __init__(self,
+                 config_path: Optional[Union[Path, str]] = None,
+                 api_key: Optional[str] = None):
         if not config_path:
             config_path = Path.home() / '.golioth' / '.goliothctl.yaml'
         elif isinstance(config_path, str):
@@ -90,6 +93,11 @@ class Client(ApiNodeMixin):
 
         url = self.config['apiurl']
         self.base_url: str = f'{url}/v1'
+
+        self.headers: Dict[str, str] = {}
+
+        if api_key is not None:
+            self.headers['x-api-key'] = api_key
 
     def load_config(self):
         with self.config_path.open('r') as fp:
@@ -133,6 +141,10 @@ class Project(ApiNodeMixin):
         self.base_url: str = f'{client.base_url}/projects/{self.id}'
         self.settings: ProjectSettings = ProjectSettings(self)
 
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.client.headers
+
     @staticmethod
     async def get_by_id(client: Client, project_id: str):
         resp = await client.get(f'projects/{project_id}')
@@ -163,7 +175,8 @@ class Project(ApiNodeMixin):
 
     @asynccontextmanager
     async def logs_websocket(self, params: dict = {}) -> WebSocketConnection:
-        async with open_websocket_url(f'{self.client.base_url.replace("http", "ws")}/ws/projects/{self.id}/logs') as ws:
+        async with open_websocket_url(f'{self.client.base_url.replace("http", "ws")}/ws/projects/{self.id}/logs',
+                                      extra_headers=[(k, v) for k, v in self.headers.items()]) as ws:
             yield ws
 
     @asynccontextmanager
@@ -244,6 +257,10 @@ class Device(ApiNodeMixin):
         self.rpc = DeviceRPC(self)
 
     @property
+    def headers(self) -> Dict[str, str]:
+        return self.project.headers
+
+    @property
     def id(self):
         return self.info['id']
 
@@ -275,6 +292,10 @@ class DeviceRPC(ApiNodeMixin):
     def __init__(self, device: Device):
         self.device = device
         self.base_url: str = device.base_url
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.device.headers
 
     async def call(self, method: str, params: Union[list, dict]):
         async with self.http_client as c:
