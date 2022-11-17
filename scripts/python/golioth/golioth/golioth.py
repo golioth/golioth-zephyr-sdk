@@ -156,6 +156,16 @@ class LogsMonitor:
     async def get(self) -> LogEntry:
         msg = await self.ws.get_message()
         msg = json.loads(msg)
+
+        if 'error' in msg:
+            error = msg['error']
+            # REVISIT: Not sure error code should map to all RPCStatusCode values, but at least it
+            # matches PERMISSION_DENIED.
+            if error['code'] == RPCStatusCode.PERMISSION_DENIED.value:
+                raise Forbidden(error['message'])
+
+            raise ApiException(f"code={error['code']} message={error['message']}")
+
         log = LogEntry(msg['result']['data'])
         return log
 
