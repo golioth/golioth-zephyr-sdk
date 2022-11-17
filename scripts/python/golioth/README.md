@@ -30,6 +30,7 @@ Options:
 Commands:
   call         Call RPC method on device.
   certificate  Certificates related commands.
+  device       Device related commands.
   logs         Logging service related commands.
   settings     Settings service related commands.
 ```

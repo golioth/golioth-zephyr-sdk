@@ -129,6 +129,39 @@ async def delete(config, id):
 
 
 @cli.group()
+def device():
+    """Device related commands."""
+    pass
+
+
+@device.command()
+@click.argument('name')
+@pass_config
+async def info(config, name):
+    """Get info about device."""
+    with console.status(f'Getting device {name} info...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        device = await project.device_by_name(name)
+
+        console.print(device.info)
+
+
+@device.command()
+@pass_config
+async def list(config):
+    """List all devices."""
+    with console.status('Getting devices...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        devices = await project.get_devices()
+
+        console.print([d.info for d in devices])
+
+
+@cli.group()
 def logs():
     """Logging service related commands."""
     pass
