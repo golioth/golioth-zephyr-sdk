@@ -125,6 +125,9 @@ class Client(ApiNodeMixin):
 
         if api_key is not None:
             self.headers['x-api-key'] = api_key
+        elif 'accesstoken' in self.config and \
+             (accesstoken := self.config['accesstoken']):
+            self.headers['authorization'] = f'bearer {accesstoken}'
 
     def load_config(self):
         with self.config_path.open('r') as fp:

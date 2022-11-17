@@ -45,8 +45,19 @@ it uses it's configuration format. `goliothctl` default configuration file is at
 
 #### Default hosted (`api.golioth.io`) backend
 
-In order to use this package with `api.golioth.io` an API key needs to be generated. This can be
-achieved with `goliothctl apikeys create`:
+`golioth` CLI can reuse credentials stored in `goliothctl`'s `~/.golioth/.goliothctl.yaml`
+configuration file. Make sure that `goliothctl` is already logged in with:
+
+``` sh
+$ goliothctl login
+```
+
+If that is true, then `golioth` CLI will reuse such access token for authorization.
+
+#### Default hosted (`api.golioth.io`) backend - using API key
+
+An alternative approach is to use generated API keys. This can be achieved with `goliothctl apikeys
+create`:
 
 ``` sh
 $ goliothctl apikeys create
