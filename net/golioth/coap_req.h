@@ -170,7 +170,7 @@ int golioth_coap_req_sync(struct golioth_client *client,
  * #golioth_coap_req_cb_t callback. Since all created requests are scheduled with timeout of 0, it
  * means that this function also handles sending of the request for the first time.
  *
- * @param[in] req CoAP request
+ * @param[in] client Client instance
  * @param[in] now Timestamp in msec of current event loop (usually output of k_uptime_get())
  *
  * @retval INT64_MAX Infinite timeout (in case request reached maximum retranmissions and was
