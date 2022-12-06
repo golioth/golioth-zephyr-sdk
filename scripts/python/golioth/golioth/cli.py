@@ -66,6 +66,68 @@ async def call(config, device_name, method, params):
 
 
 @cli.group()
+def lightdb():
+    """LightDB State related commands."""
+    pass
+
+@lightdb.command()
+@click.option('-d', '--device-name',
+              help='Name of device',
+              required=True)
+@click.argument('path')
+@pass_config
+async def get(config, device_name, path):
+    """Get LightDB State value."""
+    path = path.strip('/')
+
+    with console.status('Getting LightDB State value...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+        device = await project.device_by_name(device_name)
+
+        resp = await device.lightdb.get(path)
+
+        console.print(resp)
+
+
+@lightdb.command()
+@click.option('-d', '--device-name',
+              help='Name of device',
+              required=True)
+@click.argument('path')
+@click.argument('value', type=json.loads)
+@pass_config
+async def set(config, device_name, path, value):
+    """Set LightDB State value."""
+    path = path.strip('/')
+
+    with console.status('Setting LightDB State value...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+        device = await project.device_by_name(device_name)
+
+        await device.lightdb.set(path, value)
+
+
+@lightdb.command()
+@click.option('-d', '--device-name',
+              help='Name of device',
+              required=True)
+@click.argument('path')
+@pass_config
+async def delete(config, device_name, path):
+    """Delete LightDB State value."""
+    path = path.strip('/')
+
+    with console.status('Deleting LightDB State value...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+        device = await project.device_by_name(device_name)
+
+        await device.lightdb.delete(path)
+
+
+@cli.group()
 def certificate():
     """Certificates related commands."""
     pass

@@ -296,6 +296,7 @@ class Device(ApiNodeMixin):
         self.info = info
         self.base_url = f'{project.base_url}/devices/{self.id}'
         self.rpc = DeviceRPC(self)
+        self.lightdb = DeviceLightDB(self)
 
     @property
     def headers(self) -> Dict[str, str]:
@@ -327,6 +328,31 @@ class Device(ApiNodeMixin):
         params['deviceId'] = self.id
         async for log in self.project.logs_iter(lines=lines, params=params):
             yield log
+
+
+class DeviceLightDB(ApiNodeMixin):
+    ValueType = Union[str, int, float, bool, 'ValueType']
+
+    def __init__(self, device: Device):
+        self.device = device
+        self.base_url: str = device.base_url
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.device.headers
+
+    async def get(self, path: str) -> DeviceLightDB.ValueType:
+        async with self.http_client as c:
+            response = await c.get(f'data/{path}')
+            return response.json()['data']
+
+    async def set(self, path: str, value: ValueType) -> None:
+        async with self.http_client as c:
+            await c.post(f'data/{path}', json=value)
+
+    async def delete(self, path: str) -> None:
+        async with self.http_client as c:
+            await c.delete(f'data/{path}')
 
 
 class DeviceRPC(ApiNodeMixin):
