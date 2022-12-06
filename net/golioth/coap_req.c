@@ -15,6 +15,8 @@ LOG_MODULE_DECLARE(golioth);
 #include "coap_utils.h"
 #include "golioth_utils.h"
 
+static const int64_t COAP_OBSERVE_TS_DIFF_NEWER = 128 * (int64_t)MSEC_PER_SEC;
+
 #define COAP_RESPONSE_CODE_CLASS(code)	((code) >> 5)
 
 static int golioth_coap_req_send(struct golioth_coap_req *req)
@@ -158,11 +160,18 @@ static int golioth_coap_req_next_block(void *data, int status)
 	return 0;
 }
 
-/* Reordering according to RFC7641 section 3.4 but without timestamp comparison */
-static inline bool is_newer(int v1, int v2)
+/* Reordering according to RFC7641 section 3.4 */
+static inline bool sequence_number_is_newer(int v1, int v2)
 {
 	return (v1 < v2 && v2 - v1 < (1 << 23)) ||
 		(v1 > v2 && v1 - v2 > (1 << 23));
+}
+
+static bool golioth_coap_reply_is_newer(struct golioth_coap_reply *reply,
+					int seq, int64_t uptime)
+{
+	return (uptime > reply->ts + COAP_OBSERVE_TS_DIFF_NEWER ||
+		sequence_number_is_newer(reply->seq, seq));
 }
 
 static int golioth_coap_req_reply_handler(struct golioth_coap_req *req,
@@ -326,7 +335,7 @@ void golioth_coap_req_process_rx(struct golioth_client *client, const struct coa
 		uint16_t req_id = coap_header_get_id(&req->request);
 		uint8_t req_token[COAP_TOKEN_MAX_LEN];
 		uint8_t req_tkl = coap_header_get_token(&req->request, req_token);
-		int age;
+		int observe_seq;
 
 		if (req_id == 0U && req_tkl == 0U) {
 			continue;
@@ -341,11 +350,19 @@ void golioth_coap_req_process_rx(struct golioth_client *client, const struct coa
 			continue;
 		}
 
-		age = coap_get_option_int(rx, COAP_OPTION_OBSERVE);
-		/* handle observed requests only if received in order */
-		if (age == -ENOENT || is_newer(req->reply.age, age)) {
-			req->reply.age = age;
+		observe_seq = coap_get_option_int(rx, COAP_OPTION_OBSERVE);
+
+		if (observe_seq == -ENOENT) {
 			golioth_coap_req_reply_handler(req, rx);
+		} else {
+			int64_t uptime = k_uptime_get();
+
+			/* handle observed requests only if received in order */
+			if (golioth_coap_reply_is_newer(&req->reply, observe_seq, uptime)) {
+				req->reply.seq = observe_seq;
+				req->reply.ts = uptime;
+				golioth_coap_req_reply_handler(req, rx);
+			}
 		}
 
 		break;
@@ -375,7 +392,8 @@ static int golioth_coap_req_init(struct golioth_coap_req *req,
 	req->cb = (cb ? cb : golioth_req_rsp_default_handler);
 	req->user_data = user_data;
 	req->request_wo_block2.offset = 0;
-	req->reply.age = 0;
+	req->reply.seq = 0;
+	req->reply.ts = -COAP_OBSERVE_TS_DIFF_NEWER;
 
 	coap_block_transfer_init(&req->block_ctx, golioth_estimated_coap_block_size(client), 0);
 
