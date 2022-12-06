@@ -39,7 +39,8 @@ struct golioth_coap_pending {
  * @note Modeled after #coap_reply
  */
 struct golioth_coap_reply {
-	int age;		/* needed for observations only */
+	int seq;		/* needed for observations only */
+	int64_t ts;		/* needed for observations only */
 };
 
 /**
