@@ -290,6 +290,12 @@ static int sock_wrapper_close_vmeth(void *obj)
 
 	(void)k_mutex_lock(&wrapper_lock, K_FOREVER);
 
+	/*
+	 * Start work cancellation, to make sure work won't be rerun in case
+	 * work is both in the running and queued state.
+	 */
+	k_work_cancel(&wrapper->work);
+
 	/* Close wrapped socket */
 	zsock_close(wrapper->fd);
 
