@@ -111,7 +111,7 @@ static int lightdb_get_handler(struct golioth_req_rsp *rsp)
 	struct async_data *async = rsp->user_data;
 
 	if (rsp->err) {
-		LOG_ERR("Failed to receive counter value: %d", rsp->err);
+		LOG_ERR("Failed to receive value: %d", rsp->err);
 		k_sem_give(&async->sem);
 		return rsp->err;
 	}
