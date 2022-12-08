@@ -201,4 +201,18 @@ int64_t golioth_coap_reqs_poll_prepare(struct golioth_client *client, int64_t no
  */
 void golioth_coap_req_process_rx(struct golioth_client *client, const struct coap_packet *rx);
 
+/**
+ * @brief Process "connect" event in CoAP requests module
+ *
+ * @param[in] client Client instance
+ */
+void golioth_coap_reqs_on_connect(struct golioth_client *client);
+
+/**
+ * @brief Process "disconnect" event in CoAP requests module
+ *
+ * @param[in] client Client instance
+ */
+void golioth_coap_reqs_on_disconnect(struct golioth_client *client);
+
 #endif /* __NET_GOLIOTH_COAP_REQ_H__ */
