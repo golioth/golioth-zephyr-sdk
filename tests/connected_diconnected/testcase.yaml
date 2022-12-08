@@ -1,0 +1,4 @@
+tests:
+  net.golioth.connected_disconnected:
+    platform_allow: qemu_x86
+    tags: golioth net goliothd
