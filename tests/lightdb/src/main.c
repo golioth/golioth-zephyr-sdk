@@ -112,6 +112,7 @@ static int lightdb_get_handler(struct golioth_req_rsp *rsp)
 
 	if (rsp->err) {
 		LOG_ERR("Failed to receive value: %d", rsp->err);
+		async->err = rsp->err;
 		k_sem_give(&async->sem);
 		return rsp->err;
 	}
