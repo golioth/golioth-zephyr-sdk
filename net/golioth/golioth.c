@@ -36,8 +36,7 @@ void golioth_init(struct golioth_client *client)
 	k_mutex_init(&client->lock);
 	client->sock = -1;
 
-	sys_dlist_init(&client->coap_reqs);
-	k_mutex_init(&client->coap_reqs_lock);
+	golioth_coap_reqs_init(client);
 }
 
 bool golioth_is_connected(struct golioth_client *client)

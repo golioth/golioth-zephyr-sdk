@@ -64,6 +64,15 @@ struct golioth_coap_req {
 };
 
 /**
+ * @brief Initialize CoAP requests for client
+ *
+ * Initializes CoAP requests handling for Golioth client instance.
+ *
+ * @param[inout] client Client instance
+ */
+void golioth_coap_reqs_init(struct golioth_client *client);
+
+/**
  * @brief Allocate and initialize new CoAP request
  *
  * Allocates new CoAP request, buffer for data (according to @p buffer_len) and initializes it, so
