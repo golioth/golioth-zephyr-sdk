@@ -19,6 +19,12 @@ static const int64_t COAP_OBSERVE_TS_DIFF_NEWER = 128 * (int64_t)MSEC_PER_SEC;
 
 #define COAP_RESPONSE_CODE_CLASS(code)	((code) >> 5)
 
+void golioth_coap_reqs_init(struct golioth_client *client)
+{
+	sys_dlist_init(&client->coap_reqs);
+	k_mutex_init(&client->coap_reqs_lock);
+}
+
 static int golioth_coap_req_send(struct golioth_coap_req *req)
 {
 	return golioth_send_coap(req->client, &req->request);
