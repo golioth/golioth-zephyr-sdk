@@ -63,6 +63,7 @@ struct golioth_client {
 	int sock;
 
 	sys_dlist_t coap_reqs;
+	bool coap_reqs_connected;
 	struct k_mutex coap_reqs_lock;
 
 	void (*on_connect)(struct golioth_client *client);

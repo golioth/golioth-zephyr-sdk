@@ -257,6 +257,8 @@ int golioth_connect(struct golioth_client *client, const char *host,
 
 	err = __golioth_connect(client, host, port);
 	if (!err) {
+		golioth_coap_reqs_on_connect(client);
+
 		if (client->on_connect) {
 			client->on_connect(client);
 		}
@@ -279,6 +281,8 @@ static int golioth_close(struct golioth_client *client)
 
 int golioth_disconnect(struct golioth_client *client)
 {
+	golioth_coap_reqs_on_disconnect(client);
+
 	return golioth_close(client);
 }
 
