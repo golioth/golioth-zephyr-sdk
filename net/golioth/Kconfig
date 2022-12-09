@@ -144,6 +144,24 @@ config GOLIOTH_SETTINGS
 	  Enable Golioth Settings feature. Not to be confused
 	  with Zephyr's own Settings subsystem.
 
+config GOLIOTH_SETTINGS_MAX_RESPONSE_LEN
+	int "Max length of settings response sent to Golioth"
+	depends on GOLIOTH_SETTINGS
+	default 256
+	help
+	  Defines the maximum length, in bytes, of the client response sent to the Golioth
+	  server on CoAP endpoint "/.c/status".
+
+	  Internally, a buffer of this size will be created, which will store a
+	  CBOR-encoded response message.
+
+	  It's generally recommended to set this to a value of 50 * N, where N is the
+	  number of Golioth settings.
+
+	  The response length grows as a function of the number of errors encountered while
+	  processing Golioth settings. Each setting can have an error, so in the worst case
+	  you'd have an error for every setting you've defined in your Golioth project.
+
 config GOLIOTH_FW_PACKAGE_NAME_MAX_LEN
 	int "Maximum length of package name"
 	default 32
