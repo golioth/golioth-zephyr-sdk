@@ -47,12 +47,11 @@ LOG_MODULE_DECLARE(golioth);
 #define GOLIOTH_SETTINGS_PATH ".c"
 #define GOLIOTH_SETTINGS_STATUS_PATH ".c/status"
 #define GOLIOTH_SETTINGS_MAX_NAME_LEN 63 /* not including NULL */
-#define GOLIOTH_SETTINGS_MAX_RESPONSE_LEN 256
 
 struct settings_response {
 	QCBOREncodeContext encode_ctx;
 	UsefulBuf useful_buf;
-	uint8_t buf[GOLIOTH_SETTINGS_MAX_RESPONSE_LEN];
+	uint8_t buf[CONFIG_GOLIOTH_SETTINGS_MAX_RESPONSE_LEN];
 	size_t num_errors;
 };
 
@@ -110,6 +109,12 @@ static int finalize_and_send_response(struct golioth_client *client,
 
 	size_t response_len;
 	QCBORError qerr = QCBOREncode_FinishGetSize(&response->encode_ctx, &response_len);
+
+	if (qerr == QCBOR_ERR_BUFFER_TOO_SMALL) {
+		LOG_ERR("Settings response too large "
+			"(consider increasing GOLIOTH_SETTINGS_MAX_RESPONSE_LEN)");
+		return qcbor_error_to_posix(qerr);
+	}
 
 	if (qerr != QCBOR_SUCCESS) {
 		LOG_ERR("QCBOREncode_FinishGetSize error: %d (%s)", qerr, qcbor_err_to_str(qerr));
