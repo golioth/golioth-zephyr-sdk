@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2022-12-13
+### Added
+- Python library and CLI tools for accessing Golioth REST API (`scripts/python/golioth/`)
+- twister+pytest tests for `samples/rpc/`
+- support for `GOLIOTHCTL_CONFIG` environment variable in pytest scripts
+- `GOLIOTH_CIPHERSUITES` Kconfig option, which allows selection of preferred ciphersuites used
+  during DTLS handshake (by default only one ciphersuite is selected to reduce DTLS handshake)
+- configurable settings response length with `GOLIOTH_SETTINGS_MAX_RESPONSE_LEN`
+- support for certificate-based authentication with `coap.golioth.io` in `sample/hello/`
+
+### Fixed
+- handling of multiple desired firmware changes in `samples/dfu/`, which previously caused corrupted
+  firmware upgrade
+- infinite loop in ciphersuite negotiation during DTLS handshake, solved by narrowing down used
+  ciphersuites by introducing `GOLIOTH_CIPHERSUITES` Kconfig option
+- handling of CoAP observation notifications (used by observations in LightDB State, DFU desired
+  firmware, RPC and Settings services) with specific (too high) CoAP observe sequence numbers, which
+  resulted in ignoring incoming CoAP observe notifications
+- disconnecting (and reconnecting) from Golioth server on nRF9160 based devices, which sometimes
+  resulted in deadlock on socket close operation
+- handling of CoAP requests when disconnected from Golioth server (sending/scheduling requests is no
+  longer possible when disconnected and already scheduled/pending requests are cancelled once client
+  gets disconnected)
+
+### Changed
+- pytest tests for `samples/logging/` use introduced Python library instead of `goliothctl`
+- hardware tests use `coap.golioth.dev` (backend development version)
+
 ## [0.4.0] - 2022-10-19
 ### Added
 - offloaded sockets wrapper for using interruptible `poll()` with drivers implementing offloaded
