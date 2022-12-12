@@ -17,7 +17,13 @@ if(CONFIG_GOLIOTH_AUTH_METHOD_CERT)
     set(path ${CONFIG_GOLIOTH_SYSTEM_CLIENT_${type_upper}_PATH})
 
     if(NOT IS_ABSOLUTE ${path})
-      set(path ${APPLICATION_SOURCE_DIR}/${path})
+      if(EXISTS ${APPLICATION_SOURCE_DIR}/${path})
+        set(path ${APPLICATION_SOURCE_DIR}/${path})
+      elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${path})
+        set(path ${CMAKE_CURRENT_SOURCE_DIR}/${path})
+      else()
+        message(FATAL_ERROR "${path} configured by CONFIG_GOLIOTH_SYSTEM_CLIENT_${type_upper}_PATH does not exist")
+      endif()
     endif()
 
     generate_inc_file_for_target(app ${path}
