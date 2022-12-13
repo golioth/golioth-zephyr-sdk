@@ -41,8 +41,8 @@ async def main(config_path, api_key, device_name):
     primary_hardware_id = device.info['hardwareIds'][0]
     client_name = f"{project.id}-{device.name}"
 
-    root_ca_crt = SCRIPTS_DIR / f'{ROOT_CA_NAME}.crt.pem'
-    root_ca_key = SCRIPTS_DIR / f'{ROOT_CA_NAME}.key.pem'
+    root_ca_crt = SCRIPTS_DIR / f'{ROOT_CA_NAME}-{project.id}.crt.pem'
+    root_ca_key = SCRIPTS_DIR / f'{ROOT_CA_NAME}-{project.id}.key.pem'
 
     # Generate an elliptic curve private key
     # Run `openssl ecparam -list_curves` to list all available algorithms
