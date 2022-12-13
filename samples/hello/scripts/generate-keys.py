@@ -73,7 +73,7 @@ async def main(config_path, api_key, device_name):
         await project.certificates.add(fp.read(), cert_type='root')
 
     # Convert keys/certificates to DER form
-    KEYS_DIR.mkdir(exists_ok=True)
+    KEYS_DIR.mkdir(exist_ok=True)
     run(f'openssl x509 -in {client_name}.crt.pem -outform DER -out {KEYS_DIR}/{client_name}.crt.der')
     run(f'openssl ec -in {client_name}.key.pem -outform DER -out {KEYS_DIR}/{client_name}.key.der')
 
