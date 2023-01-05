@@ -16,6 +16,11 @@ manifest:
           - segger
           - tinycrypt
 
+    - name: golioth-firmware-sdk
+      revision: c985462b0ce575df5209b104b40e88f26c0b2e2a
+      url: https://github.com/golioth/golioth-firmware-sdk
+      path: modules/lib/golioth-firmware-sdk
+
   self:
     path: modules/lib/golioth
     west-commands: scripts/west-commands.yml
