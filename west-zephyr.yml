@@ -4,17 +4,7 @@ manifest:
       revision: v3.2.0
       url: https://github.com/zephyrproject-rtos/zephyr
       west-commands: scripts/west-commands.yml
-      import:
-        name-allowlist:
-          - cmsis
-          - hal_espressif
-          - hal_nordic
-          - hal_nxp
-          - mbedtls
-          - mcuboot
-          - net-tools
-          - segger
-          - tinycrypt
+      import: true
 
     - name: golioth-firmware-sdk
       revision: c985462b0ce575df5209b104b40e88f26c0b2e2a
