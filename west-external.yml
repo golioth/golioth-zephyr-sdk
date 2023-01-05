@@ -4,3 +4,8 @@ manifest:
       revision: 17b5607b8c49b835d22dec3effa97b25c89267b3
       url: https://github.com/golioth/QCBOR.git
       path: modules/lib/qcbor
+
+    - name: libcoap
+      revision: 3552b53be4a0508a5041fd25fcf6ed880c2923f5
+      url: https://github.com/obgm/libcoap.git
+      path: modules/lib/libcoap
