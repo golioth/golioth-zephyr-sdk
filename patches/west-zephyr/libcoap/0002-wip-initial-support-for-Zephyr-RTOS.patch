@@ -1,0 +1,926 @@
+From a55e26e4d1ea3571242cc45c120b32acadb59591 Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@emb.dev>
+Date: Thu, 12 Jan 2023 15:28:10 +0100
+Subject: [PATCH] wip: initial support for Zephyr RTOS
+
+---
+ include/coap3/coap_debug.h          |   4 +
+ include/coap3/coap_mutex_internal.h |  12 +-
+ include/coap3/net.h                 |   1 -
+ src/coap_debug.c                    |   8 +-
+ src/coap_io.c                       |   2 +-
+ src/coap_io_zephyr.c                | 526 ++++++++++++++++++++++++++++
+ src/coap_time_zephyr.c              |  14 +
+ src/coap_zephyr_tls.c               |  79 +++++
+ src/net.c                           |   2 +-
+ zephyr/CMakeLists.txt               |  37 ++
+ zephyr/Kconfig                      |  13 +
+ zephyr/include/coap3/coap.h         |  35 ++
+ zephyr/include/coap_config.h        |  33 ++
+ zephyr/module.yml                   |   3 +
+ 14 files changed, 762 insertions(+), 7 deletions(-)
+ create mode 100644 src/coap_io_zephyr.c
+ create mode 100644 src/coap_time_zephyr.c
+ create mode 100644 src/coap_zephyr_tls.c
+ create mode 100644 zephyr/CMakeLists.txt
+ create mode 100644 zephyr/Kconfig
+ create mode 100644 zephyr/include/coap3/coap.h
+ create mode 100644 zephyr/include/coap_config.h
+ create mode 100644 zephyr/module.yml
+
+diff --git a/include/coap3/coap_debug.h b/include/coap3/coap_debug.h
+index 8a5a32c..e29af68 100644
+--- a/include/coap3/coap_debug.h
++++ b/include/coap3/coap_debug.h
+@@ -80,6 +80,8 @@ typedef enum {
+ #endif /* RIOT_VERSION */
+ #endif /* HAVE_SYSLOG_H */
+ 
++#ifndef __ZEPHYR__
++
+ #ifndef LOG_EMERG
+ # define LOG_EMERG  COAP_LOG_EMERG
+ #endif
+@@ -105,6 +107,8 @@ typedef enum {
+ # define LOG_DEBUG  COAP_LOG_DEBUG
+ #endif
+ 
++#endif
++
+ /**
+  * Get the current logging level.
+  *
+diff --git a/include/coap3/coap_mutex_internal.h b/include/coap3/coap_mutex_internal.h
+index 7a42bbd..fc6c5b5 100644
+--- a/include/coap3/coap_mutex_internal.h
++++ b/include/coap3/coap_mutex_internal.h
+@@ -70,7 +70,17 @@ typedef int coap_mutex_t;
+ #define coap_mutex_trylock(a) *(a) = 1
+ #define coap_mutex_unlock(a) *(a) = 0
+ 
+-#else /* !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
++#elif defined(__ZEPHYR__)
++#include <zephyr/kernel.h>
++
++typedef struct k_mutex coap_mutex_t;
++#define COAP_MUTEX_DEFINE(_name)			\
++	static K_MUTEX_DEFINE(_name)
++#define coap_mutex_lock(a) k_mutex_lock(a, K_FOREVER)
++#define coap_mutex_trylock(a) k_mutex_lock(a, K_NO_WAIT)
++#define coap_mutex_unlock(a) k_mutex_unlock(a)
++
++#else /* !__ZEPYR__ && !WITH_CONTIKI && !WITH_LWIP && !RIOT_VERSION && !HAVE_PTHREAD_H && !HAVE_PTHREAD_MUTEX_LOCK */
+ /* define stub mutex functions */
+ #warning "stub mutex functions"
+ typedef int coap_mutex_t;
+diff --git a/include/coap3/net.h b/include/coap3/net.h
+index ceb271c..73c7756 100644
+--- a/include/coap3/net.h
++++ b/include/coap3/net.h
+@@ -23,7 +23,6 @@
+ #include <sys/select.h>
+ #include <sys/time.h>
+ #endif
+-#include <time.h>
+ 
+ #ifdef WITH_LWIP
+ #include <lwip/ip_addr.h>
+diff --git a/src/coap_debug.c b/src/coap_debug.c
+index fb94dfe..033ef5b 100644
+--- a/src/coap_debug.c
++++ b/src/coap_debug.c
+@@ -13,12 +13,14 @@
+  * @brief Debug utilities
+  */
+ 
+-#include "coap3/coap_internal.h"
+-
+-#if defined(HAVE_STRNLEN) && defined(__GNUC__) && !defined(_GNU_SOURCE)
++#if defined(__GNUC__) && !defined(_GNU_SOURCE)
+ #define _GNU_SOURCE 1
+ #endif
+ 
++#include "coap3/coap_internal.h"
++
++#include <sys/types.h>
++
+ #include <stdarg.h>
+ #include <stdio.h>
+ #include <string.h>
+diff --git a/src/coap_io.c b/src/coap_io.c
+index face811..c724990 100644
+--- a/src/coap_io.c
++++ b/src/coap_io.c
+@@ -59,7 +59,7 @@
+ # include "uip.h"
+ #endif
+ 
+-#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) && !(WITH_LWIP)
++#if !defined(WITH_CONTIKI) && !defined(RIOT_VERSION) && !(WITH_LWIP) && !defined(__ZEPHYR__)
+  /* define generic PKTINFO for IPv4 */
+ #if defined(IP_PKTINFO)
+ #  define GEN_IP_PKTINFO IP_PKTINFO
+diff --git a/src/coap_io_zephyr.c b/src/coap_io_zephyr.c
+new file mode 100644
+index 0000000..97f81a0
+--- /dev/null
++++ b/src/coap_io_zephyr.c
+@@ -0,0 +1,526 @@
++/*
++ * Copyright (C) 2012,2014 Olaf Bergmann <bergmann@tzi.org>
++ *               2014 chrysn <chrysn@fsfe.org>
++ *               2022-2023 Jon Shallow <supjps-libcoap@jpshallow.com>
++ *               2023 Golioth, Inc.
++ *
++ * SPDX-License-Identifier: BSD-2-Clause
++ *
++ * This file is part of the CoAP library libcoap. Please see
++ * README for terms of use.
++ */
++
++/**
++ * @file coap_io_zephyr.c
++ * @brief Zephyr specific functions
++ */
++
++#include "coap3/coap_internal.h"
++
++/*
++ * coap_io_prepare_io() copy pasted from coap_io.c
++ *
++ * return  0 No i/o pending
++ *       +ve millisecs to next i/o activity
++ */
++unsigned int
++coap_io_prepare_io(coap_context_t *ctx,
++                   coap_socket_t *sockets[],
++                   unsigned int max_sockets,
++                   unsigned int *num_sockets,
++                   coap_tick_t now) {
++  coap_queue_t *nextpdu;
++  coap_session_t *s, *rtmp;
++  coap_tick_t timeout = 0;
++  coap_tick_t s_timeout;
++#if COAP_SERVER_SUPPORT
++  int check_dtls_timeouts = 0;
++#endif /* COAP_SERVER_SUPPORT */
++#if defined(COAP_EPOLL_SUPPORT) || defined(WITH_LWIP)
++  (void)sockets;
++  (void)max_sockets;
++#endif /* COAP_EPOLL_SUPPORT || WITH_LWIP */
++
++  *num_sockets = 0;
++
++#if COAP_SERVER_SUPPORT
++  /* Check to see if we need to send off any Observe requests */
++  coap_check_notify(ctx);
++#endif /* COAP_SERVER_SUPPORT */
++
++#ifndef WITHOUT_ASYNC
++  /* Check to see if we need to send off any Async requests */
++  timeout = coap_check_async(ctx, now);
++#endif /* WITHOUT_ASYNC */
++
++  /* Check to see if we need to send off any retransmit request */
++  nextpdu = coap_peek_next(ctx);
++  while (nextpdu && now >= ctx->sendqueue_basetime &&
++         nextpdu->t <= now - ctx->sendqueue_basetime) {
++    coap_retransmit(ctx, coap_pop_next(ctx));
++    nextpdu = coap_peek_next(ctx);
++  }
++  if (nextpdu && (timeout == 0 ||
++      nextpdu->t - (now - ctx->sendqueue_basetime) < timeout))
++    timeout = nextpdu->t - (now - ctx->sendqueue_basetime);
++
++  /* Check for DTLS timeouts */
++  if (ctx->dtls_context) {
++    if (coap_dtls_is_context_timeout()) {
++      coap_tick_t tls_timeout = coap_dtls_get_context_timeout(ctx->dtls_context);
++      if (tls_timeout > 0) {
++        if (tls_timeout < now + COAP_TICKS_PER_SECOND / 10)
++          tls_timeout = now + COAP_TICKS_PER_SECOND / 10;
++        coap_log_debug("** DTLS global timeout set to %dms\n",
++                 (int)((tls_timeout - now) * 1000 / COAP_TICKS_PER_SECOND));
++        if (timeout == 0 || tls_timeout - now < timeout)
++          timeout = tls_timeout - now;
++      }
++#if COAP_SERVER_SUPPORT
++    } else {
++      check_dtls_timeouts = 1;
++#endif /* COAP_SERVER_SUPPORT */
++    }
++  }
++#if COAP_SERVER_SUPPORT
++  coap_endpoint_t *ep;
++  coap_tick_t session_timeout;
++
++  if (ctx->session_timeout > 0)
++    session_timeout = ctx->session_timeout * COAP_TICKS_PER_SECOND;
++  else
++    session_timeout = COAP_DEFAULT_SESSION_TIMEOUT * COAP_TICKS_PER_SECOND;
++
++  LL_FOREACH(ctx->endpoint, ep) {
++#if !defined(COAP_EPOLL_SUPPORT) && !defined(WITH_LWIP)
++    if (ep->sock.flags & (COAP_SOCKET_WANT_READ | COAP_SOCKET_WANT_WRITE | COAP_SOCKET_WANT_ACCEPT)) {
++      if (*num_sockets < max_sockets)
++        sockets[(*num_sockets)++] = &ep->sock;
++    }
++#endif /* ! COAP_EPOLL_SUPPORT i && ! WITH_LWIP */
++    SESSIONS_ITER_SAFE(ep->sessions, s, rtmp) {
++      /* Check whether any idle server sessions should be released */
++      if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
++          s->delayqueue == NULL &&
++          (s->last_rx_tx + session_timeout <= now ||
++           s->state == COAP_SESSION_STATE_NONE)) {
++        coap_handle_event(ctx, COAP_EVENT_SERVER_SESSION_DEL, s);
++        coap_session_free(s);
++      } else {
++        if (s->type == COAP_SESSION_TYPE_SERVER && s->ref == 0 &&
++            s->delayqueue == NULL) {
++          s_timeout = (s->last_rx_tx + session_timeout) - now;
++          if (timeout == 0 || s_timeout < timeout)
++            timeout = s_timeout;
++        }
++        /* Make sure the session object is not deleted in any callbacks */
++        coap_session_reference(s);
++        /* Check any DTLS timeouts and expire if appropriate */
++        if (check_dtls_timeouts && s->state == COAP_SESSION_STATE_HANDSHAKE &&
++            s->proto == COAP_PROTO_DTLS && s->tls) {
++          coap_tick_t tls_timeout = coap_dtls_get_timeout(s, now);
++          while (tls_timeout > 0 && tls_timeout <= now) {
++            coap_log_debug("** %s: DTLS retransmit timeout\n",
++                     coap_session_str(s));
++            if (coap_dtls_handle_timeout(s))
++              goto release_1;
++
++            if (s->tls)
++              tls_timeout = coap_dtls_get_timeout(s, now);
++            else {
++              tls_timeout = 0;
++              timeout = 1;
++            }
++          }
++          if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
++            timeout = tls_timeout - now;
++        }
++        /* Check if any server large receives have timed out */
++        if (s->lg_srcv) {
++          if (coap_block_check_lg_srcv_timeouts(s, now, &s_timeout)) {
++            if (timeout == 0 || s_timeout < timeout)
++              timeout = s_timeout;
++          }
++        }
++        /* Check if any server large sending have timed out */
++        if (s->lg_xmit) {
++          if (coap_block_check_lg_xmit_timeouts(s, now, &s_timeout)) {
++            if (timeout == 0 || s_timeout < timeout)
++              timeout = s_timeout;
++          }
++        }
++#if !defined(COAP_EPOLL_SUPPORT) && !defined(WITH_LWIP)
++        if (s->sock.flags & (COAP_SOCKET_WANT_READ|COAP_SOCKET_WANT_WRITE)) {
++          if (*num_sockets < max_sockets)
++            sockets[(*num_sockets)++] = &s->sock;
++        }
++#endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP */
++release_1:
++        coap_session_release(s);
++      }
++    }
++  }
++#endif /* COAP_SERVER_SUPPORT */
++#if COAP_CLIENT_SUPPORT
++  SESSIONS_ITER_SAFE(ctx->sessions, s, rtmp) {
++    if (s->type == COAP_SESSION_TYPE_CLIENT &&
++        s->state == COAP_SESSION_STATE_ESTABLISHED &&
++        ctx->ping_timeout > 0) {
++      if (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND <= now) {
++        if ((s->last_ping > 0 && s->last_pong < s->last_ping) ||
++            ((s->last_ping_mid = coap_session_send_ping(s)) == COAP_INVALID_MID))
++        {
++          /* Make sure the session object is not deleted in the callback */
++          coap_session_reference(s);
++          coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
++          coap_session_release(s);
++          continue;
++        }
++        s->last_rx_tx = now;
++        s->last_ping = now;
++      }
++      s_timeout = (s->last_rx_tx + ctx->ping_timeout * COAP_TICKS_PER_SECOND) - now;
++      if (timeout == 0 || s_timeout < timeout)
++        timeout = s_timeout;
++    }
++
++#if !COAP_DISABLE_TCP
++    if (s->type == COAP_SESSION_TYPE_CLIENT && COAP_PROTO_RELIABLE(s->proto) &&
++        s->state == COAP_SESSION_STATE_CSM && ctx->csm_timeout > 0) {
++      if (s->csm_tx == 0) {
++        s->csm_tx = now;
++      } else if (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND <= now) {
++        /* Make sure the session object is not deleted in the callback */
++        coap_session_reference(s);
++        coap_session_disconnected(s, COAP_NACK_NOT_DELIVERABLE);
++        coap_session_release(s);
++        continue;
++      }
++      s_timeout = (s->csm_tx + ctx->csm_timeout * COAP_TICKS_PER_SECOND) - now;
++      if (timeout == 0 || s_timeout < timeout)
++        timeout = s_timeout;
++    }
++#endif /* !COAP_DISABLE_TCP */
++
++    /* Make sure the session object is not deleted in any callbacks */
++    coap_session_reference(s);
++    /* Check any DTLS timeouts and expire if appropriate */
++    if (s->state == COAP_SESSION_STATE_HANDSHAKE &&
++        s->proto == COAP_PROTO_DTLS && s->tls) {
++      coap_tick_t tls_timeout = coap_dtls_get_timeout(s, now);
++      while (tls_timeout > 0 && tls_timeout <= now) {
++        coap_log_debug("** %s: DTLS retransmit timeout\n", coap_session_str(s));
++        if (coap_dtls_handle_timeout(s))
++          goto release_2;
++
++        if (s->tls)
++          tls_timeout = coap_dtls_get_timeout(s, now);
++        else {
++          tls_timeout = 0;
++          timeout = 1;
++        }
++      }
++      if (tls_timeout > 0 && (timeout == 0 || tls_timeout - now < timeout))
++        timeout = tls_timeout - now;
++    }
++
++    /* Check if any client large receives have timed out */
++    if (s->lg_crcv) {
++      if (coap_block_check_lg_crcv_timeouts(s, now, &s_timeout)) {
++        if (timeout == 0 || s_timeout < timeout)
++          timeout = s_timeout;
++      }
++    }
++    /* Check if any client large sending have timed out */
++    if (s->lg_xmit) {
++      if (coap_block_check_lg_xmit_timeouts(s, now, &s_timeout)) {
++        if (timeout == 0 || s_timeout < timeout)
++          timeout = s_timeout;
++      }
++    }
++
++#if !defined(COAP_EPOLL_SUPPORT) && !defined(WITHLWIP)
++    assert(s->ref > 1);
++    if (s->sock.flags & (COAP_SOCKET_WANT_READ |
++                         COAP_SOCKET_WANT_WRITE |
++                         COAP_SOCKET_WANT_CONNECT)) {
++      if (*num_sockets < max_sockets)
++        sockets[(*num_sockets)++] = &s->sock;
++    }
++#endif /* ! COAP_EPOLL_SUPPORT && ! WITH_LWIP */
++release_2:
++    coap_session_release(s);
++  }
++#endif /* COAP_CLIENT_SUPPORT */
++
++  return (unsigned int)((timeout * 1000 + COAP_TICKS_PER_SECOND - 1) / COAP_TICKS_PER_SECOND);
++}
++
++int coap_io_process(coap_context_t *ctx, uint32_t timeout_ms)
++{
++	struct zsock_pollfd fds[ARRAY_SIZE(ctx->sockets)] = {};
++	coap_tick_t before, now;
++	unsigned int timeout;
++	int timeout_poll;
++	int ret;
++
++	coap_log_info("****** coap_io_process(timeout_ms %u %d)\n", (unsigned int) timeout_ms, (int) timeout_ms);
++
++	coap_ticks(&before);
++
++	timeout = coap_io_prepare_io(ctx, ctx->sockets,
++			    (sizeof(ctx->sockets) / sizeof(ctx->sockets[0])),
++			    &ctx->num_sockets, before);
++
++	if (timeout == 0 || timeout_ms < timeout) {
++		timeout = timeout_ms;
++	}
++
++	coap_log_info("****** coap_io_process() timeout %d timeout_ms %d\n",
++		      (int) timeout, (int) timeout_ms);
++
++	if (timeout == COAP_IO_NO_WAIT) {
++		timeout_poll = 0;
++	} else if (timeout == COAP_IO_WAIT) {
++		timeout_poll = -1;
++	} else {
++		timeout_poll = timeout;
++	}
++
++	for (unsigned int i = 0; i < ctx->num_sockets; i++) {
++		fds[i].fd = ctx->sockets[i]->fd;
++
++		if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ) {
++			fds[i].events |= ZSOCK_POLLIN;
++		}
++
++		if (ctx->sockets[i]->flags & COAP_SOCKET_WANT_WRITE) {
++			fds[i].events |= ZSOCK_POLLOUT;
++		}
++
++		coap_log_info("****** fds[%d].fd %d .events %d\n", i, fds[i].fd, fds[i].events);
++	}
++
++	ret = zsock_poll(fds, ctx->num_sockets, timeout_poll);
++
++	if (ret < 0) {
++		coap_log_debug("%s", strerror(errno));
++		return -1;
++	}
++
++	if (ret > 0) {
++		for (unsigned int i = 0; i < ctx->num_sockets; i++) {
++			if ((ctx->sockets[i]->flags & COAP_SOCKET_WANT_READ) &&
++			    (fds[i].revents & ZSOCK_POLLIN)) {
++				coap_log_info("****** fds[%d].fd %d .revents %d\n",
++					      i, fds[i].fd, fds[i].revents);
++				ctx->sockets[i]->flags |= COAP_SOCKET_CAN_READ;
++			}
++		}
++	}
++
++	coap_ticks(&now);
++	coap_io_do_io(ctx, now);
++
++	return 0;
++}
++
++void coap_packet_get_memmapped(coap_packet_t *packet, unsigned char **address, size_t *length)
++{
++	__ASSERT(packet->pbuf->tot_len == packet->pbuf->len,
++		 "Can only deal with contiguous PBUFs to read the initial details");
++
++	coap_log_info("****** coap_get_memmapped()\n");
++
++	*address = packet->payload;
++	*length = packet->length;
++}
++
++ssize_t coap_socket_send(coap_socket_t *sock, coap_session_t *session,
++			 const uint8_t *data, size_t data_len )
++{
++	coap_log_info("****** coap_socket_send()\n");
++
++	return zsock_send(sock->fd, data, data_len, 0);
++}
++
++#if COAP_SERVER_SUPPORT
++
++int
++coap_socket_bind_udp(coap_socket_t *sock,
++                     const coap_address_t *listen_addr,
++                     coap_address_t *bound_addr)
++{
++	coap_log_info("****** coap_socket_bind_udp()\n");
++
++	return 0;
++}
++
++#endif /* COAP_SERVER_SUPPORT */
++
++#if COAP_CLIENT_SUPPORT
++int coap_socket_connect_udp(coap_socket_t *sock,
++			    const coap_address_t *local_if,
++			    const coap_address_t *server,
++			    int default_port,
++			    coap_address_t *local_addr,
++			    coap_address_t *remote_addr)
++{
++	coap_address_t connect_addr;
++	int ret;
++
++	coap_log_info("****** coap_socket_connect_udp()\n");
++
++	coap_address_copy(&connect_addr, server);
++
++	sock->flags &= ~(COAP_SOCKET_CONNECTED | COAP_SOCKET_MULTICAST);
++	sock->fd = zsock_socket(connect_addr.addr.sa.sa_family, SOCK_DGRAM, 0);
++	if (sock->fd < 0) {
++		goto close_socket;
++	}
++
++	ret = zsock_connect(sock->fd, &connect_addr.addr.sa, connect_addr.size);
++	if (ret < 0) {
++		goto close_socket;
++	}
++
++	sock->flags |= COAP_SOCKET_CONNECTED;
++
++	return 1;
++
++close_socket:
++	coap_socket_close(sock);
++
++	return 0;
++}
++#endif /* ! COAP_CLIENT_SUPPORT */
++
++#if ! COAP_DISABLE_TCP
++int coap_socket_connect_tcp1(coap_socket_t *sock,
++			     const coap_address_t *local_if,
++			     const coap_address_t *server,
++			     int default_port,
++			     coap_address_t *local_addr,
++			     coap_address_t *remote_addr)
++{
++	(void)sock;
++	(void)local_if;
++	(void)server;
++	(void)default_port;
++	(void)local_addr;
++	(void)remote_addr;
++	return 0;
++}
++
++int coap_socket_connect_tcp2(coap_socket_t *sock,
++			     coap_address_t *local_addr,
++			     coap_address_t *remote_addr)
++{
++	(void)sock;
++	(void)local_addr;
++	(void)remote_addr;
++	return 0;
++}
++
++int coap_socket_bind_tcp(coap_socket_t *sock,
++			 const coap_address_t *listen_addr,
++			 coap_address_t *bound_addr)
++{
++	(void)sock;
++	(void)listen_addr;
++	(void)bound_addr;
++	return 0;
++}
++
++int coap_socket_accept_tcp(coap_socket_t *server,
++			   coap_socket_t *new_client,
++			   coap_address_t *local_addr,
++			   coap_address_t *remote_addr)
++{
++	(void)server;
++	(void)new_client;
++	(void)local_addr;
++	(void)remote_addr;
++	return 0;
++}
++#endif /* !COAP_DISABLE_TCP */
++
++ssize_t coap_socket_write(coap_socket_t *sock, const uint8_t *data, size_t data_len)
++{
++	(void)sock;
++	(void)data;
++	(void)data_len;
++	return -1;
++}
++
++ssize_t coap_socket_read(coap_socket_t *sock, uint8_t *data, size_t data_len)
++{
++	(void)sock;
++	(void)data;
++	(void)data_len;
++
++	coap_log_info("****** coap_socket_read()\n");
++
++	return -1;
++}
++
++void coap_socket_close(coap_socket_t *sock)
++{
++	coap_log_info("****** coap_socket_close()\n");
++}
++
++ssize_t coap_network_read(coap_socket_t *sock, coap_packet_t *packet)
++{
++	ssize_t ret;
++
++	if ((sock->flags & COAP_SOCKET_CAN_READ) == 0) {
++		coap_log_debug("coap_network_read: COAP_SOCKET_CAN_READ not set\n");
++		return -1;
++	}
++
++	/* clear has-data flag */
++	sock->flags &= ~COAP_SOCKET_CAN_READ;
++
++	if (!(sock->flags & COAP_SOCKET_CONNECTED)) {
++		coap_log_debug("coap_network_read: !COAP_SOCKET_CONNECTED\n");
++		return -1;
++	}
++
++	ret = zsock_recv(sock->fd, packet->payload, COAP_RXBUFFER_SIZE, 0);
++	if (ret < 0) {
++		if (errno == ECONNREFUSED || errno == EHOSTUNREACH) {
++			/* client-side ICMP destination unreachable, ignore it */
++			coap_log_warn("** %s: coap_network_read: ICMP: %s\n",
++				      sock->session ?
++				      	coap_session_str(sock->session) : "",
++				      strerror(errno));
++			return -2;
++		}
++
++		coap_log_warn("** %s: coap_network_read: %s\n",
++			      sock->session ?
++                              	coap_session_str(sock->session) : "",
++			      strerror(errno));
++
++		goto error;
++	}
++
++	if (ret > 0) {
++		packet->length = ret;
++	}
++
++	if (ret >= 0) {
++		return ret;
++	}
++
++error:
++	return -1;
++}
++
++ssize_t coap_network_send(coap_socket_t *sock,
++			  const coap_session_t *session,
++			  const uint8_t *data,
++			  size_t datalen)
++{
++	return -1;
++}
+diff --git a/src/coap_time_zephyr.c b/src/coap_time_zephyr.c
+new file mode 100644
+index 0000000..36aa788
+--- /dev/null
++++ b/src/coap_time_zephyr.c
+@@ -0,0 +1,14 @@
++#include "coap3/coap_internal.h"
++
++void coap_ticks(coap_tick_t *t)
++{
++	*t = (k_uptime_get() * COAP_TICKS_PER_SECOND) / MSEC_PER_SEC;
++}
++
++void coap_clock_init(void)
++{
++}
++
++uint64_t coap_ticks_to_rt_us(coap_tick_t t) {
++	return (uint64_t)t * 1000000 / COAP_TICKS_PER_SECOND;
++}
+diff --git a/src/coap_zephyr_tls.c b/src/coap_zephyr_tls.c
+new file mode 100644
+index 0000000..4670089
+--- /dev/null
++++ b/src/coap_zephyr_tls.c
+@@ -0,0 +1,79 @@
++#include "coap3/coap_internal.h"
++
++void *coap_dtls_new_context(coap_context_t *c_context)
++{
++	return NULL;
++}
++
++void coap_dtls_free_context(void *dtls_context)
++{
++	coap_log_info("****** coap_dtls_free_context()\n");
++}
++
++void *coap_dtls_new_client_session(coap_session_t *c_session)
++{
++	coap_log_info("****** coap_dtls_new_client_session()\n");
++
++	return NULL;
++}
++
++void coap_dtls_free_session(coap_session_t *c_session)
++{
++	coap_log_info("****** coap_dtls_free_session()\n");
++}
++
++int coap_dtls_send(coap_session_t *c_session,
++                   const uint8_t *data,
++                   size_t data_len)
++{
++	coap_log_info("****** coap_dtls_send()\n");
++
++	return 0;
++}
++
++void coap_dtls_startup(void)
++{
++}
++
++int coap_dtls_is_supported(void)
++{
++	/* TODO: to be changed once allocation of DTLS context will work */
++	return 0;
++}
++
++int coap_tls_is_supported(void)
++{
++	return 0;
++}
++
++int coap_dtls_is_context_timeout(void)
++{
++	return 0;
++}
++
++coap_tick_t coap_dtls_get_context_timeout(void *dtls_context COAP_UNUSED)
++{
++	return 0;
++}
++
++coap_tick_t coap_dtls_get_timeout(coap_session_t *c_session, coap_tick_t now)
++{
++	return 0;
++}
++
++int coap_dtls_handle_timeout(coap_session_t *c_session)
++{
++	return 0;
++}
++
++unsigned int coap_dtls_get_overhead(coap_session_t *c_session)
++{
++	return 29;
++}
++
++int coap_dtls_receive(coap_session_t *c_session,
++                      const uint8_t *data,
++                      size_t data_len)
++{
++	return -1;
++}
+diff --git a/src/net.c b/src/net.c
+index 3ab1a69..7e32a86 100644
+--- a/src/net.c
++++ b/src/net.c
+@@ -3521,7 +3521,7 @@ coap_register_option(coap_context_t *ctx, uint16_t type) {
+   coap_option_filter_set(&ctx->known_options, type);
+ }
+ 
+-#if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION
++#if ! defined WITH_CONTIKI && ! defined WITH_LWIP && ! defined RIOT_VERSION && ! defined __ZEPHYR__
+ #if COAP_SERVER_SUPPORT
+ int
+ coap_join_mcast_group_intf(coap_context_t *ctx, const char *group_name,
+diff --git a/zephyr/CMakeLists.txt b/zephyr/CMakeLists.txt
+new file mode 100644
+index 0000000..47dff07
+--- /dev/null
++++ b/zephyr/CMakeLists.txt
+@@ -0,0 +1,37 @@
++if(CONFIG_LIBCOAP)
++  zephyr_include_directories(include)
++  zephyr_include_directories(../include)
++
++  zephyr_library()
++  zephyr_library_include_directories(include)
++  zephyr_library_include_directories(../include)
++
++  zephyr_library_sources(
++    ../src/block.c
++    ../src/coap_address.c
++    ../src/coap_asn1.c
++    ../src/coap_async.c
++    ../src/coap_cache.c
++    ../src/coap_debug.c
++    ../src/coap_event.c
++    ../src/coap_hashkey.c
++    ../src/coap_io_zephyr.c
++    ../src/coap_zephyr_tls.c
++    ../src/coap_notls.c
++    ../src/coap_option.c
++    ../src/coap_prng.c
++    ../src/coap_session.c
++    ../src/coap_subscribe.c
++    ../src/coap_tcp.c
++    ../src/coap_time_zephyr.c
++    ../src/encode.c
++    ../src/mem.c
++    ../src/net.c
++    ../src/pdu.c
++    ../src/resource.c
++    ../src/str.c
++    ../src/uri.c
++  )
++
++  zephyr_library_link_libraries(mbedTLS posix_subsys)
++endif()
+diff --git a/zephyr/Kconfig b/zephyr/Kconfig
+new file mode 100644
+index 0000000..172b9b0
+--- /dev/null
++++ b/zephyr/Kconfig
+@@ -0,0 +1,13 @@
++# Kconfig - application configuration options
++
++# Copyright (c) 2022-2023 Golioth, Inc.
++# SPDX-License-Identifier: Apache-2.0
++
++menu "libcoap options"
++
++config LIBCOAP
++	bool "libcoap"
++	select POSIX_API
++	select REQUIRES_FULL_LIBC
++
++endmenu
+diff --git a/zephyr/include/coap3/coap.h b/zephyr/include/coap3/coap.h
+new file mode 100644
+index 0000000..d4570cd
+--- /dev/null
++++ b/zephyr/include/coap3/coap.h
+@@ -0,0 +1,35 @@
++#ifndef _COAP_H_
++#define _COAP_H_
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#include "coap3/libcoap.h"
++
++#include "coap3/coap_forward_decls.h"
++#include "coap3/block.h"
++#include "coap3/coap_address.h"
++#include "coap3/coap_async.h"
++#include "coap3/coap_cache.h"
++#include "coap3/coap_debug.h"
++#include "coap3/coap_dtls.h"
++#include "coap3/coap_event.h"
++#include "coap3/coap_encode.h"
++#include "coap3/coap_io.h"
++#include "coap3/coap_prng.h"
++#include "coap3/coap_option.h"
++#include "coap3/coap_str.h"
++#include "coap3/coap_subscribe.h"
++#include "coap3/coap_time.h"
++#include "coap3/mem.h"
++#include "coap3/net.h"
++#include "coap3/pdu.h"
++#include "coap3/resource.h"
++#include "coap3/uri.h"
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* _COAP_H_ */
+diff --git a/zephyr/include/coap_config.h b/zephyr/include/coap_config.h
+new file mode 100644
+index 0000000..1a40243
+--- /dev/null
++++ b/zephyr/include/coap_config.h
+@@ -0,0 +1,33 @@
++#ifndef __ZEPHYR_MODULE_COAP_CONFIG_H__
++#define __ZEPHYR_MODULE_COAP_CONFIG_H__
++
++/* TODO: check this list */
++#define HAVE_SYS_SOCKET_H
++#define HAVE_MALLOC
++#define HAVE_ARPA_INET_H
++#define HAVE_NETDB_H
++#define HAVE_INTTYPES_H
++#define HAVE_STRUCT_CMSGHDR
++#define HAVE_MBEDTLS
++#define HAVE_STDIO_H
++#define HAVE_ASSERT_H
++#define HAVE_STRNLEN 1
++#define HAVE_LIMITS_H
++
++#define COAP_CONSTRAINED_STACK 1
++#define COAP_DISABLE_TCP 1
++#define COAP_RESOURCES_NOHASH
++
++#define COAP_CLIENT_SUPPORT 1
++#define COAP_SERVER_SUPPORT 0
++
++#define PACKAGE_NAME "libcoap"
++#define PACKAGE_VERSION "4.3.1-rc2" /* TODO: don't hardcode that */
++#define PACKAGE_STRING PACKAGE_NAME PACKAGE_VERSION
++
++/* TODO: Workarounds */
++#define IN_MULTICAST(...) 0
++#define IN6_IS_ADDR_MULTICAST(a)    IN_MULTICAST(a)
++#define IN6_IS_ADDR_V4MAPPED(...) 0
++
++#endif /* __ZEPHYR_MODULE_COAP_CONFIG_H__ */
+diff --git a/zephyr/module.yml b/zephyr/module.yml
+new file mode 100644
+index 0000000..cbff6a1
+--- /dev/null
++++ b/zephyr/module.yml
+@@ -0,0 +1,3 @@
++build:
++  cmake: zephyr
++  kconfig: zephyr/Kconfig
+-- 
+2.39.0
+

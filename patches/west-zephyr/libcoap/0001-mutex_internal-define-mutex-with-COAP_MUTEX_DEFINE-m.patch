@@ -1,0 +1,131 @@
+From 77d2556e0319d52f4d9df226b4ce133e7cfa89cb Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@emb.dev>
+Date: Thu, 12 Jan 2023 15:59:36 +0100
+Subject: [PATCH] mutex_internal: define mutex with COAP_MUTEX_DEFINE() macro
+
+Introduce new macro, which will be used for defining static mutex
+objects, for use from COAP_CONSTRAINED_STACK enabled code. This macro
+will automatically initialize mutex using platform/OS specific macro if
+such exists. In case of !COAP_CONSTRAINED_STACK this macro is a noop, in
+order to reduce ifdef statements across the codebase.
+---
+ include/coap3/coap_mutex_internal.h | 15 ++++++++++-----
+ src/coap_debug.c                    |  4 ++--
+ src/coap_mbedtls.c                  |  2 +-
+ src/net.c                           |  4 ++--
+ 4 files changed, 15 insertions(+), 10 deletions(-)
+
+diff --git a/include/coap3/coap_mutex_internal.h b/include/coap3/coap_mutex_internal.h
+index cf12344..7a42bbd 100644
+--- a/include/coap3/coap_mutex_internal.h
++++ b/include/coap3/coap_mutex_internal.h
+@@ -29,7 +29,8 @@
+ #include <pthread.h>
+ 
+ typedef pthread_mutex_t coap_mutex_t;
+-#define COAP_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
++#define COAP_MUTEX_DEFINE(_name)			\
++	static coap_mutex_t _name = PTHREAD_MUTEX_INITIALIZER
+ #define coap_mutex_lock(a) pthread_mutex_lock(a)
+ #define coap_mutex_trylock(a) pthread_mutex_trylock(a)
+ #define coap_mutex_unlock(a) pthread_mutex_unlock(a)
+@@ -39,7 +40,8 @@ typedef pthread_mutex_t coap_mutex_t;
+ #include <mutex.h>
+ 
+ typedef mutex_t coap_mutex_t;
+-#define COAP_MUTEX_INITIALIZER MUTEX_INIT
++#define COAP_MUTEX_DEFINE(_name)			\
++	static coap_mutex_t _name = MUTEX_INIT
+ #define coap_mutex_lock(a) mutex_lock(a)
+ #define coap_mutex_trylock(a) mutex_trylock(a)
+ #define coap_mutex_unlock(a) mutex_unlock(a)
+@@ -50,7 +52,8 @@ typedef mutex_t coap_mutex_t;
+ #if NO_SYS
+ /* Single threaded, no-op'd in lwip/sys.h */
+ typedef int coap_mutex_t;
+-#define COAP_MUTEX_INITIALIZER 0
++#define COAP_MUTEX_DEFINE(_name)			\
++	static coap_mutex_t _name
+ #define coap_mutex_lock(a) *(a) = 1
+ #define coap_mutex_trylock(a) *(a) = 1
+ #define coap_mutex_unlock(a) *(a) = 0
+@@ -61,7 +64,8 @@ typedef int coap_mutex_t;
+ #elif defined(WITH_CONTIKI)
+ /* Contiki does not have a mutex API, used as single thread */
+ typedef int coap_mutex_t;
+-#define COAP_MUTEX_INITIALIZER 0
++#define COAP_MUTEX_DEFINE(_name)			\
++	static coap_mutex_t _name
+ #define coap_mutex_lock(a) *(a) = 1
+ #define coap_mutex_trylock(a) *(a) = 1
+ #define coap_mutex_unlock(a) *(a) = 0
+@@ -70,7 +74,8 @@ typedef int coap_mutex_t;
+ /* define stub mutex functions */
+ #warning "stub mutex functions"
+ typedef int coap_mutex_t;
+-#define COAP_MUTEX_INITIALIZER 0
++#define COAP_MUTEX_DEFINE(_name)			\
++	static coap_mutex_t _name
+ #define coap_mutex_lock(a) *(a) = 1
+ #define coap_mutex_trylock(a) *(a) = 1
+ #define coap_mutex_unlock(a) *(a) = 0
+diff --git a/src/coap_debug.c b/src/coap_debug.c
+index f043514..fb94dfe 100644
+--- a/src/coap_debug.c
++++ b/src/coap_debug.c
+@@ -587,7 +587,7 @@ is_binary(int content_format) {
+ void
+ coap_show_pdu(coap_log_t level, const coap_pdu_t *pdu) {
+ #if COAP_CONSTRAINED_STACK
+-  static coap_mutex_t static_show_pdu_mutex = COAP_MUTEX_INITIALIZER;
++  COAP_MUTEX_DEFINE(static_show_pdu_mutex);
+   /* Proxy-Uri: can be 1034 bytes long */
+   static unsigned char buf[min(COAP_DEBUG_BUF_SIZE, 1035)];
+   static char outbuf[COAP_DEBUG_BUF_SIZE];
+@@ -974,7 +974,7 @@ coap_log_impl(coap_log_t level, const char *format, ...) {
+ 
+   if (log_handler) {
+ #if COAP_CONSTRAINED_STACK
+-    static coap_mutex_t static_log_mutex = COAP_MUTEX_INITIALIZER;
++    COAP_MUTEX_DEFINE(static_log_mutex);
+     static char message[COAP_DEBUG_BUF_SIZE];
+ #else /* ! COAP_CONSTRAINED_STACK */
+     char message[COAP_DEBUG_BUF_SIZE];
+diff --git a/src/coap_mbedtls.c b/src/coap_mbedtls.c
+index 80442fe..31c21c1 100644
+--- a/src/coap_mbedtls.c
++++ b/src/coap_mbedtls.c
+@@ -2073,7 +2073,7 @@ int coap_dtls_receive(coap_session_t *c_session,
+ 
+   if (m_env->established) {
+ #if COAP_CONSTRAINED_STACK
+-    static coap_mutex_t b_static_mutex = COAP_MUTEX_INITIALIZER;
++    COAP_MUTEX_DEFINE(b_static_mutex);
+     static uint8_t pdu[COAP_RXBUFFER_SIZE];
+ #else /* ! COAP_CONSTRAINED_STACK */
+     uint8_t pdu[COAP_RXBUFFER_SIZE];
+diff --git a/src/net.c b/src/net.c
+index 12e5069..3ab1a69 100644
+--- a/src/net.c
++++ b/src/net.c
+@@ -1642,7 +1642,7 @@ coap_write_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now
+ static void
+ coap_read_session(coap_context_t *ctx, coap_session_t *session, coap_tick_t now) {
+ #if COAP_CONSTRAINED_STACK
+-  static coap_mutex_t s_static_mutex = COAP_MUTEX_INITIALIZER;
++  COAP_MUTEX_DEFINE(s_static_mutex);
+   static coap_packet_t s_packet;
+ #else /* ! COAP_CONSTRAINED_STACK */
+   coap_packet_t s_packet;
+@@ -1801,7 +1801,7 @@ coap_read_endpoint(coap_context_t *ctx, coap_endpoint_t *endpoint, coap_tick_t n
+   ssize_t bytes_read = -1;
+   int result = -1;                /* the value to be returned */
+ #if COAP_CONSTRAINED_STACK
+-  static coap_mutex_t e_static_mutex = COAP_MUTEX_INITIALIZER;
++  COAP_MUTEX_DEFINE(e_static_mutex);
+   static coap_packet_t e_packet;
+ #else /* ! COAP_CONSTRAINED_STACK */
+   coap_packet_t e_packet;
+-- 
+2.39.0
+
