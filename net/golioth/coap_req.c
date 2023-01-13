@@ -204,6 +204,10 @@ static int golioth_coap_req_reply_handler(struct golioth_coap_req *req,
 	LOG_DBG("CoAP response code: 0x%x (class %u detail %u)",
 		(unsigned int)code, (unsigned int)(code >> 5), (unsigned int)(code & 0x1f));
 
+	if (code == COAP_RESPONSE_CODE_BAD_REQUEST) {
+		LOG_WRN("Server reports CoAP Bad Request. (Check payload formatting)");
+	}
+
 	err = golioth_coap_code_to_posix(code);
 	if (err) {
 		struct golioth_req_rsp rsp = {
