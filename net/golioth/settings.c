@@ -237,7 +237,7 @@ static int on_setting(struct golioth_req_rsp *rsp)
 	return finalize_and_send_response(client, &settings_response);
 }
 
-static int golioth_settings_observe(struct golioth_client *client)
+int golioth_settings_observe(struct golioth_client *client)
 {
 	return golioth_coap_req_cb(client, COAP_METHOD_GET, PATHV(GOLIOTH_SETTINGS_PATH),
 				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
@@ -265,5 +265,5 @@ int golioth_settings_register_callback(struct golioth_client *client,
 		client->settings.initialized = true;
 	}
 
-	return golioth_settings_observe(client);
+	return 0;
 }

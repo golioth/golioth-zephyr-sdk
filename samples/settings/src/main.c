@@ -46,11 +46,7 @@ enum golioth_settings_status on_setting(
 static void golioth_on_connect(struct golioth_client *client)
 {
 	if (IS_ENABLED(CONFIG_GOLIOTH_SETTINGS)) {
-		int err = golioth_settings_register_callback(client, on_setting);
-
-		if (err) {
-			LOG_ERR("Failed to register settings callback: %d", err);
-		}
+		golioth_settings_observe(client);
 	}
 }
 
@@ -63,6 +59,13 @@ void main(void)
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
 		net_connect();
+	}
+
+	if (IS_ENABLED(CONFIG_GOLIOTH_SETTINGS)) {
+		err = golioth_settings_register_callback(client, on_setting);
+		if (err) {
+			LOG_ERR("Failed to register settings callback: %d", err);
+		}
 	}
 
 	client->on_connect = golioth_on_connect;
