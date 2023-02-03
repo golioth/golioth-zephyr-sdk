@@ -128,6 +128,23 @@ struct golioth_settings {
 int golioth_settings_register_callback(struct golioth_client *client,
 				       golioth_settings_cb callback);
 
+/**
+ * @brief Observe for Settings
+ *
+ * User applications should call this function in the `on_connect` callback,
+ * if they wish to observe Settings.
+ *
+ * Establishes a single observation for the settings endpoint ".c".
+ * The handler for this observation will call the callback registered with
+ * @ref golioth_settings_register_callback.
+ *
+ * @param client Client instance
+ *
+ * @return 0 - Settings observation established
+ * @return <0 - Error observing Settings
+ */
+int golioth_settings_observe(struct golioth_client *client);
+
 /** @} */
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_SETTINGS_H_ */
