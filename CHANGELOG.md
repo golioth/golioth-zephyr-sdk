@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - TBD
+### Breaking Changes
+- calling `golioth_rpc_register()` no longer automatically observes. The RPC observation is now
+  established only if the user calls `golioth_rpc_observe()`. Existing applications that use
+  RPCs will need to call `golioth_rpc_observe()` in the `on_connect` callback. Additionally, it's
+  recommended to move any calls to `golioth_rpc_register()` outside of the `on_connect` callback,
+  to avoid registering the same RPC method multiple times. See the `rpc` sample for reference.
+- calling `golioth_settings_register_callback()` no longer automatically observes. The settings
+  observation is now established only if the user calls `golioth_settings_observe()`.
+  Existing applications that use settings will need to call `golioth_settings_observe()` in the
+  `on_connect` callback. See the `settings` sample for reference.
+
 ## [0.5.0] - 2022-12-13
 ### Added
 - Python library and CLI tools for accessing Golioth REST API (`scripts/python/golioth/`)
