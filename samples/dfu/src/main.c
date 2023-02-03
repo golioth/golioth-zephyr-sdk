@@ -152,6 +152,7 @@ static void golioth_on_connect(struct golioth_client *client)
 
 	k_sem_give(&sem_connected);
 
+	memset(&update_ctx, 0, sizeof(update_ctx));
 	err = golioth_fw_observe_desired(client, golioth_desired_update, &update_ctx);
 	if (err) {
 		LOG_ERR("Failed to start observation of desired FW: %d", err);
