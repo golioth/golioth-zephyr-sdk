@@ -343,6 +343,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 			wait_for_client_start();
 
 			/* Flush pending events */
+			atomic_clear_bit(&flags, FLAG_RECONNECT);
 			(void)eventfd_read(fds[POLLFD_EVENT].fd, &eventfd_value);
 
 			LOG_INF("Starting connect");
