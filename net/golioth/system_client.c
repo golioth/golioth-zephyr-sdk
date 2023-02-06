@@ -328,7 +328,7 @@ static void wait_for_client_start(void)
 static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 {
 	struct golioth_client *client = arg1;
-	bool timeout_occurred;
+	bool event_occurred;
 	int timeout;
 	int64_t recv_expiry = 0;
 	int64_t ping_expiry = 0;
@@ -359,7 +359,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 			ping_expiry = k_uptime_get() + PING_INTERVAL;
 		}
 
-		timeout_occurred = false;
+		event_occurred = false;
 
 		golioth_poll_prepare(client, k_uptime_get(), NULL, &golioth_timeout);
 
@@ -383,17 +383,17 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 
 		if (ret == 0) {
 			LOG_DBG("Timeout in poll");
-			timeout_occurred = true;
+			event_occurred = true;
 		}
 
 		if (fds[POLLFD_EVENT].revents) {
 			(void)eventfd_read(fds[POLLFD_EVENT].fd,
 					   &eventfd_value);
-			LOG_DBG("Timeout in eventfd");
-			timeout_occurred = true;
+			LOG_DBG("Event in eventfd");
+			event_occurred = true;
 		}
 
-		if (timeout_occurred) {
+		if (event_occurred) {
 			bool reconnect_request = atomic_test_and_clear_bit(&flags, FLAG_RECONNECT);
 			bool stop_request = atomic_test_and_clear_bit(&flags, FLAG_STOP_CLIENT);
 			bool receive_timeout = (recv_expiry <= k_uptime_get());
