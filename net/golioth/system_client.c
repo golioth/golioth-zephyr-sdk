@@ -10,6 +10,7 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #include <errno.h>
 #include <logging/golioth.h>
 #include <net/golioth/system_client.h>
+#include <net/golioth/rpc.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/net/tls_credentials.h>
 #include <zephyr/posix/sys/eventfd.h>
@@ -252,6 +253,14 @@ static int client_initialize(struct golioth_client *client)
 
 	if (IS_ENABLED(CONFIG_LOG_BACKEND_GOLIOTH)) {
 		log_backend_golioth_init(client);
+	}
+
+	if (IS_ENABLED(CONFIG_GOLIOTH_RPC)) {
+		err = golioth_rpc_init(client);
+		if (err) {
+			LOG_ERR("Failed to initialize RPC: %d", err);
+			return err;
+		}
 	}
 
 	return 0;
