@@ -350,7 +350,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 				continue;
 			}
 
-			/* Flush reconnect requests */
+			/* Flush pending events */
 			(void)eventfd_read(fds[POLLFD_EVENT].fd, &eventfd_value);
 
 			LOG_INF("Client connected!");
