@@ -206,7 +206,6 @@ twister:
 
 twister-ncs:
   extends: .twister
-  image: zephyrprojectrtos/ci:v0.23.3
   variables:
     WEST_MANIFEST: west-ncs.yml
   script:
