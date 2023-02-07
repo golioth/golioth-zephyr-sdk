@@ -342,6 +342,9 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 			LOG_DBG("Waiting for client to be started");
 			wait_for_client_start();
 
+			/* Flush pending events */
+			(void)eventfd_read(fds[POLLFD_EVENT].fd, &eventfd_value);
+
 			LOG_INF("Starting connect");
 			err = client_connect(client);
 			if (err) {
@@ -349,9 +352,6 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 				k_sleep(K_SECONDS(5));
 				continue;
 			}
-
-			/* Flush pending events */
-			(void)eventfd_read(fds[POLLFD_EVENT].fd, &eventfd_value);
 
 			LOG_INF("Client connected!");
 
