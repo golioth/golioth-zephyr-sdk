@@ -152,7 +152,7 @@ static int on_rpc(struct golioth_req_rsp *rsp)
 	return send_response(client, response_buf, response_len);
 }
 
-static int golioth_rpc_observe(struct golioth_client *client)
+int golioth_rpc_observe(struct golioth_client *client)
 {
 	return golioth_coap_req_cb(client, COAP_METHOD_GET, PATHV(GOLIOTH_RPC_PATH),
 				   GOLIOTH_CONTENT_FORMAT_APP_CBOR,
@@ -189,9 +189,6 @@ int golioth_rpc_register(struct golioth_client *client,
 	method->callback_arg = callback_arg;
 
 	client->rpc.num_methods++;
-	if (client->rpc.num_methods == 1) {
-		status = golioth_rpc_observe(client);
-	}
 
 cleanup:
 	k_mutex_unlock(&client->rpc.mutex);

@@ -140,6 +140,24 @@ int golioth_rpc_register(struct golioth_client *client,
 			 golioth_rpc_cb_fn callback,
 			 void *callback_arg);
 
+/**
+ * @brief Observe for RPC method invocations
+ *
+ * User applications should call this function in the `on_connect` callback,
+ * if they wish to observe RPCs.
+ *
+ * Establishes a single observation for endpoint ".rpc".
+ * The handler for this endpoint will look up the method in a table of
+ * registered RPCs (from @ref golioth_rpc_register) and invoke the callback
+ * if the method is found.
+ *
+ * @param client Client instance
+ *
+ * @return 0 - RPC observation established
+ * @return <0 - Error observing RPC
+ */
+int golioth_rpc_observe(struct golioth_client *client);
+
 /** @} */
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_RPC_H_ */
