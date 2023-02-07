@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <zephyr/net/coap.h>
+#include <zephyr/kernel.h>
 
 struct _QCBOREncodeContext;
 struct _QCBOREncodeContext;
@@ -106,11 +107,21 @@ struct golioth_rpc_method {
  */
 struct golioth_rpc {
 #if defined(CONFIG_GOLIOTH_RPC)
-	bool initialized;
 	struct golioth_rpc_method methods[CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS];
 	int num_methods;
+	struct k_mutex mutex;
 #endif
 };
+
+/**
+ * @brief Initialize RPC
+ *
+ * @param client Client instance
+ *
+ * @return 0 - RPC initialized successfully
+ * @return Otherwise - RPC error initializing
+ */
+int golioth_rpc_init(struct golioth_client *client);
 
 /**
  * @brief Register an RPC method

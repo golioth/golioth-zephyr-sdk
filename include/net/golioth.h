@@ -71,8 +71,6 @@ struct golioth_client {
 	void (*wakeup)(struct golioth_client *client);
 
 	struct golioth_rpc rpc;
-	struct k_mutex rpc_mutex;
-
 	struct golioth_settings settings;
 };
 

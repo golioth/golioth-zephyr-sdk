@@ -98,7 +98,7 @@ static int on_rpc(struct golioth_req_rsp *rsp)
 	/* Search for matching RPC registration */
 	const struct golioth_rpc_method *matching_method = NULL;
 
-	k_mutex_lock(&client->rpc_mutex, K_FOREVER);
+	k_mutex_lock(&client->rpc.mutex, K_FOREVER);
 
 	for (int i = 0; i < client->rpc.num_methods; i++) {
 		const struct golioth_rpc_method *method = &client->rpc.methods[i];
@@ -127,7 +127,7 @@ static int on_rpc(struct golioth_req_rsp *rsp)
 		QCBORDecode_ExitArray(&decode_ctx);
 	}
 
-	k_mutex_unlock(&client->rpc_mutex);
+	k_mutex_unlock(&client->rpc.mutex);
 
 	QCBOREncode_AddUInt64ToMap(&encode_ctx, "statusCode", status_code);
 
@@ -161,6 +161,11 @@ static int golioth_rpc_observe(struct golioth_client *client)
 				   GOLIOTH_COAP_REQ_OBSERVE);
 }
 
+int golioth_rpc_init(struct golioth_client *client)
+{
+	return k_mutex_init(&client->rpc.mutex);
+}
+
 int golioth_rpc_register(struct golioth_client *client,
 			 const char *method_name,
 			 golioth_rpc_cb_fn callback,
@@ -168,12 +173,7 @@ int golioth_rpc_register(struct golioth_client *client,
 {
 	int status = 0;
 
-	if (!client->rpc.initialized) {
-		k_mutex_init(&client->rpc_mutex);
-		client->rpc.initialized = true;
-	}
-
-	k_mutex_lock(&client->rpc_mutex, K_FOREVER);
+	k_mutex_lock(&client->rpc.mutex, K_FOREVER);
 
 	if (client->rpc.num_methods >= CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS) {
 		LOG_ERR("Unable to register, can't register more than %d methods",
@@ -194,6 +194,6 @@ int golioth_rpc_register(struct golioth_client *client,
 	}
 
 cleanup:
-	k_mutex_unlock(&client->rpc_mutex);
+	k_mutex_unlock(&client->rpc.mutex);
 	return status;
 }
