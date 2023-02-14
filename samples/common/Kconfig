@@ -18,6 +18,14 @@ config GOLIOTH_SAMPLE_DHCP_BIND
 	help
 	  Obtain an IPv4 address from the DHCP server.
 
+config GOLIOTH_SAMPLE_NRF91_LTE_MONITOR
+	bool "nRF91 LTE monitor"
+	default y
+	depends on LOG
+	depends on LTE_LINK_CONTROL
+	help
+	  LTE Link Control events monitor for nRF91.
+
 config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
 	bool "Automatically load settings before main()"
 	depends on SETTINGS
