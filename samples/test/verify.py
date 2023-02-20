@@ -58,7 +58,7 @@ def main():
 
     # Connect to the device over serial and use the shell CLI to interact and run tests
     print("Opening serial port: {}".format(port))
-    ser = serial.Serial(port, 115200, timeout=1, writeTimeout=1)
+    ser = serial.Serial(port, 115200, timeout=300, writeTimeout=1)
 
     # Set Golioth credentials over device shell CLI
     set_credentials(ser)

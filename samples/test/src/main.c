@@ -38,7 +38,7 @@ ZTEST_F(test_golioth, test_connect)
 {
 	_client->on_connect = golioth_on_connect;
 	golioth_system_client_start();
-	zassert_equal(0, k_sem_take(&_connected_sem, K_SECONDS(10)), "failed to connect");
+	zassert_equal(0, k_sem_take(&_connected_sem, K_SECONDS(300)), "failed to connect");
 }
 
 ZTEST_SUITE(test_golioth, NULL, test_golioth_suite_setup, NULL, NULL, NULL);
