@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2022 Golioth, Inc.
+# Copyright (C) 2022-2023 Golioth, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -9,7 +9,12 @@ config NET_SOCKETS_OFFLOAD_POLL_WRAPPER
 	default y if NRF_MODEM_LIB
 	depends on NET_SOCKETS_OFFLOAD
 	help
-	  Enable library for communication with Golioth cloud.
+	  Wrapper around offloaded Zephyr sockets, which utilizes a dedicated
+	  thread to execute interruptible poll() system call.
+
+	  Enable when communicating with Golioth over offloaded sockets, which
+	  return -EXDEV from ioctl(fd, ZFD_IOCTL_POLL_OFFLOAD, ...) and instead
+	  implement ioctl(fd, ZFD_IOCTL_POLL_OFFLOAD, ...) system call.
 
 if NET_SOCKETS_OFFLOAD_POLL_WRAPPER
 
@@ -17,8 +22,8 @@ config NET_SOCKETS_OFFLOAD_POLL_WRAPPER_SOCKET_PRIORITY
 	int "Socket processing priority"
 	default 10
 	help
-	  Processing priority for sockets implementation. This value should be lower than offloaded
-	  sockets priority, which should be wrapped.
+	  Processing priority for sockets implementation. This value should be
+	  lower than offloaded sockets priority, which should be wrapped.
 
 	  See NET_SOCKETS_PRIORITY_DEFAULT help for details.
 
@@ -40,9 +45,10 @@ config NET_SOCKETS_OFFLOAD_POLL_WRAPPER_CONTEXT_MAX
 	int "Maximum number of dispatcher sockets created"
 	default POSIX_MAX_FDS
 	help
-	  Maximum number of dispatcher sockets created at a time. Note, that
-	  only sockets that has not been dispatched yet count into the limit.
-	  After a proper socket has been created for a given file descriptor,
-	  the dispatcher context is released and can be reused.
+	  Maximum number of offloaded sockets with poll() executed in dedicated
+	  thread. This allocates and creates threads for each of those. Note
+	  that all sockets that use this capability at any time count into this
+	  limit, as there is no garbage collection or reusing of unused wrapper
+	  threads.
 
 endif # NET_SOCKETS_OFFLOAD_POLL_WRAPPER
