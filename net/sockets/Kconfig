@@ -6,7 +6,6 @@
 
 config NET_SOCKETS_OFFLOAD_POLL_WRAPPER
 	bool "Socket offload poll() wrapper"
-	default y if NRF_MODEM_LIB
 	depends on NET_SOCKETS_OFFLOAD
 	help
 	  Wrapper around offloaded Zephyr sockets, which utilizes a dedicated
