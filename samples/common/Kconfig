@@ -46,7 +46,6 @@ config GOLIOTH_SAMPLE_SETTINGS_SHELL
 config GOLIOTH_SAMPLE_WIFI
 	bool "WiFi utilities for samples"
 	depends on NET_L2_WIFI_MGMT
-	select GOLIOTH_SAMPLE_INCLUDE_HEADERS
 	help
 	  Enable utilities for easy WiFi setup, mainly for use inside samples/.
 
