@@ -28,7 +28,7 @@ jobs:
           cat <<EOF > .west/config
           [manifest]
           path = modules/lib/golioth
-          file = west-zephyr.yml
+          file = .ci-west-zephyr.yml
           EOF
 
           west update -o=--depth=1 -n

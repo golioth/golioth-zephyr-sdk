@@ -1,7 +1,7 @@
 image: zephyrprojectrtos/ci:v0.24.2
 
 variables:
-  WEST_MANIFEST: west-zephyr.yml
+  WEST_MANIFEST: .ci-west-zephyr.yml
 
 .west-init: &west-init
   - rm -rf .west modules/lib/golioth

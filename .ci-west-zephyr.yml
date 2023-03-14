@@ -1,0 +1,17 @@
+manifest:
+  self:
+    path: modules/lib/golioth
+    import:
+      file: west-zephyr.yml
+      name-allowlist:
+        - cmsis
+        - hal_espressif
+        - hal_nordic
+        - hal_nxp
+        - mbedtls
+        - mcuboot
+        - net-tools
+        - qcbor
+        - segger
+        - tinycrypt
+        - zephyr
