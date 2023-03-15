@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - TBD
+## [0.6.0] - 2022-03-17
+### Added
+- LTE link monitor for nRF91
+
+### Fixed
+- flushing of reconnect requests (there is no more unwanted reconnection when using credentials from
+  Zephyr settings)
+- documentation for settings in Github Actions HIL (Hardware In the Loop) tests
+
 ### Breaking Changes
 - calling `golioth_rpc_register()` no longer automatically observes. The RPC observation is now
   established only if the user calls `golioth_rpc_observe()`. Existing applications that use
@@ -15,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   observation is now established only if the user calls `golioth_settings_observe()`.
   Existing applications that use settings will need to call `golioth_settings_observe()` in the
   `on_connect` callback. See the `settings` sample for reference.
+
+### Changed
+- verified with Zephyr v3.3.0
+- verified with NCS v2.3.0
+- disabled `sockets_offload_poll_wrapper` by default (since there is proper fix in NCS 2.3.0)
+- removed west projects filter in `west-zephyr.yml` to keep consistent behavior with `west-ncs.yml`
+  (which is not filtered as well)
 
 ## [0.5.0] - 2022-12-13
 ### Added
