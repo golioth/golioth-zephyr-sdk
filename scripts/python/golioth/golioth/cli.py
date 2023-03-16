@@ -246,7 +246,18 @@ def format_hexdump(indent_size: int, data: bytes):
     return indent + ' '.join([f'{x:02x}' for x in data])
 
 
+def log_format_default(log: LogEntry) -> str:
+    return f'[{log.datetime}] <{log.level.name}> {log.module} {log.message}'
+
+
+def print_log_default(log: LogEntry):
+    console.print(log_format_default(log))
+
+
 def log_format_zephyr(log: LogEntry) -> str:
+    if 'uptime' not in log.metadata:
+        return f'GENERIC {log_format_default(log)}'
+
     ts = datetime.fromtimestamp(log.metadata['uptime'] / 1000000, tz=timezone.utc)
     ts_str = ts.strftime('%H:%M:%S') + f'.{ts.microsecond // 1000:03},{ts.microsecond % 1000:03}'
 
@@ -272,14 +283,6 @@ def log_format_zephyr(log: LogEntry) -> str:
 
 def print_log_zephyr(log: LogEntry):
     print(log_format_zephyr(log))
-
-
-def log_format_default(log: LogEntry) -> str:
-    return f'[{log.datetime}] <{log.level.name}> {log.module} {log.message}'
-
-
-def print_log_default(log: LogEntry):
-    console.print(log_format_default(log))
 
 
 @logs.command()
