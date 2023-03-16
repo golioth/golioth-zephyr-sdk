@@ -1,4 +1,4 @@
-From e08257841b576ff56d23b082bf5d9847c8829b3e Mon Sep 17 00:00:00 2001
+From 7000e11c98c69f5d4383f9b8b1b7e6d4ae0ece1a Mon Sep 17 00:00:00 2001
 From: Marcin Niestroj <m.niestroj@emb.dev>
 Date: Mon, 12 Sep 2022 19:34:18 +0200
 Subject: [PATCH] twister: DeviceHandler: add DeviceSerial helper class
@@ -7,11 +7,11 @@ Split low-level device serial handling from other code.
 
 Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
 ---
- scripts/pylib/twister/twisterlib/handlers.py | 213 +++++++++++--------
- 1 file changed, 122 insertions(+), 91 deletions(-)
+ scripts/pylib/twister/twisterlib/handlers.py | 159 +++++++++++++------
+ 1 file changed, 109 insertions(+), 50 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index f4b2c5aaa6..b7fabb646a 100755
+index 8c103a6d1b..f1f3590510 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
 @@ -331,23 +331,29 @@ class SimulationHandler(BinaryHandler):
@@ -56,27 +56,7 @@ index f4b2c5aaa6..b7fabb646a 100755
              # Set capture_coverage to True to indicate that right after
              # test results we should get coverage data, otherwise we exit
              # from the test.
-@@ -355,6 +361,19 @@ class DeviceHandler(Handler):
- 
-         ser.flush()
- 
-+        # turns out the ser.flush() is not enough to clear serial leftover from last case
-+        # explicitly readline() can do it reliably
-+        old_timeout = ser.timeout
-+        # wait for 1s if no serial output
-+        ser.timeout = 1
-+        # or read 1000 lines at most
-+        # if the leftovers are more than 1000 lines, user should realize that once
-+        # saw the caught ones and fix it.
-+        leftover_lines = ser.readlines(1000)
-+        for line in leftover_lines:
-+            logger.debug(f"leftover log of previous test: {line}")
-+        ser.timeout = old_timeout
-+
-         while ser.isOpen():
-             if halt_event.is_set():
-                 logger.debug('halted')
-@@ -401,6 +420,82 @@ class DeviceHandler(Handler):
+@@ -402,6 +408,82 @@ class DeviceHandler(Handler):
  
          log_out_fp.close()
  
@@ -159,12 +139,12 @@ index f4b2c5aaa6..b7fabb646a 100755
      def device_is_available(self, instance):
          device = instance.platform.name
          fixture = instance.testsuite.harness_config.get("fixture")
-@@ -449,22 +544,8 @@ class DeviceHandler(Handler):
+@@ -450,22 +532,8 @@ class DeviceHandler(Handler):
              hardware = self.device_is_available(self.instance)
  
          runner = hardware.runner or self.options.west_runner
 -        serial_pty = hardware.serial_pty
--
+ 
 -        ser_pty_process = None
 -        if serial_pty:
 -            master, slave = pty.openpty()
@@ -177,58 +157,13 @@ index f4b2c5aaa6..b7fabb646a 100755
 -            serial_device = os.ttyname(slave)
 -        else:
 -            serial_device = hardware.serial
- 
+-
 -        logger.debug(f"Using serial device {serial_device} @ {hardware.baud} baud")
 +        serial_device = DeviceSerial(hardware, self.timeout)
  
          if (self.options.west_flash is not None) or runner:
              command = ["west", "flash", "--skip-rebuild", "-d", self.build_dir]
-@@ -522,56 +603,20 @@ class DeviceHandler(Handler):
-         if pre_script:
-             self.run_custom_script(pre_script, 30)
- 
--        try:
--            ser = serial.Serial(
--                serial_device,
--                baudrate=hardware.baud,
--                parity=serial.PARITY_NONE,
--                stopbits=serial.STOPBITS_ONE,
--                bytesize=serial.EIGHTBITS,
--                timeout=self.timeout
--            )
--        except serial.SerialException as e:
--            self.instance.status = "failed"
--            self.instance.reason = "Serial Device Error"
--            logger.error("Serial device error: %s" % (str(e)))
--
--            self.instance.add_missing_case_status("blocked", "Serial Device Error")
--            if serial_pty and ser_pty_process:
--                ser_pty_process.terminate()
--                outs, errs = ser_pty_process.communicate()
--                logger.debug("Process {} terminated outs: {} errs {}".format(serial_pty, outs, errs))
--
--            if serial_pty:
--                self.make_device_available(serial_pty)
--            else:
--                self.make_device_available(serial_device)
--            return
--
--        ser.flush()
--
--        # turns out the ser.flush() is not enough to clear serial leftover from last case
--        # explicitly readline() can do it reliably
--        old_timeout = ser.timeout
--        # wait for 1s if no serial output
--        ser.timeout = 1
--        # or read 1000 lines at most
--        # if the leftovers are more than 1000 lines, user should realize that once
--        # saw the caught ones and fix it.
--        leftover_lines = ser.readlines(1000)
--        for line in leftover_lines:
--            logger.debug(f"leftover log of previous test: {line}")
--        ser.timeout = old_timeout
--
-         harness_name = self.instance.testsuite.harness.capitalize()
+@@ -553,11 +621,16 @@ class DeviceHandler(Handler):
          harness_import = HarnessImporter(harness_name)
          harness = harness_import.instance
          harness.configure(self.instance)
@@ -249,7 +184,7 @@ index f4b2c5aaa6..b7fabb646a 100755
          start_time = time.time()
  
          d_log = "{}/device.log".format(self.instance.build_dir)
-@@ -591,7 +636,7 @@ class DeviceHandler(Handler):
+@@ -577,7 +650,7 @@ class DeviceHandler(Handler):
                          flash_error = True
                          with open(d_log, "w") as dlog_fp:
                              dlog_fp.write(stderr.decode())
@@ -258,7 +193,7 @@ index f4b2c5aaa6..b7fabb646a 100755
                  except subprocess.TimeoutExpired:
                      logger.warning("Flash operation timed out.")
                      self.terminate(proc)
-@@ -604,7 +649,7 @@ class DeviceHandler(Handler):
+@@ -590,7 +663,7 @@ class DeviceHandler(Handler):
                  dlog_fp.write(stderr.decode())
  
          except subprocess.CalledProcessError:
@@ -267,7 +202,7 @@ index f4b2c5aaa6..b7fabb646a 100755
              self.instance.status = "error"
              self.instance.reason = "Device issue (Flash error)"
              flash_error = True
-@@ -613,25 +658,14 @@ class DeviceHandler(Handler):
+@@ -599,25 +672,14 @@ class DeviceHandler(Handler):
              self.run_custom_script(post_flash_script, 30)
  
          if not flash_error:
@@ -295,7 +230,7 @@ index f4b2c5aaa6..b7fabb646a 100755
  
          handler_time = time.time() - start_time
  
-@@ -656,10 +690,7 @@ class DeviceHandler(Handler):
+@@ -642,10 +704,7 @@ class DeviceHandler(Handler):
          if post_script:
              self.run_custom_script(post_script, 30)
  
@@ -308,5 +243,5 @@ index f4b2c5aaa6..b7fabb646a 100755
  class QEMUHandler(Handler):
      """Spawns a thread to monitor QEMU output from pipes
 -- 
-2.39.2
+2.40.0
 
