@@ -1,6 +1,6 @@
 # Kconfig - application configuration options
 
-# Copyright (c) 2021 Golioth, Inc.
+# Copyright (c) 2021-2023 Golioth, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 menu "Golioth options"
@@ -9,6 +9,11 @@ rsource "samples/common/Kconfig.defconfig"
 
 rsource "logging/Kconfig"
 rsource "net/Kconfig"
+
+config GOLIOTH_COMPAT_INIT
+	bool "Enable SYS_INIT() compatible macro"
+	default y if ZEPHYR_NRF_MODULE
+
 rsource "samples/common/Kconfig"
 
 endmenu

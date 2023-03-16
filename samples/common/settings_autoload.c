@@ -7,7 +7,9 @@
 #include <zephyr/init.h>
 #include <zephyr/settings/settings.h>
 
-static int settings_autoload(const struct device *dev)
+#include <golioth/compat/init.h>
+
+static int settings_autoload(void)
 {
 	return settings_load();
 }

@@ -26,18 +26,4 @@ config GOLIOTH_SAMPLE_SETTINGS_SHELL
 
 endif # SETTINGS
 
-if HAS_ESPRESSIF_HAL
-
-config ESP_CLK_INIT_OVERRIDE
-	bool "Override ESP clock initialization"
-	default y
-	help
-	  Override weak ESP clock initialization `void esp_clk_init(void)` with
-	  empty definition.
-
-	  Enable this option when experiencing issues booting application after
-	  swap.
-
-endif # HAS_ESPRESSIF_HAL
-
 source "Kconfig.zephyr"

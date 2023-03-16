@@ -12,6 +12,8 @@ LOG_MODULE_DECLARE(golioth_dfu);
 
 #include "flash.h"
 
+#include <golioth/compat/init.h>
+
 #ifdef CONFIG_TRUSTED_EXECUTION_NONSECURE
 #define SLOT0_LABEL	slot0_ns_partition
 #else
@@ -23,7 +25,7 @@ LOG_MODULE_DECLARE(golioth_dfu);
 
 char current_version_str[sizeof("255.255.65535")];
 
-static int current_version_init(const struct device *dev)
+static int current_version_init(void)
 {
 	struct mcuboot_img_header hdr;
 	int written;
