@@ -10,6 +10,8 @@ LOG_MODULE_REGISTER(lte_monitor);
 #include <modem/lte_lc.h>
 #include <zephyr/init.h>
 
+#include <golioth/compat/init.h>
+
 static void lte_handler(const struct lte_lc_evt *const evt)
 {
 	switch (evt->type) {
@@ -56,7 +58,7 @@ static void lte_handler(const struct lte_lc_evt *const evt)
 	}
 }
 
-static int nrf91_lte_monitor_init(const struct device *dev)
+static int nrf91_lte_monitor_init(void)
 {
 	lte_lc_register_handler(lte_handler);
 

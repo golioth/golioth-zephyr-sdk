@@ -9,6 +9,8 @@
 
 #include "sockets_internal.h"
 
+#include <golioth/compat/init.h>
+
 LOG_MODULE_REGISTER(net_sock_wrapper, CONFIG_NET_SOCKETS_LOG_LEVEL);
 
 __net_socket struct wrapper_context {
@@ -447,7 +449,7 @@ NET_SOCKET_REGISTER(sock_wrapper,
 		    AF_UNSPEC, is_supported,
 		    sock_wrapper_create);
 
-static int sock_wrapper_init(const struct device *dev)
+static int sock_wrapper_init(void)
 {
 	struct k_work_queue_config cfg = {};
 	struct wrapper_context *wrapper;
