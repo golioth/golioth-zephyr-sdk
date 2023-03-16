@@ -1,4 +1,4 @@
-From ca07f2acee232958b60117523f0243158f948cd3 Mon Sep 17 00:00:00 2001
+From 446fc3369e1d5750eb40e8796d02a024f5434f94 Mon Sep 17 00:00:00 2001
 From: Marcin Niestroj <m.niestroj@emb.dev>
 Date: Wed, 14 Sep 2022 19:41:17 +0200
 Subject: [PATCH] twister: support 'attach_serial_after_flash' in hardware map
@@ -30,10 +30,10 @@ Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
  3 files changed, 26 insertions(+), 8 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index b7fabb646a..d630033993 100755
+index f1f3590510..2eeeea29ef 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
-@@ -608,14 +608,15 @@ class DeviceHandler(Handler):
+@@ -622,14 +622,15 @@ class DeviceHandler(Handler):
          harness = harness_import.instance
          harness.configure(self.instance)
  
@@ -57,7 +57,7 @@ index b7fabb646a..d630033993 100755
  
          start_time = time.time()
  
-@@ -658,6 +659,16 @@ class DeviceHandler(Handler):
+@@ -672,6 +673,16 @@ class DeviceHandler(Handler):
              self.run_custom_script(post_flash_script, 30)
  
          if not flash_error:
@@ -125,5 +125,5 @@ index 2759bb0b32..01e36b5fb9 100644
          type: int
          required: false
 -- 
-2.39.2
+2.40.0
 

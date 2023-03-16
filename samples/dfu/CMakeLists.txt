@@ -7,5 +7,3 @@ project(dfu)
 
 target_sources(app PRIVATE src/main.c)
 target_sources_ifdef(CONFIG_BOOTLOADER_MCUBOOT app PRIVATE src/flash.c)
-
-target_sources_ifdef(CONFIG_ESP_CLK_INIT_OVERRIDE app PRIVATE src/esp_clk_init.c)
