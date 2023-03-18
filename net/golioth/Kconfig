@@ -119,6 +119,13 @@ config GOLIOTH_COAP_MAX_OPTIONS
 	help
 	  Maximum CoAP options supported by Golioth client.
 
+config GOLIOTH_LIGHTDB_HELPERS
+	bool "Light DB helpers"
+	select QCBOR
+	help
+	  Enable LightDB helper module, which implements functions declared in
+	  net/golioth/lightdb_helpers.h header.
+
 config GOLIOTH_FW
 	bool "Firmware management"
 	select QCBOR

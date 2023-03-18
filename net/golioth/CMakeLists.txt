@@ -6,6 +6,7 @@ zephyr_library_sources(
   lightdb.c
   stream.c
 )
+zephyr_library_sources_ifdef(CONFIG_GOLIOTH_LIGHTDB_HELPERS lightdb_helpers.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_FW fw.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_RPC rpc.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_SETTINGS settings.c)
