@@ -179,16 +179,14 @@ free_req:
 	return err;
 }
 
-int golioth_fw_report_state(struct golioth_client *client,
-			    const char *package_name,
-			    const char *current_version,
-			    const char *target_version,
-			    enum golioth_fw_state state,
-			    enum golioth_dfu_result result)
+static int fw_report_state_encode(const char *current_version,
+				  const char *target_version,
+				  enum golioth_fw_state state,
+				  enum golioth_dfu_result result,
+				  UsefulBuf encode_bufc,
+				  size_t *encoded_len)
 {
 	QCBOREncodeContext encode_ctx;
-	UsefulBuf_MAKE_STACK_UB(encode_bufc, 64);
-	size_t encoded_len;
 	QCBORError qerr;
 
 	QCBOREncode_Init(&encode_ctx, encode_bufc);
@@ -208,10 +206,47 @@ int golioth_fw_report_state(struct golioth_client *client,
 
 	QCBOREncode_CloseMap(&encode_ctx);
 
-	qerr = QCBOREncode_FinishGetSize(&encode_ctx, &encoded_len);
-	if (qerr != QCBOR_SUCCESS) {
-		return qcbor_error_to_posix(qerr);
-	}
+	qerr = QCBOREncode_FinishGetSize(&encode_ctx, encoded_len);
+
+	return qcbor_error_to_posix(qerr);
+}
+
+int golioth_fw_report_state_cb(struct golioth_client *client,
+			       const char *package_name,
+			       const char *current_version,
+			       const char *target_version,
+			       enum golioth_fw_state state,
+			       enum golioth_dfu_result result,
+			       golioth_req_cb_t cb, void *user_data)
+{
+	UsefulBuf_MAKE_STACK_UB(encode_bufc, 64);
+	size_t encoded_len;
+
+	fw_report_state_encode(current_version, target_version,
+			       state, result,
+			       encode_bufc, &encoded_len);
+
+	return golioth_coap_req_cb(client, COAP_METHOD_POST,
+				     PATHV(GOLIOTH_FW_REPORT_STATE, package_name),
+				     GOLIOTH_CONTENT_FORMAT_APP_CBOR,
+				     encode_bufc.ptr, encoded_len,
+				     cb, user_data,
+				     0);
+}
+
+int golioth_fw_report_state(struct golioth_client *client,
+			    const char *package_name,
+			    const char *current_version,
+			    const char *target_version,
+			    enum golioth_fw_state state,
+			    enum golioth_dfu_result result)
+{
+	UsefulBuf_MAKE_STACK_UB(encode_bufc, 64);
+	size_t encoded_len;
+
+	fw_report_state_encode(current_version, target_version,
+			       state, result,
+			       encode_bufc, &encoded_len);
 
 	return golioth_coap_req_sync(client, COAP_METHOD_POST,
 				     PATHV(GOLIOTH_FW_REPORT_STATE, package_name),

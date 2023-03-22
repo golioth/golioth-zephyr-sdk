@@ -89,6 +89,34 @@ int golioth_fw_download(struct golioth_client *client,
 			golioth_req_cb_t cb, void *user_data);
 
 /**
+ * @brief Report state of firmware (callback based)
+ *
+ * Asynchronously push firmware state information to Golioth
+ *
+ * @warning Experimental API
+ *
+ * @param client Client instance
+ * @param package_name Package name of firmware
+ * @param current_version Current firmware version
+ * @param target_version Target firmware version
+ * @param state State of firmware
+ * @param result Result of downloading or updating firmware
+ * @param cb Callback executed on response received, timeout or error
+ * @param user_data User data passed to @p cb
+ *
+ * @retval 0 On success
+ * @retval <0 On failure
+ */
+int golioth_fw_report_state_cb(struct golioth_client *client,
+			       const char *package_name,
+			       const char *current_version,
+			       const char *target_version,
+			       enum golioth_fw_state state,
+			       enum golioth_dfu_result result,
+			       golioth_req_cb_t cb,
+			       void *user_data);
+
+/**
  * @brief Report state of firmware
  *
  * @param client Client instance
