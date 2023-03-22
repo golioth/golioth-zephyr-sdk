@@ -22,6 +22,7 @@ LOG_MODULE_REGISTER(golioth_dfu, LOG_LEVEL_DBG);
 K_SEM_DEFINE(sem_connected, 0, 1);
 K_SEM_DEFINE(sem_downloading, 0, 1);
 K_SEM_DEFINE(sem_downloaded, 0, 1);
+K_SEM_DEFINE(sem_report_pending, 1, 1);
 
 #define REBOOT_DELAY_SEC	1
 
@@ -146,9 +147,37 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 	return 0;
 }
 
+static int async_error_handler(struct golioth_req_rsp *rsp)
+{
+	if (rsp->err) {
+		LOG_ERR("Async firmware report failed: %d", rsp->err);
+		return rsp->err;
+	}
+
+	LOG_INF("Async firmware report succeeded");
+	return 0;
+}
+
 static void golioth_on_connect(struct golioth_client *client)
 {
 	int err;
+
+	if (k_sem_take(&sem_report_pending, K_NO_WAIT) == 0) {
+		/*
+		 * Demonstrate async call to report firmware state on initial
+		 * connect
+		 */
+		err = golioth_fw_report_state_cb(client, "main",
+						 current_version_str,
+						 NULL,
+						 GOLIOTH_FW_STATE_IDLE,
+						 dfu_initial_result,
+						 async_error_handler,
+						 NULL);
+		if (err) {
+			LOG_ERR("Failed to report firmware state: %d", err);
+		}
+	}
 
 	k_sem_give(&sem_connected);
 
@@ -187,15 +216,6 @@ void main(void)
 	golioth_system_client_start();
 
 	k_sem_take(&sem_connected, K_FOREVER);
-
-	err = golioth_fw_report_state(client, "main",
-				      current_version_str,
-				      NULL,
-				      GOLIOTH_FW_STATE_IDLE,
-				      dfu_initial_result);
-	if (err) {
-		LOG_ERR("Failed to report firmware state: %d", err);
-	}
 
 	k_sem_take(&sem_downloading, K_FOREVER);
 
