@@ -293,8 +293,9 @@ config GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 
 config GOLIOTH_SYSTEM_SETTINGS
 	bool "Load credentials from persistent settings"
-	depends on SETTINGS
 	default y
+	depends on GOLIOTH_AUTH_METHOD_PSK
+	depends on SETTINGS
 	help
 	  When selected, Golioth credentials will be loaded from settings
 	  subsystem.
