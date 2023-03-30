@@ -12,22 +12,6 @@ LOG_MODULE_DECLARE(golioth_dfu);
 
 #include "flash.h"
 
-/* NCS' fork of Zephyr does not implement DT_FIXED_PARTITION_EXISTS macro yet */
-#ifndef DT_FIXED_PARTITION_EXISTS
-#define DT_FIXED_PARTITION_EXISTS(node_id)		\
-	DT_NODE_HAS_COMPAT(DT_PARENT(node_id), fixed_partitions)
-#endif
-
-/* NCS' fork of Zephyr does not implement FIXED_PARTITION_ macros yet */
-#ifndef FIXED_PARTITION_EXISTS
-#define FIXED_PARTITION_EXISTS(label) DT_FIXED_PARTITION_EXISTS(DT_NODELABEL(label))
-#endif
-
-/* NCS' fork of Zephyr does not implement FIXED_PARTITION_ macros yet */
-#ifndef FIXED_PARTITION_ID
-#define FIXED_PARTITION_ID(label) DT_FIXED_PARTITION_ID(DT_NODELABEL(label))
-#endif
-
 #ifdef CONFIG_TRUSTED_EXECUTION_NONSECURE
 #define SLOT0_LABEL	slot0_ns_partition
 #define SLOT1_LABEL	slot1_ns_partition
