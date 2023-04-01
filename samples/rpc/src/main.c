@@ -33,7 +33,11 @@ static enum golioth_rpc_status on_multiply(QCBORDecodeContext *request_params_ar
 	}
 
 	value = a * b;
+
+	LOG_DBG("%lf * %lf = %lf", a, b, value);
+
 	QCBOREncode_AddDoubleToMap(response_detail_map, "value", value);
+
 	return GOLIOTH_RPC_OK;
 }
 
