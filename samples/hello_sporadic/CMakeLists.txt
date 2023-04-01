@@ -2,6 +2,8 @@
 
 cmake_minimum_required(VERSION 3.13.1)
 
+set(SNIPPET golioth-sample)
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(hello)
 

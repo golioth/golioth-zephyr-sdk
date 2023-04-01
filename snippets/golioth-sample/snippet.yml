@@ -1,0 +1,19 @@
+name: golioth-sample
+boards:
+  esp32:
+    append:
+      DTC_OVERLAY_FILE: esp32.overlay
+      OVERLAY_CONFIG: esp32.conf
+  mimxrt1060_evkb:
+    append:
+      OVERLAY_CONFIG: mimxrt1060_evkb.conf
+  nrf52840dk_nrf52840:
+    append:
+      DTC_OVERLAY_FILE: nrf52840dk_nrf52840.overlay
+      OVERLAY_CONFIG: nrf52840dk_nrf52840.conf
+  nrf9160dk_nrf9160_ns:
+    append:
+      OVERLAY_CONFIG: nrf9160dk_nrf9160_ns.conf
+  qemu_x86:
+    append:
+      OVERLAY_CONFIG: qemu_x86.conf
