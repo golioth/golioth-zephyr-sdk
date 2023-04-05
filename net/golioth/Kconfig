@@ -299,6 +299,13 @@ config GOLIOTH_SYSTEM_SETTINGS
 	  When selected, Golioth credentials will be loaded from settings
 	  subsystem.
 
+config GOLIOTH_PSK_ID_MAX_LEN
+	int "Maximum Lenght of the PSK-ID stored in settings"
+	depends on GOLIOTH_SYSTEM_SETTINGS
+	default 128 
+	help
+	  Sets the maximum length of the PSK-ID stored in settings
+
 endif # GOLIOTH_SYSTEM_CLIENT
 
 endif # GOLIOTH
