@@ -477,7 +477,7 @@ void golioth_system_client_stop(void)
  */
 static uint8_t golioth_dtls_psk[PSK_MAX_LEN];
 static size_t golioth_dtls_psk_len;
-static uint8_t golioth_dtls_psk_id[64];
+static uint8_t golioth_dtls_psk_id[GOLIOTH_PSK_ID_MAX_LEN];
 static size_t golioth_dtls_psk_id_len;
 
 static void golioth_settings_check_credentials(void)
