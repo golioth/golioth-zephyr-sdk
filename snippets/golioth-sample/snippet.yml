@@ -1,4 +1,6 @@
 name: golioth-sample
+append:
+  OVERLAY_CONFIG: golioth_sample.conf
 boards:
   /esp32.*/:
     append:
