@@ -1,6 +1,6 @@
 name: golioth-sample
 boards:
-  esp32:
+  /esp32.*/:
     append:
       DTC_OVERLAY_FILE: esp32.overlay
       OVERLAY_CONFIG: esp32.conf
