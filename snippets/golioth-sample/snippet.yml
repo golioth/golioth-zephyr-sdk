@@ -4,9 +4,9 @@ boards:
     append:
       DTC_OVERLAY_FILE: esp32.overlay
       OVERLAY_CONFIG: esp32.conf
-  mimxrt1060_evkb:
+  /mimxrt1060_evk.*/:
     append:
-      OVERLAY_CONFIG: mimxrt1060_evkb.conf
+      OVERLAY_CONFIG: mimxrt1060_evk.conf
   nrf52840dk_nrf52840:
     append:
       DTC_OVERLAY_FILE: nrf52840dk_nrf52840.overlay
