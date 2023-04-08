@@ -14,6 +14,6 @@ boards:
   nrf9160dk_nrf9160_ns:
     append:
       OVERLAY_CONFIG: nrf9160dk_nrf9160_ns.conf
-  qemu_x86:
+  /qemu_x86.*/:
     append:
       OVERLAY_CONFIG: qemu_x86.conf
