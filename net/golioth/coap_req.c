@@ -254,7 +254,7 @@ static int golioth_coap_req_reply_handler(struct golioth_coap_req *req,
 				.err = -EBADMSG,
 			};
 
-			LOG_ERR("Failed to move to next block: %d", new_offset);
+			LOG_ERR("Failed to move to next block: %zu", new_offset);
 
 			(void)req->cb(&rsp);
 
