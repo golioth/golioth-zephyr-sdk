@@ -1,3 +1,4 @@
+import argparse
 import sys
 import os
 import serial
@@ -51,14 +52,21 @@ def red_print(s):
     print(red + s + resetcolor)
 
 def main():
-    if len(sys.argv) != 2:
-        print('usage: {} <port>'.format(sys.argv[0]))
-        sys.exit(-1)
-    port = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("port",
+            help="The port to which the device is attached (eg: /dev/ttyACM0)")
+    parser.add_argument("--baud", type=int, default=115200,
+            help="Serial port baud rate (default: 115200)")
+    parser.add_argument("--timeout", type=int, default=1,
+            help="Seconds to attempt opening a serial connection (default: 1)")
+    parser.add_argument("--write-timeout", type=int, default=1,
+            help="Seconds to attempt writing to serial port (default: 1)")
+
+    args = parser.parse_args()
 
     # Connect to the device over serial and use the shell CLI to interact and run tests
-    print("Opening serial port: {}".format(port))
-    ser = serial.Serial(port, 115200, timeout=1, writeTimeout=1)
+    print("Opening serial port: {}".format(args.port))
+    ser = serial.Serial(args.port, args.baud, timeout=args.timeout, writeTimeout=args.write_timeout)
 
     # Set Golioth credentials over device shell CLI
     set_credentials(ser)
