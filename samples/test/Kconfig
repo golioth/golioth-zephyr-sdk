@@ -3,6 +3,10 @@
 
 mainmenu "Golioth application options"
 
+config GOLIOTH_CONNECTION_TEST_TIMEOUT
+	int "Connection timeout in seconds"
+	default 10
+
 if DNS_RESOLVER
 
 config DNS_SERVER_IP_ADDRESSES
