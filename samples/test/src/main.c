@@ -36,9 +36,12 @@ static void golioth_on_connect(struct golioth_client *client)
 
 ZTEST_F(test_golioth, test_connect)
 {
+	int err;
+
 	_client->on_connect = golioth_on_connect;
 	golioth_system_client_start();
-	zassert_equal(0, k_sem_take(&_connected_sem, K_SECONDS(10)), "failed to connect");
+	err = k_sem_take(&_connected_sem, K_SECONDS(CONFIG_GOLIOTH_CONNECTION_TEST_TIMEOUT));
+	zassert_false(err, "failed to connect");
 }
 
 ZTEST_SUITE(test_golioth, NULL, test_golioth_suite_setup, NULL, NULL, NULL);
