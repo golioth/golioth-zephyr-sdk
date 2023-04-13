@@ -117,7 +117,9 @@ jobs:
         run: |
           cd samples/test
           source $HOME/runner_env.sh
-          nrfjprog --program build/zephyr/merged.hex --sectorerase --verify -f NRF91 --snr $CI_NRF9160DK_SNR
+          nrfjprog --eraseall -f NRF91 --snr $CI_NRF9160DK_SNR
+          nrfjprog --program build/zephyr/merged.hex --verify -f NRF91 --snr $CI_NRF9160DK_SNR
           nrfjprog --pinreset -f NRF91 --snr $CI_NRF9160DK_SNR
+          sleep 3
           # Add a longer timeout to verify step for LTE connection
           python verify.py $CI_NRF9160DK_PORT --timeout 300
