@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------
-# Workflow is currently disabled due to inconsistent
+# Workflow is not run on commit/merge due to inconsistent
 # modem initialization on nRF9160dk, which can cause
 # the hw_flash_and_test job to fail:
 #
@@ -8,12 +8,11 @@
 name: Test nrf9160dk
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
   schedule:
     # Run workflow at the start of every day (12 AM UTC)
     - cron: "0 0 * * *"
+
+  workflow_dispatch:
 
 jobs:
   build_for_hw_test:
@@ -120,4 +119,5 @@ jobs:
           source $HOME/runner_env.sh
           nrfjprog --program build/zephyr/merged.hex --sectorerase --verify -f NRF91 --snr $CI_NRF9160DK_SNR
           nrfjprog --pinreset -f NRF91 --snr $CI_NRF9160DK_SNR
-          python verify.py $CI_NRF9160DK_PORT
+          # Add a longer timeout to verify step for LTE connection
+          python verify.py $CI_NRF9160DK_PORT --timeout 300
