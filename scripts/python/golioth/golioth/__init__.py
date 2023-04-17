@@ -11,6 +11,7 @@ from .golioth import (
     LogLevel,
     LogEntry,
     Device,
+    DeviceLightDB,
     DeviceRPC,
     ProjectSettings,
 )
