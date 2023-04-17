@@ -27,6 +27,10 @@ class DeviceNotFound(ApiException):
     pass
 
 
+class InvalidObjectID(ApiException):
+    pass
+
+
 class RPCStatusCode(IntEnum):
     OK = 0
     CANCELED = 1
@@ -179,6 +183,8 @@ class Project(ApiNodeMixin):
         self.client = client
         self.info: dict[str, Any] = info
         self.base_url: str = f'{client.base_url}/projects/{self.id}'
+        self.artifacts: ProjectArtifacts = ProjectArtifacts(self)
+        self.releases: ProjectReleases = ProjectReleases(self)
         self.certificates: ProjectCertificates = ProjectCertificates(self)
         self.settings: ProjectSettings = ProjectSettings(self)
 
@@ -413,6 +419,178 @@ class Certificate(ApiNodeMixin):
 
     def __repr__(self):
         return f'Certificate <{self.id}, enabled={self.enabled}>'
+
+
+class Artifact(ApiNodeMixin):
+    class Error(ApiException):
+        pass
+
+    class InUse(Error):
+        pass
+
+    class AlreadyExists(Error):
+        pass
+
+    def __init__(self, project: Project, info: dict[str, Any]):
+        self.project = project
+        self.info = info
+        self.base_url = f'{project.base_url}/artifacts/{self.id}'
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.project.headers
+
+    @property
+    def id(self):
+        return self.info['id']
+
+    @property
+    def package(self):
+        return self.info['package']
+
+    @property
+    def version(self):
+        return self.info['version']
+
+    def __repr__(self):
+        return f'Artifact <{self.id}, package={self.package}, version={self.version}>'
+
+
+class Release(ApiNodeMixin):
+    class Error(ApiException):
+        pass
+
+    class TagInUse(Error):
+        pass
+
+    def __init__(self, project: Project, info: dict[str, Any]):
+        self.project = project
+        self.info = info
+        self.base_url = f'{project.base_url}/releases/{self.id}'
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.project.headers
+
+    @property
+    def id(self):
+        return self.info['id']
+
+    @property
+    def tags(self):
+        return self.info['releaseTags']
+
+    @property
+    def artifact_ids(self):
+        return self.info['artifactIds']
+
+    @property
+    def rollout(self):
+        return self.info['rollout']
+
+    def __repr__(self):
+        return f'Release <{self.id}, tags={self.tags}, artifact_ids={self.artifact_ids}, rollout={self.rollout}>'
+
+
+class ProjectArtifacts(ApiNodeMixin):
+    def __init__(self, project: Project):
+        self.project = project
+        self.base_url = self.project.base_url + '/artifacts'
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.project.headers
+
+    async def get_all(self) -> list:
+        resp = await self.project.get('artifacts')
+        return [Artifact(self, d) for d in resp.json()['list']]
+
+    async def get(self, artifact_id: str):
+        resp = await super().get(artifact_id)
+        return Artifact(self.project, resp.json()['data'])
+
+    async def delete(self, artifact_id: str):
+        try:
+            return await super().delete(artifact_id)
+        except httpx.HTTPStatusError as err:
+            msg = err.response.json()['message']
+            if 'artifact in use' in msg:
+                raise Artifact.InUse(f'Artifact {artifact_id} in use') from err
+            elif 'hex string is not a valid ObjectID' in msg:
+                raise InvalidObjectID(msg) from err
+
+            raise err
+
+    async def upload(self,
+                     path: Path,
+                     version: str,
+                     package: str = 'main') -> Artifact:
+        json = {
+            'projectId': self.project.id,
+            'content': b64encode(path.open('rb').read()).decode(),
+            'version': version,
+            'package': package,
+        }
+
+        try:
+            response = await self.project.client.post('artifacts', json=json)
+        except httpx.HTTPStatusError as err:
+            msg = err.response.json()['message']
+            if 'artifact already exists' in msg:
+                raise Artifact.AlreadyExists(msg) from err
+
+            raise err
+
+        return Artifact(self.project, response.json()['data'])
+
+
+class ProjectReleases(ApiNodeMixin):
+    def __init__(self, project: Project):
+        self.project = project
+        self.base_url = self.project.base_url + '/releases'
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.project.headers
+
+    async def get_all(self) -> list:
+        resp = await self.project.get('releases')
+        return [Release(self, d) for d in resp.json()['list']]
+
+    async def get(self, release_id: str):
+        resp = await super().get(release_id)
+        return Release(self.project, resp.json()['data'])
+
+    async def delete(self, release_id: str):
+        try:
+            return await super().delete(release_id)
+        except httpx.HTTPStatusError as err:
+            msg = err.response.json()['message']
+            if 'hex string is not a valid ObjectID' in msg:
+                raise InvalidObjectID from err
+
+            raise err
+
+    async def create(self,
+                     artifact_ids: list[str],
+                     tags: list[str],
+                     rollout: bool = False):
+        json = {
+            'releaseTags': tags,
+            'artifactIds': artifact_ids,
+            'rollout': rollout,
+        }
+
+        try:
+            response = await self.project.post('releases', json=json)
+        except httpx.HTTPStatusError as err:
+            msg = err.response.json()['message']
+            if 'already exists with same release tag' in msg:
+                raise Release.TagInUse(msg) from err
+
+            raise err
+
+        return Release(self.project, response.json()['data'])
 
 
 class ProjectCertificates(ApiNodeMixin):
