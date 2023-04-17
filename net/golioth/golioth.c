@@ -464,8 +464,7 @@ static int golioth_process_rx_data(struct golioth_client *client,
 	uint8_t type;
 
 	err = coap_packet_parse(&client->rx_packet, data, len,
-				client->rx_options,
-				ARRAY_SIZE(client->rx_options));
+				NULL, 0);
 	if (err) {
 		return err;
 	}
