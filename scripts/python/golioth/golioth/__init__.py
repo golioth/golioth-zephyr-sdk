@@ -14,6 +14,10 @@ from .golioth import (
     DeviceLightDB,
     DeviceRPC,
     Certificate,
+    Artifact,
+    Release,
+    ProjectArtifacts,
+    ProjectReleases,
     ProjectCertificates,
     ProjectSettings,
 )
