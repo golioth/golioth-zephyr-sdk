@@ -57,7 +57,6 @@ struct golioth_client {
 	size_t rx_received;
 
 	struct coap_packet rx_packet;
-	struct coap_option rx_options[CONFIG_GOLIOTH_COAP_MAX_OPTIONS];
 
 	struct k_mutex lock;
 	int sock;

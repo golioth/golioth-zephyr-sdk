@@ -113,12 +113,6 @@ config GOLIOTH_CIPHERSUITES
 	  If empty, then underlying TLS implementation (e.g. mbedTLS library) decides which
 	  ciphersuites to use. Relying on that is not recommended!
 
-config GOLIOTH_COAP_MAX_OPTIONS
-	int "Maximum CoAP options supported"
-	default 16
-	help
-	  Maximum CoAP options supported by Golioth client.
-
 config GOLIOTH_FW
 	bool "Firmware management"
 	select QCBOR
