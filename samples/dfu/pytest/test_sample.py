@@ -4,12 +4,13 @@
 
 from contextlib import asynccontextmanager, suppress
 import logging
+from operator import attrgetter
 import os
 from pathlib import Path
 import re
 import subprocess
 
-from golioth import Artifact, Client, LogEntry, Project, Release
+from golioth import Artifact, Client, LogEntry, LogsMonitor, Project, Release
 import pytest
 import trio
 
@@ -48,20 +49,32 @@ async def logs_monitor(device):
         yield logs_monitor
 
 
-@pytest.fixture(scope='function')
-async def diagnostics_get(logs_monitor):
-    async def get(timeout):
+class DiagnosticsCollector:
+    def __init__(self, logs_monitor: LogsMonitor):
+        self.logs_monitor: LogsMonitor = logs_monitor
+        self.logs: list[LogEntry] = []
+
+    def get_all(self) -> list[LogEntry]:
+        return self.logs
+
+    async def expect(self, timeout: int, state: str) -> LogEntry:
         with trio.fail_after(timeout):
             while True:
-                log = await logs_monitor.get()
+                log = await self.logs_monitor.get()
 
-                if log.type == 'DIAGNOSTICS':
-                    break
+                if log.type != 'DIAGNOSTICS':
+                    continue
 
-            logging.info("Diagnostics: %s", log)
-            return log
+                logging.info("Diagnostics: %s", log)
+                self.logs.append(log)
 
-    return get
+                if log.metadata['state'] == state:
+                    return log
+
+
+@pytest.fixture(scope='function')
+async def diagnostics(logs_monitor):
+    return DiagnosticsCollector(logs_monitor)
 
 
 def create_dummy_firmware_sysbuild(running_dir) -> str:
@@ -151,33 +164,35 @@ async def temp_release_with_artifact(project: Project, firmware_path: Path):
             yield release
 
 
-async def test_dfu(cmdopt, initial_timeout, project, diagnostics_get):
+async def test_dfu(cmdopt, initial_timeout, project, diagnostics):
     # Wait 2s to be (almost) sure that logs will show updated firmware version
     # TODO: register on logs 2s from the past, so that sleep won't be needed
     await trio.sleep(2)
 
     firmware_path = Path(create_dummy_firmware(cmdopt))
     async with temp_release_with_artifact(project, firmware_path):
-        downloading_target = None
+        log = await diagnostics.expect(initial_timeout, 'DOWNLOADING')
+        assert log.metadata['target'] == NEW_VERSION, 'Incorrect target version'
 
-        for i in range(0, 2):
-            log = await diagnostics_get(initial_timeout)
+        log = await diagnostics.expect(5 * 60, 'DOWNLOADED')
+        assert log.metadata['target'] == NEW_VERSION, 'Incorrect target version'
 
-            if log.metadata["state"] == "DOWNLOADING":
-                downloading_target = log.metadata["target"]
-                break
+        #
+        # FIXME: Since server-side can reorder diagnostics notifications, do not
+        # expect 'UPDATING' to be after 'DOWNLOADING', as reordering happens
+        # very often. Instead, check if device has sent those two diagnostics
+        # messages in correct order by sorting all received logs by timestamp.
+        #
+        # log = await diagnostics.expect(10, 'UPDATING')
+        # assert log.metadata['target'] == NEW_VERSION, 'Incorrect target version'
 
-        assert downloading_target is not None, "Downloading has not started yet"
-        assert downloading_target == NEW_VERSION, "Incorrect target version"
+        log = await diagnostics.expect(2 * 60 + initial_timeout, 'IDLE')
+        assert log.metadata['version'] == NEW_VERSION, 'Incorrect version'
 
-        log = await diagnostics_get(5 * 60)
-        assert log.metadata["state"] == "DOWNLOADED", "Incorrect state"
-        assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
-
-        log = await diagnostics_get(10)
-        assert log.metadata["state"] == "UPDATING", "Incorrect state"
-        assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
-
-        log = await diagnostics_get(2 * 60 + initial_timeout)
-        assert log.metadata["state"] == "IDLE", "Incorrect state"
-        assert log.metadata["version"] == NEW_VERSION, "Incorrect version"
+    # Check order of reported diagnostics
+    expected_states = ['IDLE', 'DOWNLOADING', 'DOWNLOADED', 'UPDATING', 'IDLE']
+    sorted_logs = sorted(diagnostics.get_all(), key=attrgetter('datetime'))
+    sorted_states = [log.metadata['state'] for log in
+                     sorted_logs[-len(expected_states):]]
+    logging.info('Sorted states: %s', sorted_states)
+    assert expected_states == sorted_states, 'Invalid diagnostics order'
