@@ -292,9 +292,12 @@ class LogEntry:
         return self.info['module']
 
     @property
+    def type(self) -> str:
+        return self.info['type']
+
+    @property
     def metadata(self) -> dict:
         return self.info['metadata']
-
 
 class Device(ApiNodeMixin):
     def __init__(self, project: Project, info: dict[str, Any]):
