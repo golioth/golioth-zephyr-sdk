@@ -2,15 +2,21 @@
 
 from base64 import b64decode
 from datetime import datetime, timezone
+import fnmatch
 import json
 from pathlib import Path
+import re
+import sys
 from typing import Optional, Tuple, Union
 
 import asyncclick as click
 from colorama import init, Fore, Style
+from imgtool.image import Image, VerifyResult
 from rich.console import Console
 
 from golioth import Client, LogEntry, LogLevel, RPCTimeout
+
+create_set = set
 
 console = Console()
 
@@ -63,6 +69,255 @@ async def call(config, device_name, method, params):
         return
 
     console.print(resp)
+
+
+class MatchGlobRegexSwitch(click.ParamType):
+    @staticmethod
+    def regex(pattern: str):
+        return pattern
+
+    @staticmethod
+    def glob(pattern: str):
+        return fnmatch.translate(pattern)
+
+    def convert(self, value, param, ctx):
+        return getattr(self, value)
+
+
+MATCH_GLOB_REGEX_SWITCH = MatchGlobRegexSwitch()
+
+
+@cli.group()
+def artifacts():
+    """DFU artifacts related commands."""
+    pass
+
+
+@artifacts.command()
+@click.option('-p', '--package', default='main', show_default=True,
+              help='Package name')
+@click.option('-r', 'release_rollout',
+              help='Create release with the same tag (when specified once) and rollout (when specified twice).',
+              count=True)
+@click.option('-f', '--force',
+              help='Force upload, by removing conflicting artifacts (and/or releases).',
+              is_flag=True)
+@click.argument('path', type=click.Path(exists=True))
+@pass_config
+async def upload(config, package, release_rollout, force, path):
+    """Upload new DFU artifact."""
+    create_release = (release_rollout > 0)
+
+    verify_result, version_bin, digest = Image.verify(path, None)
+    if verify_result != VerifyResult.OK:
+        raise RuntimeError('Invalid firmware file')
+
+    version = '.'.join([str(x) for x in version_bin[:3]])
+
+    with console.status('Uploading DFU artifact...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        if force:
+            artifacts_to_remove = create_set()
+            artifacts = await project.artifacts.get_all()
+
+            artifacts_to_remove.update([a for a in artifacts
+                                        if (a.version == version and
+                                            a.package == package)])
+
+            releases_to_remove = create_set()
+            releases = await project.releases.get_all()
+
+            if create_release:
+                releases_to_remove.update([r for r in releases
+                                           if version in r.tags])
+
+            for artifact in artifacts_to_remove:
+                releases_to_remove.update([r for r in releases
+                                           if artifact.id in r.artifact_ids])
+
+            for release in releases_to_remove:
+                await project.releases.delete(release.id)
+
+            for artifact in artifacts_to_remove:
+                await project.artifacts.delete(artifact.id)
+
+        artifact = await project.artifacts.upload(Path(path), version, package)
+        console.print(artifact)
+
+        if create_release:
+            release = await project.releases.create(artifact_ids=[artifact.id],
+                                                    tags=[version],
+                                                    rollout=(release_rollout > 1))
+
+            console.print(release)
+
+
+@artifacts.command()
+@pass_config
+async def list(config):
+    """List DFU artifacts."""
+    with console.status('Getting DFU artifacts...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        artifacts = await project.artifacts.get_all()
+        for artifact in artifacts:
+            console.print(artifact)
+
+
+@artifacts.command()
+@click.argument('artifact_id', nargs=-1, required=True)
+@click.option('--by-package-version', '--pv', is_flag=True,
+              help='Select artifact by "package@version" instead of artifact ID.')
+@click.option('--hidden-glob', 'match_type', flag_value='glob',
+              default=True,
+              hidden=True,
+              type=MATCH_GLOB_REGEX_SWITCH,
+              help='Use glob match.')
+@click.option('--regex', '-r', 'match_type', flag_value='regex',
+              type=MATCH_GLOB_REGEX_SWITCH,
+              help='Use regex match (instead of glob).')
+@pass_config
+async def delete(config, artifact_id, by_package_version, match_type):
+    """Delete DFU artifact.
+
+    \b
+    Example invocations
+    -------------------
+
+    \b
+    Delete artifact with package 'main' and version '1.0.0':
+    $ golioth artifacts delete --pv main@1.0.0
+
+    \b
+    Delete all artifacts:
+    $ golioth artifacts delete '*'
+
+    \b
+    Delete all version 2.x.x and 3.x.x artifacts from package 'main':
+    $ golioth artifacts delete --pv 'main@[2-3].*.*'
+    """
+    if by_package_version:
+        def artifact_match(pattern, artifact):
+            return pattern.match(f'{artifact.package}@{artifact.version}') is not None
+    else:
+        def artifact_match(pattern, artifact):
+            return pattern.match(artifact.id) is not None
+
+    with console.status('Getting DFU artifacts...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        patterns = [re.compile(match_type(x)) for x in artifact_id]
+        deleted = []
+
+        for artifact in await project.artifacts.get_all():
+            for pattern in patterns:
+                if artifact_match(pattern, artifact):
+                    await project.artifacts.delete(artifact.id)
+                    console.print(f'Deleted: {artifact}')
+                    deleted.append(artifact)
+                    break
+
+        if not deleted:
+            console.print('No artifacts deleted!')
+
+
+@cli.group()
+def releases():
+    """DFU releases related commands."""
+    pass
+
+
+@releases.command()
+@click.option('artifact_ids', '--artifact', '-a', multiple=True, required=True)
+@click.option('tags', '--tag', '-t', multiple=True, required=True)
+@click.option('--rollout', '-r', is_flag=True)
+@pass_config
+async def create(config, artifact_ids, tags, rollout):
+    """Create DFU release."""
+    with console.status('Creating DFU release...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        await project.releases.create(artifact_ids, tags, rollout)
+
+
+@releases.command()
+@click.argument('release_id', nargs=-1, required=True)
+@click.option('--by-tag', '-t', is_flag=True,
+              help='Select release by release tag instead of release ID.')
+@click.option('--hidden-glob', 'match_type', flag_value='glob',
+              default=True,
+              hidden=True,
+              type=MATCH_GLOB_REGEX_SWITCH,
+              help='Use glob match.')
+@click.option('--regex', '-r', 'match_type', flag_value='regex',
+              type=MATCH_GLOB_REGEX_SWITCH,
+              help='Use regex match (instead of glob).')
+@pass_config
+async def delete(config, release_id, by_tag, match_type):
+    """Delete DFU releases.
+
+    \b
+    Example invocations
+    -------------------
+
+    \b
+    Delete release with tag '1.0.0':
+    $ golioth releases delete -t 1.0.0
+
+    \b
+    Delete all releases:
+    $ golioth releases delete '*'
+
+    \b
+    Delete all version 2.x.x and 3.x.x releases:
+    $ golioth releases delete -t '[2-3].*.*'
+    """
+    if by_tag:
+        def artifact_match(pattern, release):
+            for tag in release.tags:
+                if pattern.match(tag):
+                    return True
+
+            return False
+    else:
+        def artifact_match(pattern, release):
+            return pattern.match(release.id) is not None
+
+    with console.status('Deleting DFU releases...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        patterns = [re.compile(match_type(r)) for r in release_id]
+        deleted = []
+
+        for release in await project.releases.get_all():
+            for pattern in patterns:
+                if artifact_match(pattern, release):
+                    await project.releases.delete(release.id)
+                    console.print(f'Deleted: {release}')
+                    deleted.append(release)
+                    break
+
+        if not deleted:
+            console.print('No releases deleted!')
+
+
+@releases.command()
+@pass_config
+async def list(config):
+    """List DFU releases."""
+    with console.status('Getting DFU releases...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        releases = await project.releases.get_all()
+        for release in releases:
+            console.print(release)
 
 
 @cli.group()
