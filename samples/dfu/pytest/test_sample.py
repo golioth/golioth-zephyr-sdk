@@ -42,6 +42,28 @@ async def device(project):
     return await project.device_by_name(os.environ['GOLIOTH_DEVICE_NAME'])
 
 
+@pytest.fixture(scope='function')
+async def logs_monitor(device):
+    async with device.logs_monitor() as logs_monitor:
+        yield logs_monitor
+
+
+@pytest.fixture(scope='function')
+async def diagnostics_get(logs_monitor):
+    async def get(timeout):
+        with trio.fail_after(timeout):
+            while True:
+                log = await logs_monitor.get()
+
+                if log.type == 'DIAGNOSTICS':
+                    break
+
+            logging.info("Diagnostics: %s", log)
+            return log
+
+    return get
+
+
 def create_dummy_firmware_sysbuild(running_dir) -> str:
     new_fw_path = os.path.join(running_dir, "new-firmware.bin")
 
@@ -97,18 +119,6 @@ def create_dummy_firmware(running_dir) -> str:
     raise RuntimeError("Unsupported build directory structure")
 
 
-async def diagnostics_log_get(logs_monitor, timeout) -> LogEntry:
-    with trio.fail_after(timeout):
-        while True:
-            log = await logs_monitor.get()
-
-            if log.type == 'DIAGNOSTICS':
-                break
-
-        logging.info("Diagnostics: %s", log)
-        return log
-
-
 @asynccontextmanager
 async def temp_artifact(project: Project, firmware_path: Path):
     logging.info("Creating artifact")
@@ -141,34 +151,33 @@ async def temp_release_with_artifact(project: Project, firmware_path: Path):
             yield release
 
 
-async def test_dfu(cmdopt, initial_timeout, project, device):
-    async with device.logs_monitor() as logs_monitor:
-        # Wait 2s to be (almost) sure that logs will show updated firmware version
-        # TODO: register on logs 2s from the past, so that sleep won't be needed
-        await trio.sleep(2)
+async def test_dfu(cmdopt, initial_timeout, project, diagnostics_get):
+    # Wait 2s to be (almost) sure that logs will show updated firmware version
+    # TODO: register on logs 2s from the past, so that sleep won't be needed
+    await trio.sleep(2)
 
-        firmware_path = Path(create_dummy_firmware(cmdopt))
-        async with temp_release_with_artifact(project, firmware_path):
-            downloading_target = None
+    firmware_path = Path(create_dummy_firmware(cmdopt))
+    async with temp_release_with_artifact(project, firmware_path):
+        downloading_target = None
 
-            for i in range(0, 2):
-                log = await diagnostics_log_get(logs_monitor, initial_timeout)
+        for i in range(0, 2):
+            log = await diagnostics_get(initial_timeout)
 
-                if log.metadata["state"] == "DOWNLOADING":
-                    downloading_target = log.metadata["target"]
-                    break
+            if log.metadata["state"] == "DOWNLOADING":
+                downloading_target = log.metadata["target"]
+                break
 
-            assert downloading_target is not None, "Downloading has not started yet"
-            assert downloading_target == NEW_VERSION, "Incorrect target version"
+        assert downloading_target is not None, "Downloading has not started yet"
+        assert downloading_target == NEW_VERSION, "Incorrect target version"
 
-            log = await diagnostics_log_get(logs_monitor, 5 * 60)
-            assert log.metadata["state"] == "DOWNLOADED", "Incorrect state"
-            assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
+        log = await diagnostics_get(5 * 60)
+        assert log.metadata["state"] == "DOWNLOADED", "Incorrect state"
+        assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
 
-            log = await diagnostics_log_get(logs_monitor, 10)
-            assert log.metadata["state"] == "UPDATING", "Incorrect state"
-            assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
+        log = await diagnostics_get(10)
+        assert log.metadata["state"] == "UPDATING", "Incorrect state"
+        assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
 
-            log = await diagnostics_log_get(logs_monitor, 2 * 60 + initial_timeout)
-            assert log.metadata["state"] == "IDLE", "Incorrect state"
-            assert log.metadata["version"] == NEW_VERSION, "Incorrect version"
+        log = await diagnostics_get(2 * 60 + initial_timeout)
+        assert log.metadata["state"] == "IDLE", "Incorrect state"
+        assert log.metadata["version"] == NEW_VERSION, "Incorrect version"
