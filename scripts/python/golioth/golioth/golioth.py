@@ -331,6 +331,7 @@ class Device(ApiNodeMixin):
         self.base_url = f'{project.base_url}/devices/{self.id}'
         self.rpc = DeviceRPC(self)
         self.lightdb = DeviceLightDB(self)
+        self.stream = DeviceStream(self)
 
     @property
     def headers(self) -> Dict[str, str]:
@@ -401,6 +402,47 @@ class DeviceLightDB(ApiNodeMixin):
 
     async def iter(self, path: str, params: dict = {}) -> Iterable[LightDBMonitor.ValueType]:
         async with self.monitor(path, params) as monitor:
+            while True:
+                yield await monitor.get()
+
+
+class DeviceStream(ApiNodeMixin):
+    ValueType = Union[str, int, float, bool, 'ValueType']
+
+    def __init__(self, device: Device):
+        self.device = device
+        self.base_url: str = device.base_url
+
+    @property
+    def headers(self) -> Dict[str, str]:
+        return self.device.headers
+
+    async def get(self, path: str) -> DeviceStream.ValueType:
+        async with self.http_client as c:
+            response = await c.get(f'stream/{path}')
+            return response.json()['data']
+
+    async def set(self, path: str, value: ValueType) -> None:
+        async with self.http_client as c:
+            await c.post(f'stream/{path}', json=value)
+
+    async def delete(self, path: str) -> None:
+        async with self.http_client as c:
+            await c.delete(f'stream/{path}')
+
+    @asynccontextmanager
+    async def websocket(self, params: dict = {}) -> WebSocketConnection:
+        async with open_websocket_url(f'{self.device.project.client.base_url.replace("http", "ws")}/ws/projects/{self.device.project.id}/devices/{self.device.id}/stream',
+                                      extra_headers=[(k, v) for k, v in self.headers.items()]) as ws:
+            yield ws
+
+    @asynccontextmanager
+    async def monitor(self, params: dict = {}) -> LightDBMonitor:
+        async with self.websocket(params) as ws:
+            yield LightDBMonitor(ws)
+
+    async def iter(self, params: dict = {}) -> Iterable[LightDBMonitor.ValueType]:
+        async with self.monitor(params) as monitor:
             while True:
                 yield await monitor.get()
 

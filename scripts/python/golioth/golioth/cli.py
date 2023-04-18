@@ -402,6 +402,28 @@ async def monitor(config, device_name, path):
 
 
 @cli.group()
+def stream():
+    """LightDB Stream related commands."""
+    pass
+
+
+@stream.command()
+@click.option('-d', '--device-name',
+              help='Name of device',
+              required=True)
+@pass_config
+async def monitor(config, device_name):
+    """Monitor LightDB Stream."""
+    with console.status('Monitoring LightDB Stream path...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+        device = await project.device_by_name(device_name)
+
+        async for value in device.stream.iter():
+            console.print(value)
+
+
+@cli.group()
 def certificate():
     """Certificates related commands."""
     pass
