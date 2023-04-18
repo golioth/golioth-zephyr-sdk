@@ -2,17 +2,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from contextlib import suppress
-import json
+from contextlib import asynccontextmanager, suppress
 import logging
 import os
 from pathlib import Path
 import re
 import subprocess
-import time
 
-import pexpect
+from golioth import Artifact, Client, LogEntry, Project, Release
 import pytest
+import trio
+
+
+# This is the same as using the @pytest.mark.anyio on all test functions in the module
+pytestmark = pytest.mark.anyio
 
 
 DEFAULT_TIMEOUT = 30
@@ -28,20 +31,15 @@ def initial_timeout(request):
     return timeout
 
 
-def device_name():
-    return os.environ["GOLIOTH_DEVICE_NAME"]
+@pytest.fixture(scope='session')
+async def project():
+    client = Client(os.environ.get("GOLIOTHCTL_CONFIG"))
+    return await client.default_project()
 
 
-def goliothctl_args():
-    args = []
-
-    with suppress(KeyError):
-        args += ['-c', os.environ["GOLIOTHCTL_CONFIG"]]
-
-    with suppress(KeyError):
-        args += pexpect.split_command_line(os.environ["GOLIOTHCTL_OPTS"])
-
-    return args
+@pytest.fixture(scope='session')
+async def device(project):
+    return await project.device_by_name(os.environ['GOLIOTH_DEVICE_NAME'])
 
 
 def create_dummy_firmware_sysbuild(running_dir) -> str:
@@ -99,104 +97,78 @@ def create_dummy_firmware(running_dir) -> str:
     raise RuntimeError("Unsupported build directory structure")
 
 
-def release_rollout(firmware_path: str):
+async def diagnostics_log_get(logs_monitor, timeout) -> LogEntry:
+    with trio.fail_after(timeout):
+        while True:
+            log = await logs_monitor.get()
+
+            if log.type == 'DIAGNOSTICS':
+                break
+
+        logging.info("Diagnostics: %s", log)
+        return log
+
+
+@asynccontextmanager
+async def temp_artifact(project: Project, firmware_path: Path):
     logging.info("Creating artifact")
-    subprocess.run(["goliothctl"] + goliothctl_args() +
-                   ["dfu", "artifact", "create", firmware_path,
-                    "--version", NEW_VERSION],
-                   check=True)
-    logging.info("Creating release (with rollout)")
-    subprocess.run(["goliothctl"] + goliothctl_args() +
-                   ["dfu", "release", "create",
-                    "--rollout", "true",
-                    "--release-tags", NEW_VERSION,
-                    "--components", f"main@{NEW_VERSION}"],
-                   check=True)
-
-
-def release_delete():
-    logging.info("Removing release")
-    subprocess.run(["goliothctl"] + goliothctl_args() +
-                   ["dfu", "release", "delete",
-                    "--release-tags", NEW_VERSION],
-                   check=True)
-    logging.info("Removing artifact")
-    subprocess.run(["goliothctl"] + goliothctl_args() +
-                   ["dfu", "artifact", "delete", NEW_VERSION],
-                   check=True)
-
-
-def expect_diagnostics_entry(goliothctl, timeout=None):
-    if timeout is None:
-        timeout = goliothctl.timeout
-
-    end_time = time.time() + timeout
-    time_left = timeout
-
-    while time_left > 0:
-        index = goliothctl.expect([goliothctl.crlf, goliothctl.delimiter],
-                                  timeout=time_left)
-        if index == 0:
-            line = goliothctl.before + goliothctl.crlf
-        else:
-            line = goliothctl.before
-
-        entry = json.loads(line)
-
-        if "type" not in entry or entry["type"] != "DIAGNOSTICS":
-            time_left = end_time - time.time()
-            continue
-
-        assert "metadata" in entry, "No metadata in diagnostics log entry"
-        assert "state" in entry["metadata"], "No state in diagnostics log entry"
-        assert "target" in entry["metadata"], "No target in diagnostics log entry"
-        assert "version" in entry["metadata"], "No version in diagnostics log entry"
-
-        return entry
-
-
-def test_dfu(cmdopt, initial_timeout):
+    artifact = await project.artifacts.upload(firmware_path,
+                                              version=NEW_VERSION)
     try:
-        args = goliothctl_args() + ["logs", "listen", "--json", device_name()]
+        yield artifact
+    finally:
+        logging.info("Removing artifact")
+        await project.artifacts.delete(artifact.id)
 
-        logging.info("running goliothctl with args=%s", args)
-        goliothctl = pexpect.spawn("goliothctl", args)
 
-        time.sleep(2) # Wait 2s to be (almost) sure that logs will show updated firmware version
+@asynccontextmanager
+async def temp_release(project: Project, artifact: Artifact):
+    logging.info("Creating release (with rollout)")
+    release = await project.releases.create(artifact_ids=[artifact.id],
+                                            tags=[NEW_VERSION],
+                                            rollout=True)
+    try:
+        yield release
+    finally:
+        logging.info("Removing release")
+        await project.releases.delete(release.id)
 
-        firmware_path = create_dummy_firmware(cmdopt)
-        try:
-            release_rollout(firmware_path)
 
+@asynccontextmanager
+async def temp_release_with_artifact(project: Project, firmware_path: Path):
+    async with temp_artifact(project, firmware_path) as artifact:
+        async with temp_release(project, artifact) as release:
+            yield release
+
+
+async def test_dfu(cmdopt, initial_timeout, project, device):
+    async with device.logs_monitor() as logs_monitor:
+        # Wait 2s to be (almost) sure that logs will show updated firmware version
+        # TODO: register on logs 2s from the past, so that sleep won't be needed
+        await trio.sleep(2)
+
+        firmware_path = Path(create_dummy_firmware(cmdopt))
+        async with temp_release_with_artifact(project, firmware_path):
             downloading_target = None
 
             for i in range(0, 2):
-                entry = expect_diagnostics_entry(goliothctl, initial_timeout)
+                log = await diagnostics_log_get(logs_monitor, initial_timeout)
 
-                logging.info("Diagnostics: %s", entry)
-
-                if entry["metadata"]["state"] == "DOWNLOADING":
-                    downloading_target = entry["metadata"]["target"]
+                if log.metadata["state"] == "DOWNLOADING":
+                    downloading_target = log.metadata["target"]
                     break
 
             assert downloading_target is not None, "Downloading has not started yet"
             assert downloading_target == NEW_VERSION, "Incorrect target version"
 
-            entry = expect_diagnostics_entry(goliothctl, 5 * 60)
-            logging.info("Diagnostics: %s", entry)
-            assert entry["metadata"]["state"] == "DOWNLOADED", "Incorrect state"
-            assert entry["metadata"]["target"] == NEW_VERSION, "Incorrect target version"
+            log = await diagnostics_log_get(logs_monitor, 5 * 60)
+            assert log.metadata["state"] == "DOWNLOADED", "Incorrect state"
+            assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
 
-            entry = expect_diagnostics_entry(goliothctl, 10)
-            logging.info("Diagnostics: %s", entry)
-            assert entry["metadata"]["state"] == "UPDATING", "Incorrect state"
-            assert entry["metadata"]["target"] == NEW_VERSION, "Incorrect target version"
+            log = await diagnostics_log_get(logs_monitor, 10)
+            assert log.metadata["state"] == "UPDATING", "Incorrect state"
+            assert log.metadata["target"] == NEW_VERSION, "Incorrect target version"
 
-            entry = expect_diagnostics_entry(goliothctl, 2 * 60 + initial_timeout)
-            logging.info("Diagnostics: %s", entry)
-            assert entry["metadata"]["state"] == "IDLE", "Incorrect state"
-            assert entry["metadata"]["version"] == NEW_VERSION, "Incorrect version"
-        finally:
-            release_delete()
-    finally:
-        goliothctl.terminate()
+            log = await diagnostics_log_get(logs_monitor, 2 * 60 + initial_timeout)
+            assert log.metadata["state"] == "IDLE", "Incorrect state"
+            assert log.metadata["version"] == NEW_VERSION, "Incorrect version"
