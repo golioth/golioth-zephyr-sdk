@@ -382,6 +382,25 @@ async def delete(config, device_name, path):
         await device.lightdb.delete(path)
 
 
+@lightdb.command()
+@click.option('-d', '--device-name',
+              help='Name of device',
+              required=True)
+@click.argument('path')
+@pass_config
+async def monitor(config, device_name, path):
+    """Monitor LightDB State path."""
+    path = path.strip('/')
+
+    with console.status('Monitoring LightDB State path...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+        device = await project.device_by_name(device_name)
+
+        async for value in device.lightdb.iter(path):
+            console.print(value)
+
+
 @cli.group()
 def certificate():
     """Certificates related commands."""

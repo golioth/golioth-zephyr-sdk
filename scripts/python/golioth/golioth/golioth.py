@@ -154,6 +154,31 @@ class Client(ApiNodeMixin):
         return await Project.get_by_id(self, project_id)
 
 
+class LightDBMonitor:
+    ValueType = Union[str, int, float, bool, 'ValueType']
+
+    def __init__(self, ws: WebSocketConnection):
+        self.ws = ws
+
+    async def __anext__(self) -> LightDBMonitor.ValueType:
+        return await self.get()
+
+    async def get(self) -> LightDBMonitor.ValueType:
+        msg = await self.ws.get_message()
+        msg = json.loads(msg)
+
+        if 'error' in msg:
+            error = msg['error']
+            # REVISIT: Not sure error code should map to all RPCStatusCode values, but at least it
+            # matches PERMISSION_DENIED.
+            if error['code'] == RPCStatusCode.PERMISSION_DENIED.value:
+                raise Forbidden(error['message'])
+
+            raise ApiException(f"code={error['code']} message={error['message']}")
+
+        return msg['result']['data']
+
+
 class LogsMonitor:
     def __init__(self, ws: WebSocketConnection):
         self.ws = ws
@@ -362,6 +387,22 @@ class DeviceLightDB(ApiNodeMixin):
     async def delete(self, path: str) -> None:
         async with self.http_client as c:
             await c.delete(f'data/{path}')
+
+    @asynccontextmanager
+    async def websocket(self, path: str, params: dict = {}) -> WebSocketConnection:
+        async with open_websocket_url(f'{self.device.project.client.base_url.replace("http", "ws")}/ws/projects/{self.device.project.id}/devices/{self.device.id}/data/{path}',
+                                      extra_headers=[(k, v) for k, v in self.headers.items()]) as ws:
+            yield ws
+
+    @asynccontextmanager
+    async def monitor(self, path: str, params: dict = {}) -> LightDBMonitor:
+        async with self.websocket(path, params) as ws:
+            yield LightDBMonitor(ws)
+
+    async def iter(self, path: str, params: dict = {}) -> Iterable[LightDBMonitor.ValueType]:
+        async with self.monitor(path, params) as monitor:
+            while True:
+                yield await monitor.get()
 
 
 class DeviceRPC(ApiNodeMixin):
