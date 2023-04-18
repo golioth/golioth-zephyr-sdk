@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from datetime import datetime, timedelta
 import logging
 import os
 
 from golioth import Client, RPCTimeout
 import pytest
+from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_delay, wait_fixed
 from trio import sleep
 
 
@@ -36,21 +36,16 @@ async def device(initial_timeout):
 
     # Try to call method for the first time, just to make sure that device is already available
     # (already connected).
-    start = datetime.now()
-
-    while datetime.now() < start + timedelta(seconds=initial_timeout):
-        try:
+    async for attempt in AsyncRetrying(stop=stop_after_delay(initial_timeout),
+                                       wait=wait_fixed(1),
+                                       retry=retry_if_exception_type(RPCTimeout),
+                                       sleep=sleep):
+        with attempt:
             logging.debug('Calling "multiply" to check if device is connected')
             await device.rpc.multiply(1, 1)
 
             # No exception was raised, so just return device
             return device
-        except RPCTimeout:
-            pass
-
-        await sleep(1)
-
-    raise RuntimeError('Timeout while waiting for first successful RPC call')
 
 
 @pytest.mark.parametrize('a,b',
