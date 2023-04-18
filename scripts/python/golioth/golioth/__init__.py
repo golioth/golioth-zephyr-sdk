@@ -13,6 +13,7 @@ from .golioth import (
     LogEntry,
     Device,
     DeviceLightDB,
+    DeviceStream,
     DeviceRPC,
     Certificate,
     Artifact,
