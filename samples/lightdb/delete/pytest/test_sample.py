@@ -1,15 +1,17 @@
-# Copyright (c) 2022 Golioth, Inc.
+# Copyright (c) 2022-2023 Golioth, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from contextlib import suppress
 import logging
 import os
-import subprocess
-import time
 
-import pexpect
+from golioth import Client, Device
 import pytest
+import trio
+
+
+# This is the same as using the @pytest.mark.anyio on all test functions in the module
+pytestmark = pytest.mark.anyio
 
 
 DEFAULT_TIMEOUT = 30
@@ -23,81 +25,56 @@ def initial_timeout(request):
     return timeout
 
 
-def device_name():
-    return os.environ["GOLIOTH_DEVICE_NAME"]
+@pytest.fixture(scope='session')
+async def device():
+    client = Client(os.environ.get("GOLIOTHCTL_CONFIG"))
+    project = await client.default_project()
+    return await project.device_by_name(os.environ['GOLIOTH_DEVICE_NAME'])
 
 
-def goliothctl_args():
-    args = []
-
-    with suppress(KeyError):
-        args += ['-c', os.environ["GOLIOTHCTL_CONFIG"]]
-
-    with suppress(KeyError):
-        args += pexpect.split_command_line(os.environ["GOLIOTHCTL_OPTS"])
-
-    return args
-
-
-def counter_set(value: int):
+async def counter_set(device: Device, value: int):
     logging.info("Setting /counter to %s", value)
-    subprocess.run(["goliothctl"] + goliothctl_args() + ["lightdb", "set", device_name(), "/counter", "-b", str(value)],
-                   check=True)
+    await device.lightdb.set('counter', value)
 
 
-def goliothctl_readline(goliothctl, timeout):
-    index = goliothctl.expect([goliothctl.crlf, goliothctl.delimiter],
-                              timeout=timeout)
-    if index == 0:
-        return goliothctl.before + goliothctl.crlf
-    else:
-        return goliothctl.before
-
-
-def test_lightdb_counter_delete(initial_timeout):
+async def test_lightdb_counter_delete(initial_timeout, device):
     magic_value = 15664155
+    counter = None
 
-    try:
-        args = goliothctl_args() + ["lightdb", "listen", device_name(), "/counter"]
-
-        logging.info("running goliothctl with args=%s", args)
-        goliothctl = pexpect.spawn("goliothctl", args)
-
+    async with device.lightdb.monitor('counter') as lightdb:
         # Allow much more time before first log entry arrives
         timeout = initial_timeout
 
-        line = ''
-
         for _ in range(0, 5):
-            line = goliothctl_readline(goliothctl, timeout).strip().decode()
+            with trio.fail_after(timeout):
+                counter = await lightdb.get()
 
             # Once we are connected (log entries arrived), reduce timeout value
             timeout = DEFAULT_TIMEOUT
 
-            logging.info("Updated counter value: %s (expected %s)", line, magic_value)
+            logging.info("Updated counter value: %s (expected %s)", counter, magic_value)
 
-            if line == str(magic_value):
+            if counter == magic_value:
                 break
 
             # Workaround LightDB issue, which does not consume requests too often
-            time.sleep(1)
+            await trio.sleep(1)
 
-            counter_set(magic_value)
+            await counter_set(device, magic_value)
 
-        assert line == str(magic_value), "Did not receive magic value"
+        assert counter == magic_value, "Did not receive magic value"
 
         for _ in range(0, 3):
-            line = goliothctl_readline(goliothctl, timeout).strip().decode()
+            with trio.fail_after(timeout):
+                counter = await lightdb.get()
 
             # Once we are connected (log entries arrived), reduce timeout value
             timeout = DEFAULT_TIMEOUT
 
-            logging.info("Updated counter value: %s (expected %s)", line, 'null')
+            logging.info("Updated counter value: %s (expected %s)", counter, None)
 
-            if line == 'null':
-                logging.info("Received 'null'")
+            if counter is None:
+                logging.info("Received 'None'")
                 break
 
-        assert line == 'null', "Did not receive 'null' value as expected"
-    finally:
-        goliothctl.terminate()
+        assert counter is None, "Did not receive 'None' value as expected"
