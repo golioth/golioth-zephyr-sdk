@@ -1,12 +1,10 @@
-# Copyright (c) 2022 Golioth, Inc.
+# Copyright (c) 2022-2023 Golioth, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import os
-import sys
-from pathlib import Path
 from datetime import datetime, timedelta
 import logging
+import os
 
 from golioth import Client, RPCTimeout
 import pytest
