@@ -1,0 +1,71 @@
+# Copyright (c) 2021-2023 Nordic Semiconductor
+# Copyright (c) 2023 Golioth, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+choice BOOTLOADER
+	# Select Espressif port of MCUboot for all $(west boards -n esp32)
+	# boards currently supported in Zephyr.
+	default BOOTLOADER_MCUBOOT_ESPRESSIF if \
+		"$(BOARD)" = "esp32" || \
+		"$(BOARD)" = "esp32_ethernet_kit" || \
+		"$(BOARD)" = "esp32_net" || \
+		"$(BOARD)" = "esp32c3_devkitm" || \
+		"$(BOARD)" = "esp32s2_franzininho" || \
+		"$(BOARD)" = "esp32s2_saola" || \
+		"$(BOARD)" = "esp32s3_devkitm" || \
+		"$(BOARD)" = "olimex_esp32_evb" || \
+		"$(BOARD)" = "xiao_esp32c3"
+	# Select Zephyr port of MCUboot for all other cases.
+	default BOOTLOADER_MCUBOOT
+
+endchoice
+
+source "share/sysbuild/Kconfig"
+
+choice BOOTLOADER
+
+config BOOTLOADER_MCUBOOT_ESPRESSIF
+	bool "MCUboot (Espressif port)"
+	help
+	  Include MCUboot (Espressif port) as the bootloader to use
+
+endchoice
+
+if BOOTLOADER_MCUBOOT_ESPRESSIF
+
+config SIGNATURE_TYPE
+	string
+	default NONE if BOOT_SIGNATURE_TYPE_NONE
+	default RSA  if BOOT_SIGNATURE_TYPE_RSA
+	default ECDSA_P256 if BOOT_SIGNATURE_TYPE_ECDSA_P256
+	default ED25519 if BOOT_SIGNATURE_TYPE_ED25519
+
+choice BOOT_SIGNATURE_TYPE
+	prompt "Signature type"
+	default BOOT_SIGNATURE_TYPE_RSA
+
+config BOOT_SIGNATURE_TYPE_NONE
+	bool "No signature; use only hash check"
+
+config BOOT_SIGNATURE_TYPE_RSA
+	bool "RSA signatures"
+
+config BOOT_SIGNATURE_TYPE_ECDSA_P256
+	bool "Elliptic curve digital signatures with curve P-256"
+
+config BOOT_SIGNATURE_TYPE_ED25519
+	bool "Edwards curve digital signatures using ed25519"
+
+endchoice
+
+config BOOT_SIGNATURE_KEY_FILE
+	string "PEM key file"
+	default "$(ZEPHYR_MCUBOOT_MODULE_DIR)/root-ec-p256.pem" if BOOT_SIGNATURE_TYPE_ECDSA_P256
+	default "$(ZEPHYR_MCUBOOT_MODULE_DIR)/root-ed25519.pem" if BOOT_SIGNATURE_TYPE_ED25519
+	default "$(ZEPHYR_MCUBOOT_MODULE_DIR)/root-rsa-2048.pem" if BOOT_SIGNATURE_TYPE_RSA
+	default ""
+	help
+	  Absolute path to key file to use with MCUBoot.
+
+endif
