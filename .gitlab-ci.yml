@@ -118,17 +118,17 @@ pre-commit:
 
 #
 # Job depends on following environment variables:
-# - GOLIOTH_PROJECT_ID: used by 'goliothctl' (in this job script)
-# - GOLIOTH_DEVICE_NAME: used by 'goliothctl' (in tests scripts)
+# - GOLIOTH_PROJECT_ID: used to setup 'golioth' Python script (in this job script)
+# - GOLIOTH_DEVICE_NAME: used by 'golioth' Python script (in tests scripts)
 #
-# - GOLIOTH_SYSTEM_SERVER_HOST: used by 'goliothctl' (in this job script) and by device firmware
-# - GOLIOTH_SYSTEM_SERVER_API_PORT: used by 'goliothctl' (in this job script)
+# - GOLIOTH_SYSTEM_SERVER_HOST: used to setup 'golioth' Python script (in this job script) and by device firmware
+# - GOLIOTH_SYSTEM_SERVER_API_PORT: used to setup 'golioth' Python script (in this job script)
 #
 # - GOLIOTH_SYSTEM_CLIENT_PSK_ID: used by device firmware
 # - GOLIOTH_SYSTEM_CLIENT_PSK: used by device firmware
 #
 # It is also assumed that a self-hosted goliothd is used and there is no authentication required by
-# 'goliothctl' at api URL http://${GOLIOTH_SYSTEM_SERVER_HOST}:${GOLIOTH_SYSTEM_SERVER_API_PORT}.
+# 'golioth' Python script at api URL http://${GOLIOTH_SYSTEM_SERVER_HOST}:${GOLIOTH_SYSTEM_SERVER_API_PORT}.
 #
 # Project with id ${GOLIOTH_PROJECT_ID} needs to exist and device with ${GOLIOTH_DEVICE_NAME} name
 # needs to be provisioned with ${GOLIOTH_SYSTEM_CLIENT_PSK_ID} and ${GOLIOTH_SYSTEM_CLIENT_PSK} as
@@ -139,18 +139,13 @@ twister-qemu-goliothd:
   tags: [dev-tun]
   resource_group: goliothd
   script:
-    # Download 'goliothctl' and expose to $PATH
-    - mkdir -p bin
-    - >
-      wget https://storage.googleapis.com/golioth-cli-releases/goliothctl/latest/goliothctl_latest_linux_64bit.tar.gz
-      -O goliothctl.tar.gz
-    - tar -xzf goliothctl.tar.gz -C bin goliothctl
-    - PATH=$PWD/bin:$PATH
-    # Login to goliothd
-    - >
-      goliothctl --apiUrl "http://${GOLIOTH_SYSTEM_SERVER_HOST}:${GOLIOTH_SYSTEM_SERVER_API_PORT}"
-      config set projectId ${GOLIOTH_PROJECT_ID}
-    - goliothctl project list
+    # Set credentials to goliothd
+    - mkdir -p ${HOME}/.golioth
+    - |
+      cat << EOF > ${HOME}/.golioth/.goliothctl.yaml
+      apiurl: http://${GOLIOTH_SYSTEM_SERVER_HOST}:${GOLIOTH_SYSTEM_SERVER_API_PORT}
+      projectid: ${GOLIOTH_PROJECT_ID}
+      EOF
     # Install samples/tests requirements
     - pip3 install -r modules/lib/golioth/scripts/requirements-tests.txt
     - pip3 install modules/lib/golioth/scripts/python/golioth
