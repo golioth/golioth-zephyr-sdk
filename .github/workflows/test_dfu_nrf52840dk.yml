@@ -1,0 +1,125 @@
+name: Test DFU nrf52840dk
+
+on:
+  push:
+    branches: [ main ]
+  pull_request: # TODO: Remove pull_request before merging!
+  schedule:
+    # Run workflow at the start of every day (12 AM UTC)
+    - cron: "0 0 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  build_for_hw_test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: zephyrprojectrtos/ci:v0.26.1
+
+    env:
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.0
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: modules/lib/golioth
+
+      - name: Init and update west
+        run: |
+          mkdir -p .west
+          cat <<EOF > .west/config
+          [manifest]
+          path = modules/lib/golioth
+          file = .ci-west-zephyr.yml
+          EOF
+
+          west update -o=--depth=1 -n
+          west patch --apply
+
+      - name: Build samples/dfu
+        run: |
+          cd modules/lib/golioth/samples/dfu
+          west build -b nrf52840dk_nrf52840 . -p
+          west sign -t imgtool --no-hex -B build/golioth-v0.0.0.bin -- --key ../../../../../bootloader/mcuboot/root-rsa-2048.pem
+          west sign -t imgtool --no-hex -B build/golioth-v2.0.0.bin -- --key ../../../../../bootloader/mcuboot/root-rsa-2048.pem --version 2.0.0
+
+      - name: Create build tarball
+        run: |
+          cd modules/lib/golioth/samples/dfu
+          tar czf build.tar.gz build/golioth-v*
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: build.tar.gz
+          path: modules/lib/golioth/samples/dfu/build.tar.gz
+
+  # Assumptions made about the self-hosted runner:
+  #
+  #  1. Has installed the GitHub Actions self-hosted runner service
+  #  2. Has nrfjprog already installed
+  #  3. Has an environment variable defined for the serial port: CI_NRF52840DK_PORT
+  #  4. Has credentials defined in the file $HOME/credentials_nrf52840dk.yml
+  #  5. Has an environment variabled defined for the JTAG serial number of the nRF52.
+  #
+  # It is the responsibility of the self-hosted runner admin to ensure
+  # these pre-conditions are met.
+  #
+  # For item 1, GitHub provides instructions when you add a new self-hosted runner
+  # in Settings -> Actions -> Runners.
+  #
+  # For item 2, you'll need to install jlink and nrf-command-line-tools:
+  #   https://www.segger.com/downloads/jlink/
+  #   https://www.nordicsemi.com/Products/Development-tools/nrf-command-line-tools/download
+  #
+  # For item 3, this environment variable can be added to $HOME/runner_env.sh:
+  #   export CI_NRF52840DK_PORT=/dev/ttyACM0
+  #
+  # For item 4, the file needs to have contents like:
+  #
+  # settings:
+  #   wifi/ssid: mywifissid
+  #   wifi/psk: mywifipassword
+  #   golioth/psk-id: device@project
+  #   golioth/psk: supersecret
+  #
+  # The golioth credentials need to match a device on coap.golioth.dev
+  #
+  # For item 5, you can discover the serial number of the nRF52 using this command:
+  #   nrfjprog --ids
+  # Once you know the serial number, you can add this to $HOME/runner_env.sh:
+  #   export CI_NRF52840DK_SNR=723769314
+  hw_flash_and_test:
+    needs: build_for_hw_test
+    runs-on: [self-hosted, has_dfu_nrf52840dk]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download build tarball
+        uses: actions/download-artifact@v3
+        with:
+          name: build.tar.gz
+          path: samples/dfu
+
+      - name: Untar
+        run: |
+          cd samples/dfu
+          tar xvf build.tar.gz
+
+#       - name: Copy credentials to samples/dfu
+#         run: |
+#           cp $HOME/credentials_nrf52840dk.yml samples/dfu/credentials.yml
+
+      - name: Flash and Verify Test Results
+        run: |
+          cd samples/test
+          source $HOME/runner_env.sh
+          nrfjprog --program build/golioth-v0.0.0.bin --sectoranduicrerase --verify -f NRF52 --snr $CI_NRF52840DK_SNR
+          nrfjprog --pinresetenable -f NRF52 --snr $CI_NRF52840DK_SNR
+          nrfjprog --pinreset -f NRF52 --snr $CI_NRF52840DK_SNR
+          sleep 3
+          echo "TODO: Run twister here."
+#           python verify.py $CI_NRF52840DK_PORT
