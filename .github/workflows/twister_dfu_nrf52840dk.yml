@@ -1,0 +1,136 @@
+name: Twister DFU nrf52840dk
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # Run workflow at the start of every day (12 AM UTC)
+    - cron: "0 0 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  # Assumptions made about the self-hosted runner:
+  #
+  #  1. Has installed the GitHub Actions self-hosted runner service
+  #  2. Has nrfjprog already installed at /opt/nrf-command-line-tools
+  #  3. Has SEGGER tools already installed at /home/golioth/JLink_Linux_V786_arm64
+  #  4. GitHub secret YOUR_RUNNER_NAME_NRF52840DK_PORT
+  #  5. GitHub secret YOUR_RUNNER_NAME_NRF52840DK
+  #  6. GitHub secret GOLIOTHCTL_YAML
+  #
+  # It is the responsibility of the self-hosted runner admin to ensure
+  # these pre-conditions are met.
+  #
+  # For item 1, GitHub provides instructions when you add a new self-hosted runner
+  # in Settings -> Actions -> Runners.
+  #
+  # For item 2, you'll need to install jlink and nrf-command-line-tools:
+  #   https://www.segger.com/downloads/jlink/
+  #   https://www.nordicsemi.com/Products/Development-tools/nrf-command-line-tools/download
+  #
+  # For item 3, this environment variable can be added to $HOME/runner_env.sh:
+  #   export CI_NRF52840DK_PORT=/dev/ttyACM0
+  #
+  # For item 4, the file needs to have contents like (use base64 encoding):
+  #
+  # - connected: true
+  #   id: "001050257254"
+  #   platform: nrf52840dk_nrf52840
+  #   product: J-Link
+  #   runner: nrfjprog
+  #   serial: /dev/serial/by-id/usb-SEGGER_J-Link_001050257254-if00
+  #
+  # For item 5, the file needs to have contents like (use base64 encoding):
+  #
+  # export GOLIOTH_SYSTEM_SERVER_HOST=coap.golioth.dev
+  # export GOLIOTH_SYSTEM_CLIENT_PSK_ID=device_psk_id@ci
+  # export GOLIOTH_SYSTEM_CLIENT_PSK=device_psk
+  # export GOLIOTH_SAMPLE_WIFI_SSID=golioth-runner-xxx
+  # export GOLIOTH_SAMPLE_WIFI_PSK=password_for_wifi
+  # export GOLIOTH_DEVICE_NAME=nrf52840dk
+  #
+  # For item 6, the file needs to have contents like (use base64 encoding):
+  #
+  # accesstoken: veryverylongtokenhash
+  # apikey: ""
+  # apiurl: https://api.golioth.dev
+  # config: ""
+  # projectid: ci
+  #
+  # NOTE: To store files as GitHub secrets, use base64 encoding:
+  #
+  # $ base64 -i --wrap=0 your_secret_file.yaml
+
+  twister_DFU:
+    runs-on: [self-hosted, has_twister_nrf52840dk]
+
+    container:
+      image: zephyrprojectrtos/ci:v0.26.1
+      volumes:
+        - /dev:/dev
+        - /opt/nrf-command-line-tools:/opt/nrf-command-line-tools
+        - /opt/SEGGER/JLink:/opt/SEGGER/JLink
+      options: --privileged
+
+    env:
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.0
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: twister_run
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: twister_run/modules/lib/golioth
+
+      - name: Init and update west
+        run: |
+          mkdir -p .west
+          cat <<EOF > .west/config
+          [manifest]
+          path = modules/lib/golioth
+          file = .ci-west-zephyr.yml
+          EOF
+
+          west update -o=--depth=1 -n
+          west patch --apply
+
+      - name: Installing Python reqs
+        run: |
+          cd modules/lib/golioth/
+          pip install -r scripts/requirements-tests.txt
+          cd scripts/python/golioth
+          pip install .
+
+      - name: Format Runner Name
+        run: |
+          RUNNERNAME=$(echo ${{ runner.name }} | sed -e 's/-/_/g' -e 's/[a-z]/\U&/g')
+          echo "hil_runner=$RUNNERNAME" >> "$GITHUB_ENV"
+          echo "hil_runner_nrf52840dk=${RUNNERNAME}_NRF52840DK" >> $GITHUB_ENV
+          echo "hil_runner_nrf52840dk_port=${RUNNERNAME}_NRF52840DK_PORT" >> $GITHUB_ENV
+
+      - name: Copy credentials into container
+        run: |
+          echo ${{ secrets[env.hil_runner_nrf52840dk] }} | base64 -d > env_dfu_nrf52840dk.sh
+          echo ${{ secrets[env.hil_runner_nrf52840dk_port] }} | base64 -d > hardware-map.yaml
+          mkdir -p $HOME/.golioth
+          echo ${{ secrets.GOLIOTHCTL_YAML }} | base64 -d > $HOME/.golioth/.goliothctl.yaml
+
+      - name: Run Twister
+        run: |
+          source env_dfu_nrf52840dk.sh
+          PATH=$PATH:/opt/nrf-command-line-tools/bin
+          nrfjprog -i
+          zephyr/scripts/twister -vvv -p nrf52840dk_nrf52840 -T modules/lib/golioth/samples/dfu --device-testing --hardware-map hardware-map.yaml --west-flash=''
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: twister-artifacts
+          path: |
+            twister_run/reports/*
+            twister_run/twister-out/**/*.log
