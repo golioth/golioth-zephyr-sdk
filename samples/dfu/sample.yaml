@@ -15,6 +15,8 @@ tests:
     platform_allow: >
       mimxrt1060_evkb
       nrf52840dk_nrf52840
+    extra_args:
+      dfu_CONFIG_GOLIOTH_SYSTEM_SETTINGS=n
   sample.golioth.dfu.ncs:
     platform_allow: nrf9160dk_nrf9160_ns
     harness_config:
