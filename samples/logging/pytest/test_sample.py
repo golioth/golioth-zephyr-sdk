@@ -3,14 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import base64
-from contextlib import suppress
-import json
 import logging
 import os
-from pathlib import Path
 import re
 import struct
-import sys
 from typing import Any, Callable, Dict, List, Match, Tuple, Optional
 
 from golioth import Client, LogEntry
