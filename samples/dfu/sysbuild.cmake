@@ -18,6 +18,10 @@ if(SB_CONFIG_BOOTLOADER_MCUBOOT_ESPRESSIF)
     set(${app_name}_CONFIG_MCUBOOT_GENERATE_UNSIGNED_IMAGE y CACHE STRING
         "MCUBOOT is configured for checksum mode" FORCE
     )
+  else()
+    set(${app_name}_CONFIG_MCUBOOT_GENERATE_UNSIGNED_IMAGE n CACHE STRING
+        "MCUBOOT is configured for signing" FORCE
+    )
   endif()
 
   # Set corresponding values in mcuboot
