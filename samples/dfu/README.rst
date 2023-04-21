@@ -327,7 +327,7 @@ running from primary area (first application slot):
      copy done: unset
      image ok: unset
 
-.. _MCUboot: https://docs.zephyrproject.org/3.0.0/guides/device_mgmt/dfu.html#mcuboot
-.. _Signing Binaries: https://docs.zephyrproject.org/3.0.0/guides/west/sign.html#west-sign
-.. _Flash map: https://docs.zephyrproject.org/3.0.0/reference/storage/flash_map/flash_map.html#flash-map-api
+.. _MCUboot: https://docs.zephyrproject.org/3.3.0/services/device_mgmt/dfu.html#mcuboot
+.. _Signing Binaries: https://docs.zephyrproject.org/3.3.0/develop/west/sign.html#west-sign
+.. _Flash map: https://docs.zephyrproject.org/3.3.0/services/storage/flash_map/flash_map.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html

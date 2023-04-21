@@ -34,4 +34,4 @@ Run ``twister``:
 
    zephyr/scripts/twister -p qemu_x86 -T modules/lib/golioth/tests/lightdb
 
-.. _Networking with QEMU: https://docs.zephyrproject.org/3.0.0/guides/networking/qemu_setup.html#networking-with-qemu
+.. _Networking with QEMU: https://docs.zephyrproject.org/3.3.0/connectivity/networking/qemu_setup.html
