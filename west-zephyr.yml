@@ -6,6 +6,16 @@ manifest:
       west-commands: scripts/west-commands.yml
       import: true
 
+    - name: mcuboot
+      revision: 1558e7ab0aadb4eac11f03befb5ccd3fa3f0aafe
+      url: https://github.com/zephyrproject-rtos/mcuboot
+      path: bootloader/mcuboot
+      submodules:
+        - name: esp-idf
+          path: boot/espressif/hal/esp-idf
+        - name: mbedtls
+          path: ext/mbedtls
+
   self:
     path: modules/lib/golioth
     west-commands: scripts/west-commands.yml
