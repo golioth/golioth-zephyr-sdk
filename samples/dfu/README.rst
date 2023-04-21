@@ -149,7 +149,7 @@ To sign the sample image we built in a previous step:
 
 .. code-block:: console
 
-   $ west sign -t imgtool -- --key WEST_ROOT/bootloader/mcuboot/root-rsa-2048.pem
+   $ west sign -t imgtool -- --key $(west topdir)/bootloader/mcuboot/root-rsa-2048.pem
 
 The above command creates image files called ``zephyr.signed.bin`` and
 ``zephyr.signed.hex`` in the build directory.
@@ -225,7 +225,7 @@ signed application image:
 
 .. code-block:: console
 
-   $ west sign -t imgtool --no-hex -B new.bin -- --key WEST_ROOT/bootloader/mcuboot/root-rsa-2048.pem --version 1.2.3
+   $ west sign -t imgtool --no-hex -B new.bin -- --key $(west topdir)/bootloader/mcuboot/root-rsa-2048.pem --version 1.2.3
 
 Please note the differences between this step and `Signing the sample image`_.
 ``bin`` version of firmware image will be used for DFU, which is why
