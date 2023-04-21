@@ -94,32 +94,31 @@ jobs:
     needs: build_for_hw_test
     runs-on: [self-hosted, has_dfu_nrf52840dk]
 
+    container:
+      image: zephyrprojectrtos/ci:v0.26.1
+
+    env:
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.0
+
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Download build tarball
-        uses: actions/download-artifact@v3
+      - uses: actions/checkout@v3
         with:
-          name: build.tar.gz
-          path: samples/dfu
+          path: modules/lib/golioth
 
-      - name: Untar
+      - name: Init and update west
         run: |
-          cd samples/dfu
-          tar xvf build.tar.gz
+          mkdir -p .west
+          cat <<EOF > .west/config
+          [manifest]
+          path = modules/lib/golioth
+          file = .ci-west-zephyr.yml
+          EOF
 
-#       - name: Copy credentials to samples/dfu
-#         run: |
-#           cp $HOME/credentials_nrf52840dk.yml samples/dfu/credentials.yml
+          west update -o=--depth=1 -n
+          west patch --apply
 
-      - name: Flash and Verify Test Results
+      - name: Run Twister
         run: |
-          cd samples/test
-          source $HOME/runner_env.sh
-          nrfjprog --program build/golioth-v0.0.0.bin --sectoranduicrerase --verify -f NRF52 --snr $CI_NRF52840DK_SNR
-          nrfjprog --pinresetenable -f NRF52 --snr $CI_NRF52840DK_SNR
-          nrfjprog --pinreset -f NRF52 --snr $CI_NRF52840DK_SNR
-          sleep 3
-          echo "TODO: Run twister here."
-#           python verify.py $CI_NRF52840DK_PORT
+          cd modules/lib/golioth/samples/dfu
+          sed -i 's/CONFIG_SETTINGS=y/CONFIG_SETTINGS=n/' prj.conf
+          echo "Run Twister Here"
