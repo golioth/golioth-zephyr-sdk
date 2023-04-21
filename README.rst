@@ -48,7 +48,7 @@ projects.
 Using with nRF Connect SDK
 ==========================
 
-Platforms like `nRF9160 Feather`_ require `nRF Connect SDK`_ to make use of
+Platforms like `nRF9160 DK`_ require `nRF Connect SDK`_ to make use of
 their distinct features, which is cellular network connectivity.
 
 Using Golioth SDK as manifest repository
@@ -160,7 +160,7 @@ During release testing, all boards and services are verified using sample applic
 .. _Zephyr Getting Started: https://docs.zephyrproject.org/3.3.0/develop/getting_started/index.html
 .. _nRF Connect SDK: https://www.nordicsemi.com/Software-and-tools/Software/nRF-Connect-SDK
 .. _nRF Connect SDK Getting Started: https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/gs_installing.html
-.. _nRF9160 Feather: https://www.jaredwolff.com/store/nrf9160-feather/
+.. _nRF9160 DK: https://www.nordicsemi.com/Products/Development-hardware/nrf9160-dk
 .. _Golioth DFU sample: samples/dfu/README.rst
 .. _Golioth Hello sample: samples/hello/README.rst
 .. _Golioth LightDB get sample: samples/lightdb/get/README.rst
