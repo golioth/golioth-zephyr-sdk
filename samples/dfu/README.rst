@@ -60,46 +60,17 @@ all devices in a project:
 
    $ goliothctl dfu release create --release-tags 1.2.3 --components main@1.2.3 --rollout true
 
-
 Jump down to the `Observe DFU process in target console output`_ section lower
 on this page to see the expected behavior of the target device during DFU.
 
 Using with Zephyr
 *****************
 
-Building and flashing MCUboot
-=============================
-
-Zephyr MCUboot target
----------------------
-
-The below steps describe how to build and run the MCUboot bootloader. Detailed
-instructions can be found in the `MCUboot`_ documentation page.
-
-The Zephyr port of MCUboot is essentially a normal Zephyr application, which
-means that we can build and flash it like normal using ``west``, like so:
-
-.. code-block:: console
-
-   west build -b <board> -d build_mcuboot bootloader/mcuboot/boot/zephyr
-   west flash -d build_mcuboot
-
-Substitute <board> for one of the boards supported by the sample.
-
-Espressif MCUboot target
-------------------------
-
-Follow https://github.com/mcu-tools/mcuboot/blob/399720d1cabd26c4356445d351f263b31e942961/docs/readme-espressif.md
-on how to build and flash MCUboot.
-
-Building the sample application
+Platform specific configuration
 ===============================
 
-Platform specific configuration
--------------------------------
-
 nRF52840 DK + ESP32-WROOM-32
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 This subsection documents using nRF52840 DK running Zephyr with offloaded ESP-AT
 WiFi driver and ESP32-WROOM-32 module based board (such as ESP32 DevkitC rev.
@@ -131,50 +102,21 @@ using wires:
 |GND        |GND           |
 +-----------+--------------+
 
+Building and flashing
+=====================
+
 On your host computer open a terminal window, locate the source code of this
 sample application (i.e., ``samples/dfu``) and type:
 
 .. code-block:: console
 
-   $ west build -b nrf52840dk_nrf52840 samples/dfu
+   $ west build -b <board> --sysbuild samples/dfu
+   $ west flash
 
-Signing the sample image
-========================
+Substitute <board> for one of the boards supported by the sample.
 
-A key feature of MCUboot is that images must be signed before they can be
-successfully uploaded and run on a target. To sign images, the MCUboot tool
-``imgtool`` can be used.
-
-To sign the sample image we built in a previous step:
-
-.. code-block:: console
-
-   $ west sign -t imgtool -- --key $(west topdir)/bootloader/mcuboot/root-rsa-2048.pem
-
-The above command creates image files called ``zephyr.signed.bin`` and
-``zephyr.signed.hex`` in the build directory.
-
-For more information on image signing and ``west sign``, see the `Signing
-Binaries`_ documentation.
-
-Flashing the sample image
-=========================
-
-Upload the ``zephyr.signed.bin`` (or ``zephyr.signed.hex``) file from the
-previous step to first application image slot of your board (see `Flash map`_
-for details on flash partitioning). Specify *signed* image file using
-``--bin-file`` option, otherwise non-signed version will be used and image won't
-be runnable:
-
-.. code-block:: console
-
-   $ west flash --bin-file build/zephyr/zephyr.signed.bin --hex-file build/zephyr/zephyr.signed.hex
-
-.. note::
-
-   Some west flash runners use ``bin`` file by default, while others use ``hex``
-   file. This is why paths to both ``zephyr.signed.bin`` and
-   ``zephyr.signed.hex`` are specified in executed command.
+Verify flashed application
+==========================
 
 Run following command in Zephyr shell to confirm content of first application
 slot (primary area):
@@ -225,15 +167,11 @@ signed application image:
 
 .. code-block:: console
 
-   $ west sign -t imgtool --no-hex -B new.bin -- --key $(west topdir)/bootloader/mcuboot/root-rsa-2048.pem --version 1.2.3
+   $ west build -b <board> --sysbuild samples/dfu -- -DCONFIG_MCUBOOT_EXTRA_IMGTOOL_ARGS='"--version 1.2.3"'
 
-Please note the differences between this step and `Signing the sample image`_.
-``bin`` version of firmware image will be used for DFU, which is why
-``--no-hex`` was specified to prevent generation of ``hex`` file. ``-B new.bin``
-was specified to override default path of ``bin`` file and prevent overriding
-original application image from `Signing the sample image`_. ``--version 1.2.3``
-was specified to distinguish between old firmware (default version is ``0.0.0``
-if not explicitly specified) and new firmware.
+Please note that ``--version 1.2.3`` was specified to distinguish between old
+firmware (default version is ``0.0.0`` if not explicitly specified) and new
+firmware.
 
 Start DFU using goliothctl
 ==========================
@@ -242,7 +180,7 @@ Run following command on host PC to upload new firmware as artifact to Golioth:
 
 .. code-block:: console
 
-   $ goliothctl dfu artifact create new.bin --version 1.2.3
+   $ goliothctl dfu artifact create build/zephyr/zephyr.signed.bin --version 1.2.3
 
 Then create new release consisting of this single firmware and roll it out to
 all devices in a project:
@@ -326,6 +264,13 @@ running from primary area (first application slot):
      swap type: none
      copy done: unset
      image ok: unset
+
+Related documentation:
+======================
+
+- `MCUboot`_
+- `Signing Binaries`_
+- `Flash map`_
 
 .. _MCUboot: https://docs.zephyrproject.org/3.3.0/services/device_mgmt/dfu.html#mcuboot
 .. _Signing Binaries: https://docs.zephyrproject.org/3.3.0/develop/west/sign.html#west-sign
