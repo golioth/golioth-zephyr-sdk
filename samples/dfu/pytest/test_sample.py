@@ -84,7 +84,9 @@ def create_dummy_firmware_sysbuild(running_dir: Path) -> Path:
     cmake = subprocess.run(["cmake", "-LA", "-N", str(running_dir)],
                            stdout=subprocess.PIPE,
                            check=True)
-    key_file_match = re.search(rb'mcuboot_CONFIG_BOOT_SIGNATURE_KEY_FILE[^=]*="(.*)"', cmake.stdout)
+    key_file_match = re.search(rb'mcuboot_(?:espressif_)?' + \
+                               rb'CONFIG_BOOT_SIGNATURE_KEY_FILE[^=]*="(.*)"',
+                               cmake.stdout)
     if not key_file_match:
         raise RuntimeError("Key file could not be extracted")
 
