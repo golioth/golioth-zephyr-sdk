@@ -15,17 +15,6 @@ from trio import sleep
 pytestmark = pytest.mark.anyio
 
 
-DEFAULT_TIMEOUT = 30
-
-
-@pytest.fixture(scope='session')
-def initial_timeout(request):
-    timeout = request.config.getoption('--initial-timeout')
-    if timeout is None:
-        timeout = DEFAULT_TIMEOUT
-    return timeout
-
-
 @pytest.fixture(scope='session')
 async def device(initial_timeout):
     device_name = os.environ["GOLIOTH_DEVICE_NAME"]

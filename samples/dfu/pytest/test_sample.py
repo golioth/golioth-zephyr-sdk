@@ -19,17 +19,8 @@ import trio
 pytestmark = pytest.mark.anyio
 
 
-DEFAULT_TIMEOUT = 30
 PROJECT_NAME = "dfu"
 NEW_VERSION = "2.0.0"
-
-
-@pytest.fixture()
-def initial_timeout(request):
-    timeout = request.config.getoption('--initial-timeout')
-    if timeout is None:
-        timeout = DEFAULT_TIMEOUT
-    return timeout
 
 
 @pytest.fixture(scope='session')

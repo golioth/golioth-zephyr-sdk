@@ -73,4 +73,14 @@ config GOLIOTH_SAMPLE_WIFI_PSK
 
 endif # GOLIOTH_SAMPLE_WIFI && !GOLIOTH_SAMPLE_WIFI_SETTINGS
 
+config GOLIOTH_SAMPLE_TEST_CONNECT_TIMEOUT
+	int "Test connect timeout"
+	default 120 if NRF_MODEM_LIB
+	default 30
+	help
+	  Connect timeout used by Pytest scripts to wait for initial
+	  connection/communication with DUT.
+
+	  Not used by the sample code itself.
+
 endif # GOLIOTH_SAMPLES_COMMON
