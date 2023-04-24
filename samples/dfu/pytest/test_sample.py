@@ -77,11 +77,12 @@ async def diagnostics(logs_monitor):
     return DiagnosticsCollector(logs_monitor)
 
 
-def create_dummy_firmware_sysbuild(running_dir) -> str:
-    new_fw_path = os.path.join(running_dir, "new-firmware.bin")
+def create_dummy_firmware_sysbuild(running_dir: Path) -> Path:
+    new_fw_path = running_dir / "new-firmware.bin"
 
     logging.info("Extracting signature file")
-    cmake = subprocess.run(["cmake", "-LA", "-N", running_dir], stdout=subprocess.PIPE,
+    cmake = subprocess.run(["cmake", "-LA", "-N", str(running_dir)],
+                           stdout=subprocess.PIPE,
                            check=True)
     key_file_match = re.search(rb'mcuboot_CONFIG_BOOT_SIGNATURE_KEY_FILE[^=]*="(.*)"', cmake.stdout)
     if not key_file_match:
@@ -89,12 +90,12 @@ def create_dummy_firmware_sysbuild(running_dir) -> str:
 
     key_file = key_file_match[1].decode()
 
-    logging.info("Creating dummy firmware %s", new_fw_path)
+    logging.info("Creating dummy firmware %s", str(new_fw_path))
     cmd = ["west", "sign",
-           "-d", os.path.join(running_dir, PROJECT_NAME),
+           "-d", str(running_dir / PROJECT_NAME),
            "-t", "imgtool",
            "--no-hex",
-           "-B", new_fw_path,
+           "-B", str(new_fw_path),
            "--",
            "--key", key_file,
            "--version", NEW_VERSION]
@@ -105,28 +106,28 @@ def create_dummy_firmware_sysbuild(running_dir) -> str:
     return new_fw_path
 
 
-def create_dummy_firmware_ncs(running_dir) -> str:
+def create_dummy_firmware_ncs(running_dir: Path) -> Path:
     logging.info("Replacing mcuboot version")
 
-    config_path = Path(running_dir) / "zephyr" / ".config"
+    config_path = running_dir / "zephyr" / ".config"
     config_old = config_path.read_text()
     config_new = re.sub(f'CONFIG_MCUBOOT_IMAGE_VERSION=.*',
                         f'CONFIG_MCUBOOT_IMAGE_VERSION="{NEW_VERSION}"',
                         config_old)
     config_path.write_text(config_new)
 
-    cmd = ["west", "build", "-d", running_dir]
+    cmd = ["west", "build", "-d", str(running_dir)]
     logging.info("Running %s", cmd)
     subprocess.run(cmd, check=True)
 
-    return os.path.join(running_dir, "zephyr", "app_update.bin")
+    return running_dir / "zephyr" / "app_update.bin"
 
 
-def create_dummy_firmware(running_dir) -> str:
-    if (Path(running_dir) / "pm.config").is_file():
+def create_dummy_firmware(running_dir: Path) -> Path:
+    if (running_dir / "pm.config").is_file():
         return create_dummy_firmware_ncs(running_dir)
 
-    if (Path(running_dir) / PROJECT_NAME).is_dir():
+    if (running_dir / PROJECT_NAME).is_dir():
         return create_dummy_firmware_sysbuild(running_dir)
 
     raise RuntimeError("Unsupported build directory structure")
@@ -169,7 +170,7 @@ async def test_dfu(cmdopt, initial_timeout, project, diagnostics):
     # TODO: register on logs 2s from the past, so that sleep won't be needed
     await trio.sleep(2)
 
-    firmware_path = Path(create_dummy_firmware(cmdopt))
+    firmware_path = create_dummy_firmware(Path(cmdopt))
     async with temp_release_with_artifact(project, firmware_path):
         log = await diagnostics.expect(initial_timeout, 'DOWNLOADING')
         assert log.metadata['target'] == NEW_VERSION, 'Incorrect target version'
