@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 import logging
 from operator import attrgetter
 import os
