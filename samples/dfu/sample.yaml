@@ -8,11 +8,11 @@ tests:
   sample.golioth.dfu.build_only:
     build_only: true
     platform_allow: >
-      esp32
       qemu_x86
   sample.golioth.dfu.sysbuild:
     sysbuild: true
     platform_allow: >
+      esp32
       mimxrt1060_evkb
       nrf52840dk_nrf52840
     extra_args:
