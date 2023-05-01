@@ -92,15 +92,21 @@ jobs:
     needs: build_for_hw_test
     runs-on: [self-hosted, has_nrf52840dk]
 
+    defaults:
+      run:
+        working-directory: connection_tests
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          path: connection_tests
 
       - name: Download build tarball
         uses: actions/download-artifact@v3
         with:
           name: build.tar.gz
-          path: samples/test
+          path: connection_tests/samples/test
 
       - name: Untar
         run: |
