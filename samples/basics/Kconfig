@@ -1,0 +1,32 @@
+# Copyright (c) 2021 Golioth, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Golioth application options"
+
+if DNS_RESOLVER
+
+config DNS_SERVER_IP_ADDRESSES
+	default y
+
+config DNS_SERVER1
+	default "1.1.1.1"
+
+endif # DNS_RESOLVER
+
+config NET_BUF_TX_COUNT
+	default 32 if GOLIOTH_AUTH_METHOD_CERT && WIFI_ESP_AT
+
+if SETTINGS
+
+config SETTINGS_RUNTIME
+	default y
+
+config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
+	default y
+
+config GOLIOTH_SAMPLE_SETTINGS_SHELL
+	default y
+
+endif # SETTINGS
+
+source "Kconfig.zephyr"
