@@ -529,7 +529,7 @@ int golioth_process_rx(struct golioth_client *client)
 	int err;
 
 	ret = golioth_recv(client, client->rx_buffer, client->rx_buffer_len,
-			   ZSOCK_MSG_DONTWAIT | ZSOCK_MSG_TRUNC);
+			   ZSOCK_MSG_DONTWAIT);
 	if (ret == -EAGAIN || ret == -EWOULDBLOCK) {
 		/* no pending data */
 		return 0;
