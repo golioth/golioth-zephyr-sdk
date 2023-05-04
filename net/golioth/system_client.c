@@ -120,73 +120,8 @@ static void eventfd_timeout_handle(struct k_work *work)
 
 static K_WORK_DELAYABLE_DEFINE(eventfd_timeout, eventfd_timeout_handle);
 
-static bool contains_char(const uint8_t *str, size_t str_len, uint8_t c)
-{
-	for (const uint8_t *p = str; p < &str[str_len]; p++) {
-		if (*p == c) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-static bool golioth_psk_id_is_valid(const uint8_t *psk_id, size_t psk_id_len)
-{
-	return contains_char(psk_id, psk_id_len, '@');
-}
-
-static bool golioth_psk_is_valid(const uint8_t *psk, size_t psk_len)
-{
-	return (psk_len > 0);
-}
-
-static int golioth_check_credentials(const uint8_t *psk_id, size_t psk_id_len,
-				     const char *psk, size_t psk_len)
-{
-	int err = 0;
-
-	if (!golioth_psk_id_is_valid(psk_id, psk_id_len)) {
-		LOG_WRN("Configured PSK-ID is invalid");
-		err = -EINVAL;
-	}
-
-	if (!golioth_psk_is_valid(psk, psk_len)) {
-		LOG_WRN("Configured PSK is invalid");
-		err = -EINVAL;
-	}
-
-	return err;
-}
-
 static int init_tls_auth_psk(void)
 {
-	int err;
-
-	err = golioth_check_credentials(TLS_PSK_ID, sizeof(TLS_PSK_ID) - 1,
-					TLS_PSK, sizeof(TLS_PSK) - 1);
-	if (err) {
-		return err;
-	}
-
-	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
-				 TLS_CREDENTIAL_PSK,
-				 TLS_PSK,
-				 sizeof(TLS_PSK) - 1);
-	if (err < 0) {
-		LOG_ERR("Failed to register PSK: %d", err);
-		return err;
-	}
-
-	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
-				 TLS_CREDENTIAL_PSK_ID,
-				 TLS_PSK_ID,
-				 sizeof(TLS_PSK_ID) - 1);
-	if (err < 0) {
-		LOG_ERR("Failed to register PSK ID: %d", err);
-		return err;
-	}
-
 	return 0;
 }
 

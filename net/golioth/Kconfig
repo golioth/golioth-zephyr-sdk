@@ -8,13 +8,8 @@ config GOLIOTH
 	bool "Golioth"
 	depends on NETWORKING
 	select COAP
-	select MBEDTLS
-	select MBEDTLS_DTLS
 	select NET_SOCKETS
-	select NET_UDP
 	imply DNS_RESOLVER if NET_NATIVE
-	imply NET_SOCKETS_SOCKOPT_TLS
-	imply NET_SOCKETS_ENABLE_DTLS
 	help
 	  Enable library for communication with Golioth cloud.
 
@@ -29,13 +24,11 @@ choice GOLIOTH_AUTH_METHOD
 
 config GOLIOTH_AUTH_METHOD_PSK
 	bool "PSK-ID / PSK only"
-	imply GOLIOTH_AUTH_PSK_MBEDTLS_DEPS
 	help
 	  Only PSK based authentication will be supported.
 
 config GOLIOTH_AUTH_METHOD_CERT
 	bool "Certificate based only"
-	imply GOLIOTH_AUTH_CERT_MBEDTLS_DEPS
 	help
 	  Only certificate based authentication will be supported.
 
