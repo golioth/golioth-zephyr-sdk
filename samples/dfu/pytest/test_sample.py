@@ -19,7 +19,7 @@ import trio
 pytestmark = pytest.mark.anyio
 
 
-PROJECT_NAME = "dfu"
+PROJECT_NAME = Path(__file__).parents[1].name
 NEW_VERSION = "2.0.0"
 
 
