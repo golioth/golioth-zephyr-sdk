@@ -124,6 +124,8 @@ jobs:
           source env_dfu_nrf52840dk.sh
           PATH=$PATH:/opt/nrf-command-line-tools/bin
           nrfjprog -i
+          golioth releases delete '*'
+          golioth artifacts delete '*'
           zephyr/scripts/twister -vvv -p nrf52840dk_nrf52840 -T modules/lib/golioth/samples/dfu --device-testing --hardware-map hardware-map.yaml --west-flash=''
 
       - name: Upload artifacts
