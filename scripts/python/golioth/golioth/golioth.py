@@ -678,6 +678,13 @@ class ProjectReleases(ApiNodeMixin):
 
         return Release(self.project, response.json()['data'])
 
+    async def rollout_set(self, release_id: str, desired_state: bool):
+        json = { 'rollout': desired_state }
+        try:
+            return await self.project.put('releases/' + release_id, json=json)
+        except httpx.HTTPStatusError as err:
+            msg = err.response.json()['message']
+            raise err
 
 class ProjectCertificates(ApiNodeMixin):
     def __init__(self, project: Project):
