@@ -320,6 +320,69 @@ async def list(config):
             console.print(release)
 
 
+@releases.command()
+@click.argument('release_id', nargs=-1, required=True)
+@click.option('--by-tag', '-t', is_flag=True,
+              help='Select release by release tag instead of release ID.')
+@click.option('--hidden-glob', 'match_type', flag_value='glob',
+              default=True,
+              hidden=True,
+              type=MATCH_GLOB_REGEX_SWITCH,
+              help='Use glob match.')
+@click.option('--regex', '-r', 'match_type', flag_value='regex',
+              type=MATCH_GLOB_REGEX_SWITCH,
+              help='Use regex match (instead of glob).')
+@pass_config
+async def rollback(config, release_id, by_tag, match_type):
+    """Rollout DFU releases.
+
+    \b
+    Example invocations
+    -------------------
+
+    \b
+    Rollback release with tag '1.0.0':
+    $ golioth releases rollback -t 1.0.0
+
+    \b
+    Rollback all releases:
+    $ golioth releases rollback '*'
+
+    \b
+    Rollback all version 2.x.x and 3.x.x releases:
+    $ golioth releases rollback -t '[2-3].*.*'
+    """
+
+    if by_tag:
+        def artifact_match(pattern, release):
+            for tag in release.tags:
+                if pattern.match(tag):
+                    return True
+
+            return False
+    else:
+        def artifact_match(pattern, release):
+            return pattern.match(release.id) is not None
+
+    with console.status('Rollback DFU releases...'):
+        client = Client(config.config_path, api_key=config.api_key)
+        project = await client.default_project()
+
+        patterns = [re.compile(match_type(r)) for r in release_id]
+        deleted = []
+
+        for release in await project.releases.get_all():
+            for pattern in patterns:
+                if artifact_match(pattern, release) and release.rollout == True:
+                    await project.releases.rollout_set(release.id, False)
+                    console.print(f'Rollback: {release}')
+                    deleted.append(release)
+                    break
+
+        if not deleted:
+            console.print('No release rollbacks!')
+
+
 @cli.group()
 def lightdb():
     """LightDB State related commands."""
