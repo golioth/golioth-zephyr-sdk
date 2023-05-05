@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from contextlib import asynccontextmanager
+from functools import cached_property
 import logging
 from operator import attrgetter
 import os
@@ -11,6 +12,7 @@ import re
 import subprocess
 
 from golioth import Artifact, Client, LogEntry, LogsMonitor, Project, Release
+from imgtool.image import Image, VerifyResult
 import pytest
 import trio
 
@@ -20,7 +22,6 @@ pytestmark = pytest.mark.anyio
 
 
 PROJECT_NAME = Path(__file__).parents[1].name
-NEW_VERSION = "2.0.0"
 
 
 @pytest.fixture(scope='session')
@@ -68,7 +69,20 @@ async def diagnostics(logs_monitor):
     return DiagnosticsCollector(logs_monitor)
 
 
-def create_dummy_firmware_sysbuild(running_dir: Path) -> Path:
+class Firmware:
+    def __init__(self, path: Path):
+        self.path = path
+
+    @cached_property
+    def version(self) -> str:
+        verify_result, version_bin, _ = Image.verify(str(self.path), None)
+        if verify_result != VerifyResult.OK:
+            raise RuntimeError('Invalid firmware file')
+
+        return '.'.join([str(x) for x in version_bin[:3]])
+
+
+def create_dummy_firmware_sysbuild(running_dir: Path, version: str) -> Path:
     new_fw_path = running_dir / "new-firmware.bin"
 
     logging.info("Extracting signature file")
@@ -91,7 +105,7 @@ def create_dummy_firmware_sysbuild(running_dir: Path) -> Path:
            "-B", str(new_fw_path),
            "--",
            "--key", key_file,
-           "--version", NEW_VERSION]
+           "--version", version]
 
     logging.info("Signing dummy firmware: %s", cmd)
     subprocess.run(cmd, check=True)
@@ -99,13 +113,13 @@ def create_dummy_firmware_sysbuild(running_dir: Path) -> Path:
     return new_fw_path
 
 
-def create_dummy_firmware_ncs(running_dir: Path) -> Path:
+def create_dummy_firmware_ncs(running_dir: Path, version: str) -> Path:
     logging.info("Replacing mcuboot version")
 
     config_path = running_dir / "zephyr" / ".config"
     config_old = config_path.read_text()
     config_new = re.sub(f'CONFIG_MCUBOOT_IMAGE_VERSION=.*',
-                        f'CONFIG_MCUBOOT_IMAGE_VERSION="{NEW_VERSION}"',
+                        f'CONFIG_MCUBOOT_IMAGE_VERSION="{version}"',
                         config_old)
     config_path.write_text(config_new)
 
@@ -116,21 +130,21 @@ def create_dummy_firmware_ncs(running_dir: Path) -> Path:
     return running_dir / "zephyr" / "app_update.bin"
 
 
-def create_dummy_firmware(running_dir: Path) -> Path:
+def create_dummy_firmware(running_dir: Path, version: str) -> Path:
     if (running_dir / "pm.config").is_file():
-        return create_dummy_firmware_ncs(running_dir)
+        return create_dummy_firmware_ncs(running_dir, version)
 
     if (running_dir / PROJECT_NAME).is_dir():
-        return create_dummy_firmware_sysbuild(running_dir)
+        return create_dummy_firmware_sysbuild(running_dir, version)
 
     raise RuntimeError("Unsupported build directory structure")
 
 
 @asynccontextmanager
-async def temp_artifact(project: Project, firmware_path: Path):
+async def temp_artifact(project: Project, firmware: Firmware):
     logging.info("Creating artifact")
-    artifact = await project.artifacts.upload(firmware_path,
-                                              version=NEW_VERSION)
+    artifact = await project.artifacts.upload(firmware.path,
+                                              version=firmware.version)
     try:
         yield artifact
     finally:
@@ -142,7 +156,7 @@ async def temp_artifact(project: Project, firmware_path: Path):
 async def temp_release(project: Project, artifact: Artifact):
     logging.info("Creating release (with rollout)")
     release = await project.releases.create(artifact_ids=[artifact.id],
-                                            tags=[NEW_VERSION],
+                                            tags=[artifact.version],
                                             rollout=True)
     try:
         yield release
@@ -152,8 +166,8 @@ async def temp_release(project: Project, artifact: Artifact):
 
 
 @asynccontextmanager
-async def temp_release_with_artifact(project: Project, firmware_path: Path):
-    async with temp_artifact(project, firmware_path) as artifact:
+async def temp_release_with_artifact(project: Project, firmware: Firmware):
+    async with temp_artifact(project, firmware) as artifact:
         async with temp_release(project, artifact) as release:
             yield release
 
@@ -163,13 +177,13 @@ async def test_dfu(cmdopt, initial_timeout, project, diagnostics):
     # TODO: register on logs 2s from the past, so that sleep won't be needed
     await trio.sleep(2)
 
-    firmware_path = create_dummy_firmware(Path(cmdopt))
-    async with temp_release_with_artifact(project, firmware_path):
+    firmware = Firmware(create_dummy_firmware(Path(cmdopt), '2.0.0'))
+    async with temp_release_with_artifact(project, firmware):
         log = await diagnostics.expect(initial_timeout, 'DOWNLOADING')
-        assert log.metadata['target'] == NEW_VERSION, 'Incorrect target version'
+        assert log.metadata['target'] == firmware.version, 'Incorrect target version'
 
         log = await diagnostics.expect(5 * 60, 'DOWNLOADED')
-        assert log.metadata['target'] == NEW_VERSION, 'Incorrect target version'
+        assert log.metadata['target'] == firmware.version, 'Incorrect target version'
 
         #
         # FIXME: Since server-side can reorder diagnostics notifications, do not
@@ -181,7 +195,7 @@ async def test_dfu(cmdopt, initial_timeout, project, diagnostics):
         # assert log.metadata['target'] == NEW_VERSION, 'Incorrect target version'
 
         log = await diagnostics.expect(2 * 60 + initial_timeout, 'IDLE')
-        assert log.metadata['version'] == NEW_VERSION, 'Incorrect version'
+        assert log.metadata['version'] == firmware.version, 'Incorrect version'
 
     # Check order of reported diagnostics
     expected_states = ['IDLE', 'DOWNLOADING', 'DOWNLOADED', 'UPDATING', 'IDLE']
