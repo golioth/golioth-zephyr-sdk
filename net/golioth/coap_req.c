@@ -124,9 +124,9 @@ static int golioth_coap_code_to_posix(uint8_t code)
 	}
 }
 
-static int golioth_coap_req_append_block2_option(struct golioth_coap_req *req)
+int golioth_coap_req_append_block2_option(struct golioth_coap_req *req)
 {
-	if (req->request_wo_block2.offset) {
+	if (req->request_wo_block2.data) {
 		/*
 		 * Block2 was already appended once, so just copy state before
 		 * it was done.
@@ -411,7 +411,7 @@ static int golioth_coap_req_init(struct golioth_coap_req *req,
 	req->client = client;
 	req->cb = (cb ? cb : golioth_req_rsp_default_handler);
 	req->user_data = user_data;
-	req->request_wo_block2.offset = 0;
+	req->request_wo_block2.data = NULL;
 	req->reply.seq = 0;
 	req->reply.ts = -COAP_OBSERVE_TS_DIFF_NEWER;
 

@@ -137,7 +137,7 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 	k_sem_give(&sem_downloading);
 	dfu->downloading_started = true;
 
-	err = golioth_fw_download(client, uri_p, uri_len, data_received, dfu);
+	err = golioth_fw_download(client, uri_p, uri_len, 0, data_received, dfu);
 	if (err) {
 		LOG_ERR("Failed to request firmware: %d", err);
 		return err;

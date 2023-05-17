@@ -86,6 +86,7 @@ int golioth_fw_observe_desired(struct golioth_client *client,
  */
 int golioth_fw_download(struct golioth_client *client,
 			const uint8_t *uri, size_t uri_len,
+			size_t offset,
 			golioth_req_cb_t cb, void *user_data);
 
 /**

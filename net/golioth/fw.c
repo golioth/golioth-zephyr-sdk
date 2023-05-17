@@ -152,6 +152,7 @@ int golioth_fw_observe_desired(struct golioth_client *client,
 
 int golioth_fw_download(struct golioth_client *client,
 			const uint8_t *uri, size_t uri_len,
+			size_t offset,
 			golioth_req_cb_t cb, void *user_data)
 {
 	struct golioth_coap_req *req;
@@ -168,6 +169,14 @@ int golioth_fw_download(struct golioth_client *client,
 	err = coap_packet_append_uri_path_from_string(&req->request, uri, uri_len);
 	if (err) {
 		LOG_ERR("Unable add uri path to packet");
+		goto free_req;
+	}
+
+	req->block_ctx.current = offset;
+
+	err = golioth_coap_req_append_block2_option(req);
+	if (err) {
+		LOG_ERR("Unable to append block2: %d", err);
 		goto free_req;
 	}
 

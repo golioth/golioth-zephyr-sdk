@@ -215,4 +215,6 @@ void golioth_coap_reqs_on_connect(struct golioth_client *client);
  */
 void golioth_coap_reqs_on_disconnect(struct golioth_client *client);
 
+int golioth_coap_req_append_block2_option(struct golioth_coap_req *req);
+
 #endif /* __NET_GOLIOTH_COAP_REQ_H__ */
