@@ -38,7 +38,6 @@ LOG_MODULE_DECLARE(golioth);
 
 #define GOLIOTH_RPC_PATH ".rpc"
 #define GOLIOTH_RPC_STATUS_PATH ".rpc/status"
-#define GOLIOTH_RPC_MAX_RESPONSE_LEN 256
 
 static int send_response(struct golioth_client *client,
 			 uint8_t *coap_payload, size_t coap_payload_len)
@@ -87,7 +86,7 @@ static int on_rpc(struct golioth_req_rsp *rsp)
 	}
 
 	/* Start encoding response */
-	uint8_t response_buf[GOLIOTH_RPC_MAX_RESPONSE_LEN];
+	uint8_t response_buf[CONFIG_GOLIOTH_RPC_MAX_RESPONSE_LEN];
 	UsefulBuf response_bufc = { response_buf, sizeof(response_buf) };
 	QCBOREncodeContext encode_ctx;
 
