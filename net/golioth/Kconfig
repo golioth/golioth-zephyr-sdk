@@ -134,6 +134,15 @@ config GOLIOTH_RPC_MAX_NUM_METHODS
 	  Maximum number of Golioth Remote Procedure Call methods that can
 	  be registered.
 
+config GOLIOTH_RPC_MAX_RESPONSE_LEN
+	int "Maximum length of the CBOR response"
+	depends on GOLIOTH_RPC
+	default 256
+	help
+	  Maximum length of the CBOR response returned by Golioth RPC methods.
+	  If this value is too small for the returned package, a
+	  QCBOR_ERR_BUFFER_TOO_SMALL will occur.
+
 config GOLIOTH_SETTINGS
 	bool "Settings cloud service"
 	select QCBOR
