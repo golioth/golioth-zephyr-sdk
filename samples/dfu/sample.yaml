@@ -3,6 +3,8 @@ sample:
   name: dfu
 common:
   harness: pytest
+  harness_config:
+    pytest_args: [ "--capture=fd", "-v" ]
   tags: golioth socket goliothd
 tests:
   sample.golioth.dfu.build_only:
