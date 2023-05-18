@@ -29,6 +29,15 @@ config MBEDTLS_SSL_MAX_CONTENT_LEN
 
 endif # MBEDTLS
 
+config MAIN_STACK_SIZE
+	default 4096
+
+config GOLIOTH
+	default y
+
+config GOLIOTH_SYSTEM_CLIENT
+	default y if GOLIOTH
+
 config GOLIOTH_SYSTEM_SERVER_HOST
 	default "$(GOLIOTH_SYSTEM_SERVER_HOST)" if "$(GOLIOTH_SYSTEM_SERVER_HOST)" != ""
 
