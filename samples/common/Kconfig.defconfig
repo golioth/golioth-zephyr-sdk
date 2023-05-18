@@ -1,10 +1,20 @@
 #
-# Copyright (C) 2022 Golioth, Inc.
+# Copyright (C) 2022-2023 Golioth, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
 
 if GOLIOTH_SAMPLES_COMMON
+
+if DNS_RESOLVER
+
+config DNS_SERVER_IP_ADDRESSES
+	default y
+
+config DNS_SERVER1
+	default "1.1.1.1"
+
+endif # DNS_RESOLVER
 
 config GOLIOTH_SYSTEM_SERVER_HOST
 	default "$(GOLIOTH_SYSTEM_SERVER_HOST)" if "$(GOLIOTH_SYSTEM_SERVER_HOST)" != ""
