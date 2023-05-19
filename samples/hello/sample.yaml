@@ -64,6 +64,5 @@ tests:
     extra_configs:
       - CONFIG_GOLIOTH_AUTH_METHOD_CERT=y
       # Make it build by providing path that can be resolved
-      - CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH="prj.conf"
       - CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH="prj.conf"
       - CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH="prj.conf"
