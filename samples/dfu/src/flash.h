@@ -23,9 +23,18 @@ extern char current_version_str[sizeof("255.255.65535")];
 #include <stddef.h>
 #include <stdint.h>
 
-struct flash_img_context {
-	/* empty */
+struct stream_flash_ctx {
+	size_t bytes_written;
 };
+
+struct flash_img_context {
+	struct stream_flash_ctx stream;
+};
+
+static inline size_t stream_flash_bytes_written(struct stream_flash_ctx *ctx)
+{
+	return ctx->bytes_written;
+}
 
 static inline int flash_img_prepare(struct flash_img_context *flash)
 {
@@ -36,6 +45,8 @@ static inline
 int flash_img_buffered_write(struct flash_img_context *ctx, const uint8_t *data,
 			     size_t len, bool flush)
 {
+	ctx->stream.bytes_written += len;
+
 	return 0;
 }
 

@@ -30,11 +30,45 @@ static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 struct dfu_ctx {
 	struct flash_img_context flash;
 	char version[65];
+	uint8_t uri[65];
 	bool downloading_started;
+	bool downloading_finished;
 };
 
 static struct dfu_ctx update_ctx;
 static enum golioth_dfu_result dfu_initial_result = GOLIOTH_DFU_RESULT_INITIAL;
+
+static int dfu_download_continue(struct golioth_client *client);
+
+static int dfu_write_chunk(struct golioth_req_rsp *rsp)
+{
+	struct dfu_ctx *dfu = rsp->user_data;
+	size_t written = stream_flash_bytes_written(&dfu->flash.stream);
+	bool last = rsp->get_next == NULL;
+	int err;
+
+	if (rsp->off > written) {
+		size_t old_len = rsp->off - written;
+
+		if (old_len > rsp->len) {
+			return 0;
+		}
+
+		rsp->len -= old_len;
+		rsp->data += old_len;
+	} else if (rsp->off < written) {
+		LOG_WRN("Hole in received data");
+		return -EINVAL;
+	}
+
+	err = flash_img_buffered_write(&dfu->flash, rsp->data, rsp->len, last);
+	if (err) {
+		LOG_ERR("Failed to write to flash: %d", err);
+		return err;
+	}
+
+	return 0;
+}
 
 static int data_received(struct golioth_req_rsp *rsp)
 {
@@ -44,26 +78,22 @@ static int data_received(struct golioth_req_rsp *rsp)
 
 	if (rsp->err) {
 		LOG_ERR("Error while receiving FW data: %d", rsp->err);
-		return 0;
+
+		dfu_download_continue(client);
+
+		return rsp->err;
 	}
 
 	LOG_DBG("Received %zu bytes at offset %zu%s", rsp->len, rsp->off,
 		last ? " (last)" : "");
 
-	if (rsp->off == 0) {
-		err = flash_img_prepare(&dfu->flash);
-		if (err) {
-			return err;
-		}
-	}
-
-	err = flash_img_buffered_write(&dfu->flash, rsp->data, rsp->len, last);
+	err = dfu_write_chunk(rsp);
 	if (err) {
-		LOG_ERR("Failed to write to flash: %d", err);
 		return err;
 	}
 
 	if (last) {
+		dfu->downloading_finished = true;
 		k_sem_give(&sem_downloaded);
 	}
 
@@ -88,9 +118,8 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 {
 	struct dfu_ctx *dfu = rsp->user_data;
 	size_t version_len = sizeof(dfu->version) - 1;
-	uint8_t uri[64];
 	uint8_t *uri_p;
-	size_t uri_len = sizeof(uri);
+	size_t uri_len = sizeof(dfu->uri) - 1;
 	int err;
 
 	if (rsp->err) {
@@ -111,7 +140,7 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 
 	err = golioth_fw_desired_parse(rsp->data, rsp->len,
 				       dfu->version, &version_len,
-				       uri, &uri_len);
+				       dfu->uri, &uri_len);
 	switch (err) {
 	case 0:
 		break;
@@ -132,7 +161,15 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 		return -EALREADY;
 	}
 
-	uri_p = uri_strip_leading_slash(uri, &uri_len);
+	uri_p = uri_strip_leading_slash(dfu->uri, &uri_len);
+	memmove(dfu->uri, uri_p, uri_len);
+	dfu->uri[uri_len] = '\0';
+
+	err = flash_img_prepare(&dfu->flash);
+	if (err) {
+		LOG_ERR("Failed to prepare flash: %d", err);
+		return err;
+	}
 
 	k_sem_give(&sem_downloading);
 	dfu->downloading_started = true;
@@ -146,16 +183,51 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 	return 0;
 }
 
+static int dfu_download_start(struct golioth_client *client)
+{
+	struct dfu_ctx *dfu = &update_ctx;
+	int err;
+
+	err = golioth_fw_observe_desired(client, golioth_desired_update, dfu);
+	if (err) {
+		LOG_ERR("Failed to start observation of desired FW: %d", err);
+		return err;
+	}
+
+	return 0;
+}
+
+static int dfu_download_continue(struct golioth_client *client)
+{
+	struct dfu_ctx *dfu = &update_ctx;
+	size_t off = stream_flash_bytes_written(&dfu->flash.stream);
+	int err;
+
+	err = golioth_fw_download(client, dfu->uri, strlen(dfu->uri), off, data_received, dfu);
+	if (err) {
+		LOG_ERR("Failed to request firmware: %d", err);
+		return err;
+	}
+
+	return 0;
+}
+
 static void golioth_on_connect(struct golioth_client *client)
 {
-	int err;
+	struct dfu_ctx *dfu = &update_ctx;
+
+	if (dfu->downloading_finished) {
+		return;
+	}
+
+	if (dfu->downloading_started) {
+		dfu_download_continue(client);
+		return;
+	}
 
 	k_sem_give(&sem_connected);
 
-	err = golioth_fw_observe_desired(client, golioth_desired_update, &update_ctx);
-	if (err) {
-		LOG_ERR("Failed to start observation of desired FW: %d", err);
-	}
+	dfu_download_start(client);
 }
 
 void main(void)
