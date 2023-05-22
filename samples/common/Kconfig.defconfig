@@ -29,6 +29,15 @@ config MBEDTLS_SSL_MAX_CONTENT_LEN
 
 endif # MBEDTLS
 
+config NETWORKING
+	default y
+
+config NET_IPV4
+	default y
+
+config NET_IPV6
+	default n
+
 config MAIN_STACK_SIZE
 	default 4096
 
