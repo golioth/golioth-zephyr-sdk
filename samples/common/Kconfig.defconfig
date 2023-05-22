@@ -41,6 +41,9 @@ config NET_IPV6
 config MAIN_STACK_SIZE
 	default 4096
 
+config MINIMAL_LIBC_MALLOC_ARENA_SIZE
+	default 2048 if MINIMAL_LIBC
+
 config GOLIOTH
 	default y
 
