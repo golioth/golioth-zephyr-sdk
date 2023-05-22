@@ -59,10 +59,16 @@ tests:
   sample.golioth.hello.psk.long_start:
     platform_allow: nrf9160dk_nrf9160_ns
     timeout: 120
-  sample.golioth.hello.cert:
+  sample.golioth.hello.cert.buildonly:
     build_only: true
     extra_configs:
       - CONFIG_GOLIOTH_AUTH_METHOD_CERT=y
       # Make it build by providing path that can be resolved
       - CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH="prj.conf"
       - CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH="prj.conf"
+  sample.golioth.hello.cert.runtime:
+    filter: >-
+      CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH and
+      CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH
+    extra_configs:
+      - CONFIG_GOLIOTH_AUTH_METHOD_CERT=y
