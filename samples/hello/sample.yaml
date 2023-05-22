@@ -61,8 +61,8 @@ tests:
     timeout: 120
   sample.golioth.hello.cert:
     build_only: true
-    extra_args: OVERLAY_CONFIG="overlay-auth-cert.conf"
     extra_configs:
+      - CONFIG_GOLIOTH_AUTH_METHOD_CERT=y
       # Make it build by providing path that can be resolved
       - CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH="prj.conf"
       - CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH="prj.conf"

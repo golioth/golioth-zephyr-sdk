@@ -42,8 +42,6 @@ Configure the following Kconfig options based on your Golioth credentials:
 - CONFIG_GOLIOTH_AUTH_METHOD_CERT        - use certificate-based authentication
 - CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH  - device certificate
 - CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH  - device private key
-- CONFIG_MBEDTLS_HEAP_SIZE               - increased mbedTLS heap size is needed
-- CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN     - increased mbedTLS maximum content length is needed
 
 by adding these lines to configuration file (e.g. ``prj.conf``):
 
@@ -52,8 +50,6 @@ by adding these lines to configuration file (e.g. ``prj.conf``):
    CONFIG_GOLIOTH_AUTH_METHOD_CERT=y
    CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH='"keys/device.crt.der"'
    CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH='"keys/device.key.der"'
-   CONFIG_MBEDTLS_HEAP_SIZE=32768
-   CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN=4096
 
 Platform specific configuration
 ===============================
