@@ -14,4 +14,3 @@ tests:
       qemu_x86
     extra_configs:
       - CONFIG_LOG_BACKEND_GOLIOTH=y
-      - CONFIG_LOG_PROCESS_THREAD_STACK_SIZE=2048
