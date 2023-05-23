@@ -70,9 +70,13 @@ static int golioth_setsockopt_dtls(struct golioth_client *client, int sock,
 		 * NOTE: At the time of implementation, mbedTLS supported only DNS entries in X509
 		 * Subject Alternative Name, so providing string representation of IP address will
 		 * fail (during handshake). If this is the case, you can can still connect if you
-		 * modify the code below to set host to NULL, which disables hostname verification.
+		 * set CONFIG_GOLIOTH_HOSTNAME_VERIFICATION_SKIP=y, which disables hostname
+		 * verification.
 		 */
-		ret = zsock_setsockopt(sock, SOL_TLS, TLS_HOSTNAME, host, strlen(host) + 1);
+		ret = zsock_setsockopt(sock, SOL_TLS, TLS_HOSTNAME,
+				       COND_CODE_1(CONFIG_GOLIOTH_HOSTNAME_VERIFICATION_SKIP,
+						   (NULL, 0),
+						   (host, strlen(host) + 1)));
 		if (ret < 0) {
 			return -errno;
 		}

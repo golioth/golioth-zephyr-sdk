@@ -84,6 +84,18 @@ config GOLIOTH_HOSTNAME_VERIFICATION
 	help
 	  Enable hostname verification on (D)TLS layer.
 
+if GOLIOTH_HOSTNAME_VERIFICATION
+
+config GOLIOTH_HOSTNAME_VERIFICATION_SKIP
+	bool "(development only) Skip hostname verification"
+	help
+	  Skip TLS layer hostname verification, by passing NULL to
+	  zsock_setsockopt(..., SOL_TLS, TLS_HOSTNAME, ...).
+
+	  Use this only for development with self-hosted server.
+
+endif # GOLIOTH_HOSTNAME_VERIFICATION
+
 config GOLIOTH_CIPHERSUITES
 	string "Ciphersuites"
 	# Select single PSK ciphersuite (following ciphersuite preference in mbedTLS)
