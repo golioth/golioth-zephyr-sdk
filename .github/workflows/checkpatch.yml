@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: zephyrprojectrtos/ci:v0.26.1
+      image: zephyrprojectrtos/ci:v0.26.4
 
     steps:
       - uses: actions/checkout@v3

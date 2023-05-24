@@ -66,7 +66,7 @@ jobs:
     runs-on: [self-hosted, has_twister_nrf52840dk]
 
     container:
-      image: zephyrprojectrtos/ci:v0.26.1
+      image: zephyrprojectrtos/ci:v0.26.4
       volumes:
         - /dev:/dev
         - /opt/nrf-command-line-tools:/opt/nrf-command-line-tools
@@ -74,7 +74,7 @@ jobs:
       options: --privileged
 
     env:
-      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.0
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.1
 
     defaults:
       run:
