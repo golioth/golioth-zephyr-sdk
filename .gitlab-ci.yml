@@ -55,7 +55,6 @@ cache-deps:
     <<: *cache-deps
     policy: pull-push
   script:
-    - west forall -c 'git clean -ffdx && git reset --hard'
     - rm -rf modules/lib/golioth
   only:
     refs:
@@ -67,10 +66,7 @@ checkpatch:
     - *west-init
     - west update modules/lib/golioth
     - >
-      west update zephyr -o=--depth=1 -n ||
-      (west forall -c 'git clean -ffdx && git reset --hard' &&
-       west update zephyr -o=--depth=1 -n)
-    - west forall -c 'git clean -ffdx && git reset --hard'
+      west update zephyr -o=--depth=1 -n
   script:
     - cd modules/lib/golioth
     - git fetch
