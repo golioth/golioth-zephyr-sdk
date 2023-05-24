@@ -39,12 +39,10 @@ stages:
     policy: pull
   before_script:
     - *west-init
-    - >
-      west update -o=--depth=1 -n ||
-      (west forall -c 'git clean -ffdx && git reset --hard' &&
-       west update -o=--depth=1 -n)
-    - west forall -c 'git clean -ffdx && git reset --hard'
-    - west patch --apply
+    - west update -o=--depth=1 -n
+    - git config --global user.email user@git-scm.com
+    - git config --global user.name "Git User"
+    - west patch
 
 .west-build:
   extends: .west-prepare

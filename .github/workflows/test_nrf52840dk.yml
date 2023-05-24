@@ -35,7 +35,9 @@ jobs:
           EOF
 
           west update -o=--depth=1 -n
-          west patch --apply
+          git config --global user.email user@git-scm.com
+          git config --global user.name "Git User"
+          west patch
 
       - name: Build samples/test
         run: |
