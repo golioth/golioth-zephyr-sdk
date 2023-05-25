@@ -138,7 +138,7 @@ config GOLIOTH_CIPHERSUITES
 
 config GOLIOTH_FW
 	bool "Firmware management"
-	select QCBOR
+	select ZCBOR
 	help
 	  Enable Golioth firmware management, which allows to ask for newest
 	  desired firmware and issue firmware download process.

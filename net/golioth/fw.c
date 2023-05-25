@@ -1,18 +1,18 @@
 /*
- * Copyright (c) 2021-2022 Golioth, Inc.
+ * Copyright (c) 2021-2023 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <net/golioth.h>
 #include <net/golioth/fw.h>
-#include <qcbor/posix_error_map.h>
-#include <qcbor/qcbor.h>
-#include <qcbor/qcbor_spiffy_decode.h>
+#include <zcbor_decode.h>
+#include <zcbor_encode.h>
 
 #include "coap_req.h"
 #include "coap_utils.h"
 #include "pathv.h"
+#include "zcbor_utils.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(golioth);
@@ -35,48 +35,68 @@ enum {
 	COMPONENT_KEY_URI = 5,
 };
 
-static int parse_component(QCBORDecodeContext *decode_ctx,
-			   uint8_t *version, size_t *version_len,
-			   uint8_t *uri, size_t *uri_len)
+struct component_tstr_value {
+	uint8_t *value;
+	size_t *value_len;
+};
+
+struct component_info {
+	struct component_tstr_value version;
+	struct component_tstr_value uri;
+};
+
+static int component_entry_decode_value(zcbor_state_t *zsd, void *void_value)
 {
-	QCBORError qerr;
-	UsefulBufC version_bufc;
-	UsefulBufC uri_bufc;
-	int err = 0;
+	struct component_tstr_value *value = void_value;
+	struct zcbor_string tstr;
+	bool ok;
 
-	QCBORDecode_EnterMap(decode_ctx, NULL);
-
-	QCBORDecode_GetTextStringInMapN(decode_ctx, COMPONENT_KEY_VERSION,
-					&version_bufc);
-
-	QCBORDecode_GetTextStringInMapN(decode_ctx, COMPONENT_KEY_URI,
-					&uri_bufc);
-
-	qerr = QCBORDecode_GetError(decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("Failed to get version and URI: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		err = qcbor_error_to_posix(qerr);
-		goto exit_map;
+	ok = zcbor_tstr_decode(zsd, &tstr);
+	if (!ok) {
+		return -EBADMSG;
 	}
 
-	if (version_bufc.len > *version_len) {
-		err = -ENOMEM;
-		goto exit_map;
+	if (tstr.len > *value->value_len) {
+		LOG_ERR("Not enough space to store");
+		return -ENOMEM;
 	}
 
-	memcpy(version, version_bufc.ptr, version_bufc.len);
-	*version_len = version_bufc.len;
+	memcpy(value->value, tstr.value, tstr.len);
+	*value->value_len = tstr.len;
 
-	if (uri_bufc.len > *uri_len) {
-		err = -ENOMEM;
-		goto exit_map;
+	return 0;
+}
+
+static int components_decode(zcbor_state_t *zsd, void *value)
+{
+	struct component_info *component = value;
+	struct zcbor_map_entry map_entries[] = {
+		ZCBOR_U32_MAP_ENTRY(COMPONENT_KEY_VERSION,
+				    component_entry_decode_value,
+				    &component->version),
+		ZCBOR_U32_MAP_ENTRY(COMPONENT_KEY_URI,
+				    component_entry_decode_value,
+				    &component->uri),
+	};
+	int err;
+	bool ok;
+
+	ok = zcbor_list_start_decode(zsd);
+	if (!ok) {
+		LOG_WRN("Did not start CBOR list correctly");
+		return -EBADMSG;
 	}
 
-	memcpy(uri, uri_bufc.ptr, uri_bufc.len);
-	*uri_len = uri_bufc.len;
+	err = zcbor_map_decode(zsd, map_entries, ARRAY_SIZE(map_entries));
+	if (err) {
+		return err;
+	}
 
-exit_map:
-	QCBORDecode_ExitMap(decode_ctx);
+	ok = zcbor_list_end_decode(zsd);
+	if (!ok) {
+		LOG_WRN("Did not end CBOR list correctly");
+		return -EBADMSG;
+	}
 
 	return err;
 }
@@ -85,59 +105,29 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
 			     uint8_t *version, size_t *version_len,
 			     uint8_t *uri, size_t *uri_len)
 {
+	ZCBOR_STATE_D(zsd, 3, payload, payload_len, 1);
 	int64_t manifest_sequence_number;
-	UsefulBufC payload_bufc = { payload, payload_len };
-	QCBORDecodeContext decode_ctx;
-	QCBORError qerr;
-	int err = 0;
+	struct component_info component_info = {
+		.version = {version, version_len},
+		.uri = {uri, uri_len},
+	};
+	struct zcbor_map_entry map_entries[] = {
+		ZCBOR_U32_MAP_ENTRY(MANIFEST_KEY_SEQUENCE_NUMBER,
+				    zcbor_map_int64_decode,
+				    &manifest_sequence_number),
+		ZCBOR_U32_MAP_ENTRY(MANIFEST_KEY_COMPONENTS,
+				    components_decode,
+				    &component_info),
+	};
+	int err;
 
-	QCBORDecode_Init(&decode_ctx, payload_bufc, QCBOR_DECODE_MODE_NORMAL);
-
-	QCBORDecode_EnterMap(&decode_ctx, NULL);
-
-	QCBORDecode_GetInt64InMapN(&decode_ctx, MANIFEST_KEY_SEQUENCE_NUMBER,
-				   &manifest_sequence_number);
-
-	qerr = QCBORDecode_GetError(&decode_ctx);
-	switch (qerr) {
-	case QCBOR_SUCCESS:
-		break;
-	case QCBOR_ERR_LABEL_NOT_FOUND:
-		LOG_DBG("No sequence-number found in manifest");
-		err = -ENOENT;
-		goto exit_root_map;
-	default:
-		LOG_ERR("Failed to get manifest bstr: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		err = qcbor_error_to_posix(qerr);
-		goto exit_root_map;
-	}
-
-	LOG_INF("Manifest sequence-number: %d", (int) manifest_sequence_number);
-
-	QCBORDecode_EnterArrayFromMapN(&decode_ctx, MANIFEST_KEY_COMPONENTS);
-
-	err = parse_component(&decode_ctx, version, version_len, uri, uri_len);
-
-	QCBORDecode_ExitArray(&decode_ctx);
-
+	err = zcbor_map_decode(zsd, map_entries, ARRAY_SIZE(map_entries));
 	if (err) {
-		goto exit_root_map;
-	}
-
-exit_root_map:
-	QCBORDecode_ExitMap(&decode_ctx);
-
-	if (err) {
+		LOG_WRN("Failed to decode desired map");
 		return err;
 	}
 
-	qerr = QCBORDecode_Finish(&decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("Error at the end: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		return qcbor_error_to_posix(qerr);
-	}
-
-	return err;
+	return 0;
 }
 
 int golioth_fw_observe_desired(struct golioth_client *client,
@@ -179,36 +169,55 @@ free_req:
 	return err;
 }
 
-static int fw_report_state_encode(const char *current_version,
+static int fw_report_state_encode(zcbor_state_t *zse,
+				  const char *current_version,
 				  const char *target_version,
 				  enum golioth_fw_state state,
-				  enum golioth_dfu_result result,
-				  UsefulBuf encode_bufc,
-				  size_t *encoded_len)
+				  enum golioth_dfu_result result)
 {
-	QCBOREncodeContext encode_ctx;
-	QCBORError qerr;
+	bool ok;
 
-	QCBOREncode_Init(&encode_ctx, encode_bufc);
+	ok = zcbor_map_start_encode(zse, 1);
+	if (!ok) {
+		LOG_WRN("Did not start CBOR map correctly");
+		return -ENOMEM;
+	}
 
-	QCBOREncode_OpenMap(&encode_ctx);
+	ok = zcbor_tstr_put_lit(zse, "s") &&
+	     zcbor_uint32_put(zse, state);
+	if (!ok) {
+		return -ENOMEM;
+	}
 
-	QCBOREncode_AddUInt64ToMap(&encode_ctx, "s", state);
-	QCBOREncode_AddUInt64ToMap(&encode_ctx, "r", result);
+	ok = zcbor_tstr_put_lit(zse, "r") &&
+	     zcbor_uint32_put(zse, result);
+	if (!ok) {
+		return -ENOMEM;
+	}
 
 	if (current_version && current_version[0] != '\0') {
-		QCBOREncode_AddSZStringToMap(&encode_ctx, "v", current_version);
+		ok = zcbor_tstr_put_lit(zse, "v") &&
+		     zcbor_tstr_put_term(zse, current_version);
+		if (!ok) {
+			return -ENOMEM;
+		}
 	}
 
 	if (target_version && target_version[0] != '\0') {
-		QCBOREncode_AddSZStringToMap(&encode_ctx, "t", target_version);
+		ok = zcbor_tstr_put_lit(zse, "t") &&
+		     zcbor_tstr_put_term(zse, target_version);
+		if (!ok) {
+			return -ENOMEM;
+		}
 	}
 
-	QCBOREncode_CloseMap(&encode_ctx);
+	ok = zcbor_map_end_encode(zse, 1);
+	if (!ok) {
+		LOG_WRN("Did not end CBOR map correctly");
+		return -ENOMEM;
+	}
 
-	qerr = QCBOREncode_FinishGetSize(&encode_ctx, encoded_len);
-
-	return qcbor_error_to_posix(qerr);
+	return 0;
 }
 
 int golioth_fw_report_state_cb(struct golioth_client *client,
@@ -219,17 +228,20 @@ int golioth_fw_report_state_cb(struct golioth_client *client,
 			       enum golioth_dfu_result result,
 			       golioth_req_cb_t cb, void *user_data)
 {
-	UsefulBuf_MAKE_STACK_UB(encode_bufc, 64);
-	size_t encoded_len;
+	uint8_t encode_buf[64];
+	ZCBOR_STATE_E(zse, 1, encode_buf, sizeof(encode_buf), 1);
+	int err;
 
-	fw_report_state_encode(current_version, target_version,
-			       state, result,
-			       encode_bufc, &encoded_len);
+	err = fw_report_state_encode(zse, current_version, target_version,
+				     state, result);
+	if (err) {
+		return err;
+	}
 
 	return golioth_coap_req_cb(client, COAP_METHOD_POST,
 				     PATHV(GOLIOTH_FW_REPORT_STATE, package_name),
 				     GOLIOTH_CONTENT_FORMAT_APP_CBOR,
-				     encode_bufc.ptr, encoded_len,
+				     encode_buf, zse->payload - encode_buf,
 				     cb, user_data,
 				     0);
 }
@@ -241,17 +253,20 @@ int golioth_fw_report_state(struct golioth_client *client,
 			    enum golioth_fw_state state,
 			    enum golioth_dfu_result result)
 {
-	UsefulBuf_MAKE_STACK_UB(encode_bufc, 64);
-	size_t encoded_len;
+	uint8_t encode_buf[64];
+	ZCBOR_STATE_E(zse, 1, encode_buf, sizeof(encode_buf), 1);
+	int err;
 
-	fw_report_state_encode(current_version, target_version,
-			       state, result,
-			       encode_bufc, &encoded_len);
+	err = fw_report_state_encode(zse, current_version, target_version,
+				     state, result);
+	if (err) {
+		return err;
+	}
 
 	return golioth_coap_req_sync(client, COAP_METHOD_POST,
 				     PATHV(GOLIOTH_FW_REPORT_STATE, package_name),
 				     GOLIOTH_CONTENT_FORMAT_APP_CBOR,
-				     encode_bufc.ptr, encoded_len,
+				     encode_buf, zse->payload - encode_buf,
 				     NULL, NULL,
 				     0);
 }
