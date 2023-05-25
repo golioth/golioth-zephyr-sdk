@@ -13,9 +13,7 @@ LOG_MODULE_REGISTER(golioth_lightdb, LOG_LEVEL_DBG);
 
 #include <zephyr/drivers/gpio.h>
 #include <stdlib.h>
-#include <qcbor/qcbor.h>
-#include <qcbor/qcbor_decode.h>
-#include <qcbor/qcbor_spiffy_decode.h>
+#include <zcbor_decode.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
@@ -62,21 +60,29 @@ static void golioth_led_set_by_name(const char *name, bool value)
 	golioth_led_set(id, value);
 }
 
+static bool zcbor_list_or_map_end(zcbor_state_t *state)
+{
+	if (state->indefinite_length_array) {
+		return *state->payload == 0xff;
+	} else {
+		return state->elem_count == 0;
+	}
+
+	return false;
+}
+
 static int golioth_led_handle(struct golioth_req_rsp *rsp)
 {
-	QCBORDecodeContext decode_ctx;
-	QCBORItem decoded_item;
-	UsefulBufC payload = { rsp->data, rsp->len };
-	QCBORError qerr;
+	ZCBOR_STATE_D(zs, 1, rsp->data, rsp->len, 1);
+	struct zcbor_string label;
 	char name[5];
 	bool value;
+	bool ok;
 
 	if (rsp->err) {
 		LOG_ERR("Failed to receive led value: %d", rsp->err);
 		return rsp->err;
 	}
-
-	QCBORDecode_Init(&decode_ctx, payload, QCBOR_DECODE_MODE_NORMAL);
 
 	/*
 	 * Expect map of "text string" (label) -> boolean (value) entries.
@@ -101,52 +107,36 @@ static int golioth_led_handle(struct golioth_req_rsp *rsp)
 	 * - LED 4 is expected to be switched on,
 	 * - LED 6 is expected to be switched off.
 	 */
-	QCBORDecode_EnterMap(&decode_ctx, NULL);
-	qerr = QCBORDecode_GetError(&decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_WRN("Did not enter CBOR map correctly");
+	ok = zcbor_map_start_decode(zs);
+	if (!ok) {
+		LOG_WRN("Did not start CBOR map correctly");
 		return -EBADMSG;
 	}
 
 	/* Iterate through all entries in map */
-	while (true) {
-		QCBORDecode_VGetNext(&decode_ctx, &decoded_item);
-
-		qerr = QCBORDecode_GetError(&decode_ctx);
-		if (qerr == QCBOR_ERR_NO_MORE_ITEMS) {
-			/* Reset decoding error, as "no more items" was expected */
-			QCBORDecode_GetAndResetError(&decode_ctx);
-			break;
+	while (!zcbor_list_or_map_end(zs)) {
+		ok = zcbor_tstr_decode(zs, &label);
+		if (!ok) {
+			LOG_WRN("Failed to get label");
+			return -EBADMSG;
 		}
 
-		if (qerr != QCBOR_SUCCESS) {
-			LOG_DBG("QCBORDecode_GetError: %d", qerr);
-			break;
+		ok = zcbor_bool_decode(zs, &value);
+		if (!ok) {
+			LOG_WRN("Failed to get value");
+			return -EBADMSG;
 		}
 
-		if (decoded_item.uLabelType != QCBOR_TYPE_TEXT_STRING) {
-			LOG_WRN("Label type should be text string");
-			continue;
-		}
-
-		if (decoded_item.uDataType != QCBOR_TYPE_FALSE &&
-		    decoded_item.uDataType != QCBOR_TYPE_TRUE) {
-			LOG_WRN("Data type should be boolean");
-			continue;
-		}
-
-		if (decoded_item.label.string.len > sizeof(name) - 1) {
-			LOG_HEXDUMP_WRN(decoded_item.label.string.ptr,
-					decoded_item.label.string.len,
+		if (label.len > sizeof(name) - 1) {
+			LOG_HEXDUMP_WRN(label.value,
+					label.len,
 					"Too long label");
 			continue;
 		}
 
 		/* Copy label to NULL-terminated string */
-		memcpy(name, decoded_item.label.string.ptr, decoded_item.label.string.len);
-		name[decoded_item.label.string.len] = '\0';
-
-		value = (decoded_item.uDataType == QCBOR_TYPE_TRUE);
+		memcpy(name, label.value, label.len);
+		name[label.len] = '\0';
 
 		LOG_INF("LED %s -> %s", name, value ? "ON" : "OFF");
 
@@ -157,11 +147,10 @@ static int golioth_led_handle(struct golioth_req_rsp *rsp)
 		golioth_led_set_by_name(name, value);
 	}
 
-	QCBORDecode_ExitMap(&decode_ctx);
-
-	qerr = QCBORDecode_Finish(&decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_WRN("Failed to finish decoding: %d (%s)", qerr, qcbor_err_to_str(qerr));
+	ok = zcbor_map_end_decode(zs);
+	if (!ok) {
+		LOG_ERR("Failed to end CBOR");
+		return -EBADMSG;
 	}
 
 	return 0;
