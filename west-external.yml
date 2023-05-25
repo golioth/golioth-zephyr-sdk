@@ -1,6 +1,2 @@
 manifest:
-  projects:
-    - name: golioth-qcbor
-      revision: 17b5607b8c49b835d22dec3effa97b25c89267b3
-      url: https://github.com/golioth/QCBOR.git
-      path: modules/lib/qcbor
+  projects: []
