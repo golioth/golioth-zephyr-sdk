@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Golioth, Inc.
+ * Copyright (c) 2021-2023 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,8 +10,7 @@
 #include <zephyr/logging/log_core.h>
 #include <zephyr/logging/log_output.h>
 #include <zephyr/sys/cbprintf.h>
-#include <qcbor/posix_error_map.h>
-#include <qcbor/qcbor.h>
+#include <zcbor_encode.h>
 
 /* Set this to 1 if you want to see what is being sent to server */
 #define DEBUG_PRINTING 0
@@ -25,9 +24,11 @@
 #define LOGS_URI_PATH		"logs"
 #define CBOR_SPACE_RESERVED	8
 
+/* Based on ZCBOR_STATE_E() */
+#define ZCBOR_ENC_NUM_STATES(num_backups)	((num_backups) + 2)
+
 struct golioth_cbor_ctx {
-	QCBOREncodeContext encode_ctx;
-	UsefulBuf encode_bufc;
+	zcbor_state_t zse[ZCBOR_ENC_NUM_STATES(1)];
 };
 
 struct golioth_pdu_ctx {
@@ -106,10 +107,7 @@ fail:
 static void log_cbor_prepare(struct golioth_cbor_ctx *cbor, uint8_t *buf,
 			     size_t buf_len)
 {
-	cbor->encode_bufc.ptr = buf;
-	cbor->encode_bufc.len = buf_len;
-
-	QCBOREncode_Init(&cbor->encode_ctx, cbor->encode_bufc);
+	zcbor_new_encode_state(cbor->zse, ARRAY_SIZE(cbor->zse), buf, buf_len, 1);
 }
 
 static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
@@ -125,12 +123,12 @@ static void log_cbor_append_headers(struct golioth_log_ctx *ctx,
 				log_dynamic_source_id(source) :
 				log_const_source_id(source));
 
-		QCBOREncode_AddSZStringToMap(&cbor->encode_ctx, "module",
-					     log_source_name_get(domain_id, source_id));
+		zcbor_tstr_put_lit(cbor->zse, "module");
+		zcbor_tstr_put_term(cbor->zse, log_source_name_get(domain_id, source_id));
 	}
 
-	QCBOREncode_AddSZStringToMap(&cbor->encode_ctx, "level",
-				     level_str(log_msg_get_level(msg)));
+	zcbor_tstr_put_lit(cbor->zse, "level");
+	zcbor_tstr_put_term(cbor->zse, level_str(log_msg_get_level(msg)));
 }
 
 static int log_packet_prepare(struct golioth_log_ctx *ctx)
@@ -157,15 +155,8 @@ static int log_packet_prepare(struct golioth_log_ctx *ctx)
 static int log_packet_finish(struct golioth_log_ctx *ctx)
 {
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
-	size_t encoded_len;
-	QCBORError qerr;
+	const uint8_t *payload_begin = ctx->packet_buf + ctx->coap_packet.offset;
 	int err;
-
-	qerr = QCBOREncode_FinishGetSize(&cbor->encode_ctx, &encoded_len);
-	if (qerr != QCBOR_SUCCESS) {
-		DBG("failed to encode: %d (%s)\n", qerr, qcbor_err_to_str(qerr));
-		return qcbor_error_to_posix(qerr);
-	}
 
 	/*
 	 * Add CBOR payload into CoAP payload. In fact CBOR is already in good
@@ -174,8 +165,9 @@ static int log_packet_finish(struct golioth_log_ctx *ctx)
 	 *
 	 * TODO: add CoAP API that will prevent internal memcpy()
 	 */
-	err = coap_packet_append_payload(&ctx->coap_packet, cbor->encode_bufc.ptr,
-					 encoded_len);
+	err = coap_packet_append_payload(&ctx->coap_packet,
+					 payload_begin,
+					 cbor->zse->payload - payload_begin);
 	if (err) {
 		DBG("logs payload append fail: %d\n", err);
 		return err;
@@ -184,32 +176,40 @@ static int log_packet_finish(struct golioth_log_ctx *ctx)
 	return 0;
 }
 
-static void log_cbor_create_map(struct golioth_log_ctx *ctx)
+static int log_cbor_create_map(struct golioth_log_ctx *ctx)
 {
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
+	bool ok;
 
-	QCBOREncode_OpenMap(&cbor->encode_ctx);
+	ok = zcbor_map_start_encode(cbor->zse, 1);
+	if (!ok) {
+		return -ENOMEM;
+	}
+
+	return 0;
 }
 
-static void log_cbor_close_map(struct golioth_log_ctx *ctx)
+static int log_cbor_close_map(struct golioth_log_ctx *ctx)
 {
 	struct golioth_cbor_ctx *cbor = &ctx->cbor;
+	bool ok;
 
-	QCBOREncode_CloseMap(&cbor->encode_ctx);
+	ok = zcbor_map_end_encode(cbor->zse, 1);
+	if (!ok) {
+		return -ENOMEM;
+	}
+
+	return 0;
 }
 
 static int log_pdu_prepare_ext(struct golioth_pdu_ctx *pdu,
 			       struct golioth_cbor_ctx *cbor,
 			       size_t elements, size_t additional_reserved)
 {
-	size_t offset;
-
-	offset = UsefulOutBuf_GetEndPosition(&cbor->encode_ctx.OutBuf) +
+	pdu->begin = pdu->ptr = cbor->zse->payload_mut +
 		CBOR_SPACE_RESERVED * elements +
 		additional_reserved;
-
-	pdu->begin = pdu->ptr = (uint8_t *)cbor->encode_bufc.ptr + offset;
-	pdu->end = (uint8_t *)cbor->encode_bufc.ptr + cbor->encode_bufc.len;
+	pdu->end = (uint8_t *)cbor->zse->payload_end;
 	if (pdu->begin > pdu->end) {
 		DBG("not enough space for encoding PDU\n");
 		return -ENOMEM;
@@ -224,26 +224,30 @@ static inline int log_pdu_prepare(struct golioth_pdu_ctx *pdu,
 	return log_pdu_prepare_ext(pdu, cbor, 1, 0);
 }
 
-static void log_pdu_text_finish(struct golioth_pdu_ctx *pdu,
+static int log_pdu_text_finish(struct golioth_pdu_ctx *pdu,
 				struct golioth_cbor_ctx *cbor)
 {
-	UsefulBufC text = {
-		.ptr = pdu->begin,
-		.len = pdu->ptr - pdu->begin,
-	};
+	bool ok;
 
-	QCBOREncode_AddText(&cbor->encode_ctx, text);
+	ok = zcbor_tstr_encode_ptr(cbor->zse, pdu->begin, pdu->ptr - pdu->begin);
+	if (!ok) {
+		return -EBADMSG;
+	}
+
+	return 0;
 }
 
-static void log_pdu_bytes_finish(struct golioth_pdu_ctx *pdu,
+static int log_pdu_bytes_finish(struct golioth_pdu_ctx *pdu,
 				 struct golioth_cbor_ctx *cbor)
 {
-	UsefulBufC bytes = {
-		.ptr = pdu->begin,
-		.len = pdu->ptr - pdu->begin,
-	};
+	bool ok;
 
-	QCBOREncode_AddBytes(&cbor->encode_ctx, bytes);
+	ok = zcbor_bstr_encode_ptr(cbor->zse, pdu->begin, pdu->ptr - pdu->begin);
+	if (!ok) {
+		return -EBADMSG;
+	}
+
+	return 0;
 }
 
 static int cbprintf_out_func(int c, void *out_ctx)
@@ -288,6 +292,7 @@ static int log_msg_process(struct golioth_log_ctx *ctx, struct log_msg *msg)
 	uint8_t level = log_msg_get_level(msg);
 	bool raw_string = (level == LOG_LEVEL_INTERNAL_RAW_STRING);
 	bool has_func = (BIT(level) & LOG_FUNCTION_PREFIX_MASK);
+	bool ok;
 	int err;
 
 	ctx->msg_part = 0;
@@ -297,16 +302,28 @@ static int log_msg_process(struct golioth_log_ctx *ctx, struct log_msg *msg)
 		goto finish;
 	}
 
-	log_cbor_create_map(ctx);
+	err = log_cbor_create_map(ctx);
+	if (err) {
+		goto finish;
+	}
 
-	QCBOREncode_AddUInt64ToMap(&cbor->encode_ctx, "uptime",
-				   log_output_timestamp_to_us(log_msg_get_timestamp(msg)));
+	ok = zcbor_tstr_put_lit(cbor->zse, "uptime") &&
+	     zcbor_uint64_put(cbor->zse, log_output_timestamp_to_us(log_msg_get_timestamp(msg)));
+	if (!ok) {
+		err = -ENOMEM;
+		goto finish;
+	}
 
 	if (!raw_string) {
 		log_cbor_append_headers(ctx, msg);
 	}
 
-	QCBOREncode_AddUInt64ToMap(&cbor->encode_ctx, "index", ctx->msg_index);
+	ok = zcbor_tstr_put_lit(cbor->zse, "index") &&
+	     zcbor_uint32_put(cbor->zse, ctx->msg_index);
+	if (!ok) {
+		err = -ENOMEM;
+		goto finish;
+	}
 
 	size_t len;
 	uint8_t *data = log_msg_get_package(msg, &len);
@@ -335,26 +352,32 @@ static int log_msg_process(struct golioth_log_ctx *ctx, struct log_msg *msg)
 
 		if (func_colon) {
 			const uint8_t *post_colon = func_colon + sizeof(": ") - 1;
-			UsefulBufC func = {
-				.ptr = pdu->begin,
-				.len = func_colon - pdu->begin,
-			};
-			UsefulBufC msg = {
-				.ptr = post_colon,
-				.len = pdu->ptr - post_colon,
-			};
 
-			QCBOREncode_AddTextToMap(&cbor->encode_ctx, "func", func);
-			QCBOREncode_AddTextToMap(&cbor->encode_ctx, "msg", msg);
+			ok = zcbor_tstr_put_lit(cbor->zse, "func") &&
+			     zcbor_tstr_encode_ptr(cbor->zse, pdu->begin, func_colon - pdu->begin);
+			if (!ok) {
+				err = -ENOMEM;
+				goto finish;
+			}
+
+			ok = zcbor_tstr_put_lit(cbor->zse, "msg") &&
+			     zcbor_tstr_encode_ptr(cbor->zse, post_colon, pdu->ptr - post_colon);
+			if (!ok) {
+				err = -ENOMEM;
+				goto finish;
+			}
 		} else {
-			QCBOREncode_AddSZString(&cbor->encode_ctx, "msg");
-			log_pdu_text_finish(pdu, cbor);
+			zcbor_tstr_put_lit(cbor->zse, "msg");
+			err = log_pdu_text_finish(pdu, cbor);
+			if (err) {
+				goto finish;
+			}
 		}
 	}
 
 	data = log_msg_get_data(msg, &len);
 	if (len) {
-		QCBOREncode_AddSZString(&cbor->encode_ctx, "hexdump");
+		zcbor_tstr_put_lit(cbor->zse, "hexdump");
 
 		err = log_pdu_prepare(pdu, cbor);
 		if (err) {
@@ -368,10 +391,16 @@ static int log_msg_process(struct golioth_log_ctx *ctx, struct log_msg *msg)
 		memcpy(pdu->begin, data, len);
 		pdu->ptr += len;
 
-		log_pdu_bytes_finish(pdu, cbor);
+		err = log_pdu_bytes_finish(pdu, cbor);
+		if (err) {
+			goto finish;
+		}
 	}
 
-	log_cbor_close_map(ctx);
+	err = log_cbor_close_map(ctx);
+	if (err) {
+		goto finish;
+	}
 
 	err = log_packet_finish(ctx);
 	if (err) {
