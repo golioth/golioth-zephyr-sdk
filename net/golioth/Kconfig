@@ -166,7 +166,7 @@ config GOLIOTH_RPC_MAX_RESPONSE_LEN
 
 config GOLIOTH_SETTINGS
 	bool "Settings cloud service"
-	select QCBOR
+	select ZCBOR
 	help
 	  Enable Golioth Settings feature. Not to be confused
 	  with Zephyr's own Settings subsystem.

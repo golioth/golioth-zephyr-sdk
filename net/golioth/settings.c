@@ -1,20 +1,20 @@
 /*
- * Copyright (c) 2022 Golioth, Inc.
+ * Copyright (c) 2022-2023 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <net/golioth/settings.h>
 #include <net/golioth/system_client.h>
-#include <qcbor/posix_error_map.h>
-#include <qcbor/qcbor.h>
-#include <qcbor/qcbor_spiffy_decode.h>
+#include <zcbor_decode.h>
+#include <zcbor_encode.h>
 #include <stdio.h>
 #include <assert.h>
 
 #include "coap_req.h"
 #include "coap_utils.h"
 #include "pathv.h"
+#include "zcbor_utils.h"
 
 /*
  * Example settings request from cloud:
@@ -49,10 +49,10 @@ LOG_MODULE_DECLARE(golioth);
 #define GOLIOTH_SETTINGS_MAX_NAME_LEN 63 /* not including NULL */
 
 struct settings_response {
-	QCBOREncodeContext encode_ctx;
-	UsefulBuf useful_buf;
+	zcbor_state_t zse[1 /* num_backups */ + 2];
 	uint8_t buf[CONFIG_GOLIOTH_SETTINGS_MAX_RESPONSE_LEN];
 	size_t num_errors;
+	struct golioth_client *client;
 };
 
 static int send_coap_response(struct golioth_client *client,
@@ -66,15 +66,17 @@ static int send_coap_response(struct golioth_client *client,
 				   GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
 
-static void init_response(struct settings_response *response, int64_t version)
+static void response_init(struct settings_response *response, struct golioth_client *client)
 {
 	memset(response, 0, sizeof(*response));
-	response->useful_buf = (UsefulBuf){ response->buf, sizeof(response->buf) };
-	QCBOREncode_Init(&response->encode_ctx, response->useful_buf);
 
-	/* Initialize the map and add the "version" */
-	QCBOREncode_OpenMap(&response->encode_ctx);
-	QCBOREncode_AddInt64ToMap(&response->encode_ctx, "version", version);
+	response->client = client;
+
+	zcbor_new_encode_state(response->zse, ARRAY_SIZE(response->zse),
+			       response->buf, sizeof(response->buf), 1);
+
+	/* Initialize the map */
+	zcbor_map_start_encode(response->zse, SIZE_MAX /* TODO: really? */);
 }
 
 static void add_error_to_response(struct settings_response *response,
@@ -82,53 +84,178 @@ static void add_error_to_response(struct settings_response *response,
 				  enum golioth_settings_status code)
 {
 	if (response->num_errors == 0) {
-		QCBOREncode_OpenArrayInMap(&response->encode_ctx, "errors");
+		zcbor_tstr_put_lit(response->zse, "errors");
+		zcbor_list_start_encode(response->zse, SIZE_MAX);
 	}
 
-	QCBOREncode_OpenMap(&response->encode_ctx);
-	QCBOREncode_AddSZStringToMap(&response->encode_ctx, "setting_key", key);
-	QCBOREncode_AddInt64ToMap(&response->encode_ctx, "error_code", code);
-	QCBOREncode_CloseMap(&response->encode_ctx);
+	zcbor_map_start_encode(response->zse, 2);
+
+	zcbor_tstr_put_lit(response->zse, "setting_key");
+	zcbor_tstr_put_term(response->zse, key);
+
+	zcbor_tstr_put_lit(response->zse, "error_code");
+	zcbor_int64_put(response->zse, code);
+
+	zcbor_map_end_encode(response->zse, 2);
 
 	response->num_errors++;
 }
 
 static int finalize_and_send_response(struct golioth_client *client,
-				      struct settings_response *response)
+				      struct settings_response *response,
+				      int64_t version)
 {
+	bool ok;
+
 	/*
 	 * If there were errors, then the "errors" array is still open,
 	 * so we need to close it.
 	 */
 	if (response->num_errors > 0) {
-		QCBOREncode_CloseArray(&response->encode_ctx);
+		ok = zcbor_list_end_encode(response->zse, SIZE_MAX);
+		if (!ok) {
+			return -ENOMEM;
+		}
+	}
+
+	/* Set version */
+	ok = zcbor_tstr_put_lit(response->zse, "version") &&
+		zcbor_int64_put(response->zse, version);
+	if (!ok) {
+		return -ENOMEM;
 	}
 
 	/* Close the root map */
-	QCBOREncode_CloseMap(&response->encode_ctx);
-
-	size_t response_len;
-	QCBORError qerr = QCBOREncode_FinishGetSize(&response->encode_ctx, &response_len);
-
-	if (qerr == QCBOR_ERR_BUFFER_TOO_SMALL) {
-		LOG_ERR("Settings response too large "
-			"(consider increasing GOLIOTH_SETTINGS_MAX_RESPONSE_LEN)");
-		return qcbor_error_to_posix(qerr);
+	ok = zcbor_map_end_encode(response->zse, 1);
+	if (!ok) {
+		return -ENOMEM;
 	}
 
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("QCBOREncode_FinishGetSize error: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		return qcbor_error_to_posix(qerr);
+	LOG_HEXDUMP_DBG(response->buf, response->zse->payload - response->buf, "Response");
+
+	return send_coap_response(client, response->buf, response->zse->payload - response->buf);
+}
+
+static int settings_decode(zcbor_state_t *zsd, void *value)
+{
+	struct settings_response *settings_response = value;
+	struct golioth_client *client = settings_response->client;
+	struct zcbor_string label;
+	bool ok;
+
+	ok = zcbor_map_start_decode(zsd);
+	if (!ok) {
+		LOG_WRN("Did not start CBOR list correctly");
+		return -EBADMSG;
 	}
 
-	LOG_HEXDUMP_DBG(response->buf, response_len, "Response");
+	while (!zcbor_list_or_map_end(zsd)) {
+		/* Handle item */
+		ok = zcbor_tstr_decode(zsd, &label);
+		if (!ok) {
+			LOG_WRN("Failed to get label");
+			return -EBADMSG;
+		}
 
-	return send_coap_response(client, response->buf, response_len);
+		char key[GOLIOTH_SETTINGS_MAX_NAME_LEN + 1] = {};
+
+		/* Copy setting label/name and ensure it's NULL-terminated */
+		memcpy(key, label.value,
+		       MIN(GOLIOTH_SETTINGS_MAX_NAME_LEN, label.len));
+
+		bool data_type_valid = true;
+		struct golioth_settings_value value = {};
+
+		zcbor_major_type_t major_type = ZCBOR_MAJOR_TYPE(*zsd->payload);
+
+		LOG_DBG("key = %s, major_type = %d", key, major_type);
+
+		switch (major_type) {
+		case ZCBOR_MAJOR_TYPE_TSTR: {
+			struct zcbor_string str;
+
+			ok = zcbor_tstr_decode(zsd, &str);
+			if (ok) {
+				value.type = GOLIOTH_SETTINGS_VALUE_TYPE_STRING;
+				value.string.ptr = str.value;
+				value.string.len = str.len;
+			} else {
+				LOG_ERR("Failed to parse tstr");
+				data_type_valid = false;
+			}
+			break;
+		}
+		case ZCBOR_MAJOR_TYPE_PINT:
+		case ZCBOR_MAJOR_TYPE_NINT: {
+			ok = zcbor_int64_decode(zsd, &value.i64);
+			if (ok) {
+				value.type = GOLIOTH_SETTINGS_VALUE_TYPE_INT64;
+			} else {
+				LOG_ERR("Failed to parse int");
+				data_type_valid = false;
+			}
+			break;
+		}
+		case ZCBOR_MAJOR_TYPE_SIMPLE: {
+			double double_result;
+
+			if (zcbor_float_decode(zsd, &double_result)) {
+				value.f = (float)double_result;
+				value.type = GOLIOTH_SETTINGS_VALUE_TYPE_FLOAT;
+			} else if (zcbor_bool_decode(zsd, &value.b)) {
+				value.type = GOLIOTH_SETTINGS_VALUE_TYPE_BOOL;
+			} else {
+				LOG_ERR("Failed to parse simple type");
+				data_type_valid = false;
+			}
+			break;
+		}
+		default:
+			LOG_ERR("Unrecognized data type: %d", major_type);
+			data_type_valid = false;
+			break;
+		}
+
+		if (data_type_valid) {
+			enum golioth_settings_status setting_status =
+				client->settings.callback(key, &value);
+
+			if (setting_status != GOLIOTH_SETTINGS_SUCCESS) {
+				add_error_to_response(settings_response, key, setting_status);
+			}
+		} else {
+			add_error_to_response(settings_response,
+					      key,
+					      GOLIOTH_SETTINGS_VALUE_FORMAT_NOT_VALID);
+
+			ok = zcbor_any_skip(zsd, NULL);
+			if (!ok) {
+				LOG_ERR("Failed to skip unsupported type");
+				return -EBADMSG;
+			}
+		}
+	}
+
+	ok = zcbor_map_end_decode(zsd);
+	if (!ok) {
+		LOG_WRN("Did not end CBOR list correctly");
+		return -EBADMSG;
+	}
+
+	return 0;
 }
 
 static int on_setting(struct golioth_req_rsp *rsp)
 {
+	ZCBOR_STATE_D(zsd, 2, rsp->data, rsp->len, 1);
 	struct golioth_client *client = rsp->user_data;
+	int64_t version;
+	struct settings_response settings_response;
+	struct zcbor_map_entry map_entries[] = {
+		ZCBOR_TSTR_LIT_MAP_ENTRY("settings", settings_decode, &settings_response),
+		ZCBOR_TSTR_LIT_MAP_ENTRY("version", zcbor_map_int64_decode, &version),
+	};
+	int err;
 
 	if (rsp->err) {
 		LOG_ERR("Error on Settings observation: %d", rsp->err);
@@ -142,99 +269,15 @@ static int on_setting(struct golioth_req_rsp *rsp)
 		return 0;
 	}
 
-	UsefulBufC payload_buf = { rsp->data, rsp->len };
+	response_init(&settings_response, client);
 
-	QCBORDecodeContext decode_ctx;
-	QCBORItem decoded_item;
-	QCBORError qerr;
-	int64_t version;
-
-	QCBORDecode_Init(&decode_ctx, payload_buf, QCBOR_DECODE_MODE_NORMAL);
-	QCBORDecode_EnterMap(&decode_ctx, NULL);
-	QCBORDecode_GetInt64InMapSZ(&decode_ctx, "version", &version);
-	qerr = QCBORDecode_GetError(&decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("Failed to parse settings version: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		QCBORDecode_ExitMap(&decode_ctx);
-		QCBORDecode_Finish(&decode_ctx);
-		return qcbor_error_to_posix(qerr);
+	err = zcbor_map_decode(zsd, map_entries, ARRAY_SIZE(map_entries));
+	if (err) {
+		LOG_ERR("Failed to parse tstr map");
+		return err;
 	}
 
-	QCBORDecode_EnterMapFromMapSZ(&decode_ctx, "settings");
-
-	struct settings_response settings_response;
-
-	init_response(&settings_response, version);
-
-	/*
-	 * We don't know how many items are in the settings map, so we will
-	 * iterate until we get an error from QCBOR
-	 */
-	qerr = QCBORDecode_GetNext(&decode_ctx, &decoded_item);
-
-	bool has_more_settings = (qerr == QCBOR_SUCCESS);
-
-	while (has_more_settings) {
-		/* Handle item */
-		uint8_t data_type = decoded_item.uDataType;
-		UsefulBufC label = decoded_item.label.string;
-		char key[GOLIOTH_SETTINGS_MAX_NAME_LEN + 1] = {};
-
-		/* Copy setting label/name and ensure it's NULL-terminated */
-		assert((decoded_item.uLabelType == QCBOR_TYPE_BYTE_STRING) ||
-		       (decoded_item.uLabelType == QCBOR_TYPE_TEXT_STRING));
-		memcpy(key,
-		       label.ptr,
-		       MIN(GOLIOTH_SETTINGS_MAX_NAME_LEN, label.len));
-
-		LOG_DBG("key = %s, type = %d", key, data_type);
-
-		bool data_type_valid = true;
-		struct golioth_settings_value value = {};
-
-		if (data_type == QCBOR_TYPE_INT64) {
-			value.type = GOLIOTH_SETTINGS_VALUE_TYPE_INT64;
-			value.i64 = decoded_item.val.int64;
-		} else if (data_type == QCBOR_TYPE_DOUBLE) {
-			value.type = GOLIOTH_SETTINGS_VALUE_TYPE_FLOAT;
-			value.f = (float)decoded_item.val.dfnum;
-		} else if (data_type == QCBOR_TYPE_TRUE) {
-			value.type = GOLIOTH_SETTINGS_VALUE_TYPE_BOOL;
-			value.b = true;
-		} else if (data_type == QCBOR_TYPE_FALSE) {
-			value.type = GOLIOTH_SETTINGS_VALUE_TYPE_BOOL;
-			value.b = false;
-		} else if (data_type == QCBOR_TYPE_TEXT_STRING) {
-			value.type = GOLIOTH_SETTINGS_VALUE_TYPE_STRING;
-			value.string.ptr = (const char *)decoded_item.val.string.ptr;
-			value.string.len = decoded_item.val.string.len;
-		} else {
-			LOG_WRN("Unrecognized data type: %d", data_type);
-			data_type_valid = false;
-			add_error_to_response(&settings_response,
-					      key,
-					      GOLIOTH_SETTINGS_VALUE_FORMAT_NOT_VALID);
-		}
-
-		if (data_type_valid) {
-			enum golioth_settings_status setting_status =
-				client->settings.callback(key, &value);
-
-			if (setting_status != GOLIOTH_SETTINGS_SUCCESS) {
-				add_error_to_response(&settings_response, key, setting_status);
-			}
-		}
-
-		/* Get next item */
-		qerr = QCBORDecode_GetNext(&decode_ctx, &decoded_item);
-		has_more_settings = (qerr == QCBOR_SUCCESS);
-	}
-
-	QCBORDecode_ExitMap(&decode_ctx); /* settings */
-	QCBORDecode_ExitMap(&decode_ctx); /* root */
-	QCBORDecode_Finish(&decode_ctx);
-
-	return finalize_and_send_response(client, &settings_response);
+	return finalize_and_send_response(client, &settings_response, version);
 }
 
 int golioth_settings_observe(struct golioth_client *client)
