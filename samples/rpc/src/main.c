@@ -11,24 +11,21 @@ LOG_MODULE_REGISTER(golioth_rpc, LOG_LEVEL_DBG);
 #include <net/golioth/system_client.h>
 #include <net/golioth/rpc.h>
 #include <samples/common/net_connect.h>
-#include <qcbor/qcbor.h>
-#include <qcbor/qcbor_spiffy_decode.h>
 
 static struct golioth_client *client = GOLIOTH_SYSTEM_CLIENT_GET();
 
-static enum golioth_rpc_status on_multiply(QCBORDecodeContext *request_params_array,
-					   QCBOREncodeContext *response_detail_map,
+static enum golioth_rpc_status on_multiply(zcbor_state_t *request_params_array,
+					   zcbor_state_t *response_detail_map,
 					   void *callback_arg)
 {
 	double a, b;
 	double value;
-	QCBORError qerr;
+	bool ok;
 
-	QCBORDecode_GetDouble(request_params_array, &a);
-	QCBORDecode_GetDouble(request_params_array, &b);
-	qerr = QCBORDecode_GetError(request_params_array);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("Failed to decode array items: %d (%s)", qerr, qcbor_err_to_str(qerr));
+	ok = zcbor_float_decode(request_params_array, &a) &&
+	     zcbor_float_decode(request_params_array, &b);
+	if (!ok) {
+		LOG_ERR("Failed to decode array items");
 		return GOLIOTH_RPC_INVALID_ARGUMENT;
 	}
 
@@ -36,7 +33,12 @@ static enum golioth_rpc_status on_multiply(QCBORDecodeContext *request_params_ar
 
 	LOG_DBG("%lf * %lf = %lf", a, b, value);
 
-	QCBOREncode_AddDoubleToMap(response_detail_map, "value", value);
+	ok = zcbor_tstr_put_lit(response_detail_map, "value") &&
+	     zcbor_float64_put(response_detail_map, value);
+	if (!ok) {
+		LOG_ERR("Failed to encode value");
+		return GOLIOTH_RPC_RESOURCE_EXHAUSTED;
+	}
 
 	return GOLIOTH_RPC_OK;
 }
