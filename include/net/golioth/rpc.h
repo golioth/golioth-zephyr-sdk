@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Golioth, Inc.
+ * Copyright (c) 2022-2023 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,11 +11,12 @@
 #include <zephyr/net/coap.h>
 #include <zephyr/kernel.h>
 
-struct _QCBOREncodeContext;
-struct _QCBOREncodeContext;
-
-typedef struct _QCBORDecodeContext QCBORDecodeContext;
-typedef struct _QCBOREncodeContext QCBOREncodeContext;
+#ifdef CONFIG_ZCBOR
+#include <zcbor_decode.h>
+#include <zcbor_encode.h>
+#else
+typedef struct {} zcbor_state_t;
+#endif
 
 /**
  * @defgroup golioth_rpc Golioth Remote Procedure Call
@@ -53,44 +54,53 @@ enum golioth_rpc_status {
  * @brief Callback function type for remote procedure call
  *
  * If the RPC has input params, they can be extracted from request_params_array
- * using QCBOR functions like QCBORDecode_GetDouble, QCBORDecode_GetTextString, etc.
+ * using zcbor functions like zcbor_float_decode, zcbor_tstr_decode, etc.
  *
  * If the RPC needs to return data, it can be added to response_detail_map
- * using QCBOR functions like QCBOREncode_AddDoubleToMap, QCBOREncode_AddTextToMap, etc.
+ * using zcbor functions like zcbor_tstr_put_lit, zcbor_float64_put, etc.
  *
  * Here is an example of a callback function that implements the "on_multiply"
  * method, which multiplies two input numbers and returns the result.
  *
  * @code{.c}
- * static enum golioth_rpc_status on_multiply(QCBORDecodeContext* request_params_array,
- *                                            QCBOREncodeContext* response_detail_map,
+ * static enum golioth_rpc_status on_multiply(zcbor_state_t *request_params_array,
+ *                                            zcbor_state_t *response_detail_map,
  *                                            void *callback_arg)
  * {
  *      double a, b;
- *      QCBORDecode_GetDouble(request_params_array, &a);
- *      QCBORDecode_GetDouble(request_params_array, &b);
- *      QCBORError qerr = QCBORDecode_GetError(request_params_array);
- *      if (qerr != QCBOR_SUCCESS) {
- *            LOG_ERR("Failed to decode array items: %d (%s)", qerr, qcbor_err_to_str(qerr));
+ *      double value;
+ *      bool ok;
+ *
+ *      ok = zcbor_float_decode(request_params_array, &a) &&
+ *           zcbor_float_decode(request_params_array, &b);
+ *      if (!ok) {
+ *            LOG_ERR("Failed to decode array items");
  *            return GOLIOTH_RPC_INVALID_ARGUMENT;
  *      }
  *
- *      double value = a * b;
- *      QCBOREncode_AddDoubleToMap(response_detail_map, "value", value);
+ *      value = a * b;
+ *
+ *      ok = zcbor_tstr_put_lit(response_detail_map, "value") &&
+ *           zcbor_float64_put(response_detail_map, value);
+ *      if (!ok) {
+ *            LOG_ERR("Failed to encode value");
+ *            return GOLIOTH_RPC_RESOURCE_EXHAUSTED;
+ *      }
+ *
  *      return GOLIOTH_RPC_OK;
  * }
  * @endcode
  *
- * @param request_params_array QCBOR decode context, inside of the RPC request params array
- * @param response_detail_map QCBOR encode context, inside of the RPC response detail map
+ * @param request_params_array zcbor decode state, inside of the RPC request params array
+ * @param response_detail_map zcbor encode state, inside of the RPC response detail map
  * @param callback_arg callback_arg, unchanged from callback_arg of @ref golioth_rpc_register
  *
  * @return GOLIOTH_RPC_OK - if method was called successfully
  * @return GOLIOTH_RPC_INVALID_ARGUMENT - if params were invalid
  * @return otherwise - method failure
  */
-typedef enum golioth_rpc_status (*golioth_rpc_cb_fn)(QCBORDecodeContext *request_params_array,
-						     QCBOREncodeContext *response_detail_map,
+typedef enum golioth_rpc_status (*golioth_rpc_cb_fn)(zcbor_state_t *request_params_array,
+						     zcbor_state_t *response_detail_map,
 						     void *callback_arg);
 
 /**

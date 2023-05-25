@@ -1,19 +1,19 @@
 /*
- * Copyright (c) 2022 Golioth, Inc.
+ * Copyright (c) 2022-2023 Golioth, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <net/golioth/rpc.h>
 #include <net/golioth/system_client.h>
-#include <qcbor/posix_error_map.h>
-#include <qcbor/qcbor.h>
-#include <qcbor/qcbor_spiffy_decode.h>
+#include <zcbor_decode.h>
+#include <zcbor_encode.h>
 #include <stdio.h>
 
 #include "coap_req.h"
 #include "coap_utils.h"
 #include "pathv.h"
+#include "zcbor_utils.h"
 
 /*
  * Request:
@@ -49,9 +49,105 @@ static int send_response(struct golioth_client *client,
 				   GOLIOTH_COAP_REQ_NO_RESP_BODY);
 }
 
+static int params_decode(zcbor_state_t *zsd, void *value)
+{
+	zcbor_state_t *params_zsd = value;
+	bool ok;
+
+	ok = zcbor_list_start_decode(zsd);
+	if (!ok) {
+		LOG_WRN("Did not start CBOR list correctly");
+		return -EBADMSG;
+	}
+
+	memcpy(params_zsd, zsd, sizeof(*params_zsd));
+
+	while (!zcbor_list_or_map_end(zsd)) {
+		ok = zcbor_any_skip(zsd, NULL);
+		if (!ok) {
+			LOG_WRN("Failed to skip param");
+			return -EBADMSG;
+		}
+	}
+
+	ok = zcbor_list_end_decode(zsd);
+	if (!ok) {
+		LOG_WRN("Did not end CBOR list correctly");
+		return -EBADMSG;
+	}
+
+	return 0;
+}
+
+static int rpc_find_and_call(struct golioth_client *client,
+			     zcbor_state_t *zse,
+			     zcbor_state_t *params_zsd,
+			     struct zcbor_string *method,
+			     enum golioth_rpc_status *status_code)
+{
+	const struct golioth_rpc_method *matching_method = NULL;
+	bool ok;
+
+	for (int i = 0; i < client->rpc.num_methods; i++) {
+		const struct golioth_rpc_method *rpc_method = &client->rpc.methods[i];
+
+		if (strlen(rpc_method->name) == method->len &&
+		    strncmp(rpc_method->name, method->value, method->len) == 0) {
+			matching_method = rpc_method;
+			break;
+		}
+	}
+
+	if (!matching_method) {
+		*status_code = GOLIOTH_RPC_UNKNOWN;
+		return 0;
+	}
+
+	LOG_DBG("Calling registered RPC method: %s", matching_method->name);
+
+	/**
+	 * Call callback while decode context is inside the params array
+	 * and encode context is inside the detail map.
+	 */
+	ok = zcbor_tstr_put_lit(zse, "detail");
+	if (!ok) {
+		LOG_ERR("Failed to encode RPC '%s'", "detail");
+		return -ENOMEM;
+	}
+
+	ok = zcbor_map_start_encode(zse, SIZE_MAX);
+	if (!ok) {
+		LOG_ERR("Did not start CBOR map correctly");
+		return -ENOMEM;
+	}
+
+	*status_code = matching_method->callback(params_zsd,
+						 zse,
+						 matching_method->callback_arg);
+
+	ok = zcbor_list_end_encode(zse, SIZE_MAX);
+	if (!ok) {
+		LOG_ERR("Failed to close '%s'", "detail");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
 static int on_rpc(struct golioth_req_rsp *rsp)
 {
+	ZCBOR_STATE_D(zsd, 2, rsp->data, rsp->len, 1);
+	zcbor_state_t params_zsd;
 	struct golioth_client *client = rsp->user_data;
+	struct zcbor_string id, method;
+	struct zcbor_map_entry map_entries[] = {
+		ZCBOR_TSTR_LIT_MAP_ENTRY("id", zcbor_map_tstr_decode, &id),
+		ZCBOR_TSTR_LIT_MAP_ENTRY("method", zcbor_map_tstr_decode, &method),
+		ZCBOR_TSTR_LIT_MAP_ENTRY("params", params_decode, &params_zsd),
+	};
+	enum golioth_rpc_status status_code;
+	int err;
+	bool ok;
 
 	if (rsp->err) {
 		LOG_ERR("Error on RPC observation: %d", rsp->err);
@@ -65,91 +161,56 @@ static int on_rpc(struct golioth_req_rsp *rsp)
 		return 0;
 	}
 
-	UsefulBufC payload_buf = { rsp->data, rsp->len };
-
-	QCBORDecodeContext decode_ctx;
-	QCBORError qerr;
-	UsefulBufC id_buf;
-	UsefulBufC method_buf;
-
-	/* Decode id and method from request */
-	QCBORDecode_Init(&decode_ctx, payload_buf, QCBOR_DECODE_MODE_NORMAL);
-	QCBORDecode_EnterMap(&decode_ctx, NULL);
-	QCBORDecode_GetTextStringInMapSZ(&decode_ctx, "id", &id_buf);
-	QCBORDecode_GetTextStringInMapSZ(&decode_ctx, "method", &method_buf);
-	qerr = QCBORDecode_GetError(&decode_ctx);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("Failed to parse RPC request: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		QCBORDecode_ExitMap(&decode_ctx);
-		QCBORDecode_Finish(&decode_ctx);
-		return qcbor_error_to_posix(qerr);
+	/* Decode request */
+	err = zcbor_map_decode(zsd, map_entries, ARRAY_SIZE(map_entries));
+	if (err) {
+		LOG_ERR("Failed to parse tstr map");
+		return err;
 	}
 
 	/* Start encoding response */
 	uint8_t response_buf[CONFIG_GOLIOTH_RPC_MAX_RESPONSE_LEN];
-	UsefulBuf response_bufc = { response_buf, sizeof(response_buf) };
-	QCBOREncodeContext encode_ctx;
+	ZCBOR_STATE_E(zse, 1, response_buf, sizeof(response_buf), 1);
 
-	QCBOREncode_Init(&encode_ctx, response_bufc);
-	QCBOREncode_OpenMap(&encode_ctx);
-	QCBOREncode_AddTextToMap(&encode_ctx, "id", id_buf);
+	ok = zcbor_map_start_encode(zse, 1);
+	if (!ok) {
+		LOG_ERR("Failed to encode RPC response map");
+		return -ENOMEM;
+	}
 
-	/* Search for matching RPC registration */
-	const struct golioth_rpc_method *matching_method = NULL;
+	ok = zcbor_tstr_put_lit(zse, "id") &&
+		zcbor_tstr_encode(zse, &id);
+	if (!ok) {
+		LOG_ERR("Failed to encode RPC '%s'", "id");
+		return -ENOMEM;
+	}
 
 	k_mutex_lock(&client->rpc.mutex, K_FOREVER);
-
-	for (int i = 0; i < client->rpc.num_methods; i++) {
-		const struct golioth_rpc_method *method = &client->rpc.methods[i];
-
-		if (strlen(method->name) == method_buf.len &&
-		    strncmp(method->name, method_buf.ptr, method_buf.len) == 0) {
-			matching_method = method;
-			break;
-		}
-	}
-
-	enum golioth_rpc_status status_code = GOLIOTH_RPC_UNKNOWN;
-
-	if (matching_method) {
-		LOG_DBG("Calling registered RPC method: %s", matching_method->name);
-
-		/**
-		 * Call callback while decode context is inside the params array
-		 * and encode context is inside the detail map.
-		 */
-		QCBORDecode_EnterArrayFromMapSZ(&decode_ctx, "params");
-		QCBOREncode_OpenMapInMap(&encode_ctx, "detail");
-		status_code = matching_method->callback(&decode_ctx,
-							&encode_ctx,
-							matching_method->callback_arg);
-		QCBOREncode_CloseMap(&encode_ctx);
-		QCBORDecode_ExitArray(&decode_ctx);
-	}
-
+	err = rpc_find_and_call(client, zse, &params_zsd, &method, &status_code);
 	k_mutex_unlock(&client->rpc.mutex);
 
-	QCBOREncode_AddUInt64ToMap(&encode_ctx, "statusCode", status_code);
-
-	QCBOREncode_CloseMap(&encode_ctx); /* root response map */
-	QCBORDecode_ExitMap(&decode_ctx); /* root request map */
-
-	/* Finalize decoding */
-	QCBORDecode_Finish(&decode_ctx);
-
-	/* Finalize encoding */
-	size_t response_len;
-
-	qerr = QCBOREncode_FinishGetSize(&encode_ctx, &response_len);
-	if (qerr != QCBOR_SUCCESS) {
-		LOG_ERR("QCBOREncode_FinishGetSize error: %d (%s)", qerr, qcbor_err_to_str(qerr));
-		return qcbor_error_to_posix(qerr);
+	if (err) {
+		return err;
 	}
 
-	LOG_HEXDUMP_DBG(response_buf, response_len, "Response");
+	ok = zcbor_tstr_put_lit(zse, "statusCode") &&
+		zcbor_uint64_put(zse, status_code);
+	if (!ok) {
+		LOG_ERR("Failed to encode RPC '%s'", "statusCode");
+		return -ENOMEM;
+	}
+
+	/* root response map */
+	ok = zcbor_map_end_encode(zse, 1);
+	if (!ok) {
+		LOG_ERR("Failed to close '%s'", "root");
+		return -ENOMEM;
+	}
+
+	LOG_HEXDUMP_DBG(response_buf, zse->payload - response_buf, "Response");
 
 	/* Send CoAP response packet */
-	return send_response(client, response_buf, response_len);
+	return send_response(client, response_buf, zse->payload - response_buf);
 }
 
 int golioth_rpc_observe(struct golioth_client *client)

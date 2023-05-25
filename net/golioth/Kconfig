@@ -145,7 +145,7 @@ config GOLIOTH_FW
 
 config GOLIOTH_RPC
 	bool "Remote Procedure Call"
-	select QCBOR
+	select ZCBOR
 	help
 	  Enable Golioth Remote Procedure Call feature.
 
@@ -163,8 +163,6 @@ config GOLIOTH_RPC_MAX_RESPONSE_LEN
 	default 256
 	help
 	  Maximum length of the CBOR response returned by Golioth RPC methods.
-	  If this value is too small for the returned package, a
-	  QCBOR_ERR_BUFFER_TOO_SMALL will occur.
 
 config GOLIOTH_SETTINGS
 	bool "Settings cloud service"
