@@ -5,13 +5,13 @@ manifest:
       file: west-zephyr.yml
       name-allowlist:
         - cmsis
+        - golioth-qcbor
         - hal_espressif
         - hal_nordic
         - hal_nxp
         - mbedtls
         - mcuboot
         - net-tools
-        - qcbor
         - segger
         - tinycrypt
         - zephyr

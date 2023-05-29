@@ -17,8 +17,6 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/atomic.h>
 
-#include <golioth/compat/init.h>
-
 #define RX_BUFFER_SIZE		CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 
 #ifdef CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID

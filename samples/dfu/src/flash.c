@@ -12,8 +12,6 @@ LOG_MODULE_DECLARE(golioth_dfu);
 
 #include "flash.h"
 
-#include <golioth/compat/init.h>
-
 #ifdef CONFIG_TRUSTED_EXECUTION_NONSECURE
 #define SLOT0_LABEL	slot0_ns_partition
 #else
