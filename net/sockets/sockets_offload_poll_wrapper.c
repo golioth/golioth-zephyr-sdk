@@ -9,8 +9,6 @@
 
 #include "sockets_internal.h"
 
-#include <golioth/compat/init.h>
-
 LOG_MODULE_REGISTER(net_sock_wrapper, CONFIG_NET_SOCKETS_LOG_LEVEL);
 
 __net_socket struct wrapper_context {
