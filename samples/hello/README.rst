@@ -48,8 +48,8 @@ by adding these lines to configuration file (e.g. ``prj.conf``):
 .. code-block:: cfg
 
    CONFIG_GOLIOTH_AUTH_METHOD_CERT=y
-   CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH='"keys/device.crt.der"'
-   CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH='"keys/device.key.der"'
+   CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH="keys/device.crt.der"
+   CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH="keys/device.key.der"
 
 Platform specific configuration
 ===============================
