@@ -7,31 +7,24 @@ Split low-level device serial handling from other code.
 
 Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
 ---
- scripts/pylib/twister/twisterlib/handlers.py | 190 +++++++++++--------
- 1 file changed, 112 insertions(+), 78 deletions(-)
+ scripts/pylib/twister/twisterlib/handlers.py | 177 +++++++++++--------
+ 1 file changed, 105 insertions(+), 72 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index a390e558f2..2d554e69ec 100755
+index 5af283cbfc..502d2ee865 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
-@@ -332,23 +332,29 @@ class SimulationHandler(BinaryHandler):
+@@ -333,19 +333,25 @@ class SimulationHandler(BinaryHandler):
              self.binary = os.path.join(instance.build_dir, "zephyr", "zephyr.exe")
              self.ready = True
  
 -class DeviceHandler(Handler):
--
--    def __init__(self, instance, type_str):
--        """Constructor
--
--        @param instance Test Instance
--        """
--        super().__init__(instance, type_str)
--
--    def monitor_serial(self, ser, halt_event, harness):
 +class DeviceSerial:
 +    class SerialError(RuntimeError):
 +        pass
-+
+ 
+-    def __init__(self, instance, type_str):
+-        """Constructor
 +    def __init__(self, hardware, timeout):
 +        self.hardware = hardware
 +        self.timeout = timeout
@@ -39,24 +32,24 @@ index a390e558f2..2d554e69ec 100755
 +        self.halt_event = threading.Event()
 +        self.thread = None
 +        self.pty_process = None
-+
-+    def monitor_serial(self, harness, log, coverage):
-         if harness.is_pytest:
-             harness.handle(None)
-             return
  
--        log_out_fp = open(self.log, "wt")
+-        @param instance Test Instance
+-        """
+-        super().__init__(instance, type_str)
++    def monitor_serial(self, harness, log, coverage):
 +        ser = self.serial
 +        halt_event = self.halt_event
  
--        if self.options.coverage:
+-    def monitor_serial(self, ser, halt_event, harness):
+-        log_out_fp = open(self.log, "wt")
 +        log_out_fp = open(log, "wt")
-+
+ 
+-        if self.options.coverage:
 +        if coverage:
              # Set capture_coverage to True to indicate that right after
              # test results we should get coverage data, otherwise we exit
              # from the test.
-@@ -409,6 +415,82 @@ class DeviceHandler(Handler):
+@@ -406,6 +412,82 @@ class DeviceHandler(Handler):
  
          log_out_fp.close()
  
@@ -139,12 +132,12 @@ index a390e558f2..2d554e69ec 100755
      def device_is_available(self, instance):
          device = instance.platform.name
          fixture = instance.testsuite.harness_config.get("fixture")
-@@ -469,22 +551,13 @@ class DeviceHandler(Handler):
+@@ -470,22 +552,13 @@ class DeviceHandler(Handler):
              return
  
          runner = hardware.runner or self.options.west_runner
 -        serial_pty = hardware.serial_pty
--
+ 
 -        ser_pty_process = None
 -        if serial_pty:
 -            master, slave = pty.openpty()
@@ -153,7 +146,7 @@ index a390e558f2..2d554e69ec 100755
 -            except subprocess.CalledProcessError as error:
 -                logger.error("Failed to run subprocess {}, error {}".format(serial_pty, error.output))
 -                return
- 
+-
 -            serial_device = os.ttyname(slave)
 -        else:
 -            serial_device = hardware.serial
@@ -167,18 +160,14 @@ index a390e558f2..2d554e69ec 100755
  
          if (self.options.west_flash is not None) or runner:
              command = ["west", "flash", "--skip-rebuild", "-d", self.build_dir]
-@@ -542,46 +615,21 @@ class DeviceHandler(Handler):
+@@ -543,42 +616,16 @@ class DeviceHandler(Handler):
          if pre_script:
              self.run_custom_script(pre_script, 30)
  
 -        flash_timeout = hardware.flash_timeout
 -        if hardware.flash_with_test:
 -            flash_timeout += self.timeout
-+        harness_name = self.instance.testsuite.harness.capitalize()
-+        harness_import = HarnessImporter(harness_name)
-+        harness = harness_import.instance
-+        harness.configure(self.instance)
- 
+-
          try:
 -            ser = serial.Serial(
 -                serial_device,
@@ -209,10 +198,6 @@ index a390e558f2..2d554e69ec 100755
 +            self.make_device_available(serial_device.device)
              return
  
--        harness_name = self.instance.testsuite.harness.capitalize()
--        harness_import = HarnessImporter(harness_name)
--        harness = harness_import.instance
--        harness.configure(self.instance)
 -        halt_monitor_evt = threading.Event()
 -
 -        t = threading.Thread(target=self.monitor_serial, daemon=True,
@@ -222,7 +207,7 @@ index a390e558f2..2d554e69ec 100755
  
          d_log = "{}/device.log".format(self.instance.build_dir)
          logger.debug('Flash command: %s', command)
-@@ -600,7 +648,7 @@ class DeviceHandler(Handler):
+@@ -597,7 +644,7 @@ class DeviceHandler(Handler):
                          flash_error = True
                          with open(d_log, "w") as dlog_fp:
                              dlog_fp.write(stderr.decode())
@@ -231,7 +216,7 @@ index a390e558f2..2d554e69ec 100755
                  except subprocess.TimeoutExpired:
                      logger.warning("Flash operation timed out.")
                      self.terminate(proc)
-@@ -613,7 +661,7 @@ class DeviceHandler(Handler):
+@@ -610,7 +657,7 @@ class DeviceHandler(Handler):
                  dlog_fp.write(stderr.decode())
  
          except subprocess.CalledProcessError:
@@ -240,7 +225,7 @@ index a390e558f2..2d554e69ec 100755
              self.instance.status = "error"
              self.instance.reason = "Device issue (Flash error)"
              flash_error = True
-@@ -623,25 +671,14 @@ class DeviceHandler(Handler):
+@@ -620,25 +667,14 @@ class DeviceHandler(Handler):
  
          if not flash_error:
              # Always wait at most the test timeout here after flashing.
@@ -268,7 +253,7 @@ index a390e558f2..2d554e69ec 100755
  
          handler_time = time.time() - start_time
  
-@@ -666,10 +703,7 @@ class DeviceHandler(Handler):
+@@ -659,10 +695,7 @@ class DeviceHandler(Handler):
          if post_script:
              self.run_custom_script(post_script, 30)
  
@@ -281,5 +266,5 @@ index a390e558f2..2d554e69ec 100755
  class QEMUHandler(Handler):
      """Spawns a thread to monitor QEMU output from pipes
 -- 
-2.40.0
+2.40.1
 

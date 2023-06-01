@@ -72,8 +72,13 @@ config NET_SHELL
 config MAIN_STACK_SIZE
 	default 4096
 
-config MINIMAL_LIBC_MALLOC_ARENA_SIZE
-	default 2048 if MINIMAL_LIBC
+if COMMON_LIBC_MALLOC
+
+config COMMON_LIBC_MALLOC_ARENA_SIZE
+	int
+	default 2048
+
+endif # COMMON_LIBC_MALLOC
 
 config GOLIOTH
 	default y
