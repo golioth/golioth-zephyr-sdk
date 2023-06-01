@@ -1,0 +1,320 @@
+From a6fe831e9d5ea230e31ee10363142e9debc61792 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Micha=C5=82=20Szprejda?= <mszprejda@antmicro.com>
+Date: Wed, 5 Apr 2023 15:21:44 +0200
+Subject: [PATCH] Twister: Add integration with renode-test
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add support for calling the `renode-test` command from west and twister.
+Enable running Robot Framework tests suites in Renode.
+
+Signed-off-by: Michał Szprejda <mszprejda@antmicro.com>
+Signed-off-by: Mateusz Hołenko <mholenko@antmicro.com>
+---
+ cmake/emu/renode.cmake                        | 33 +++++++++++
+ doc/develop/test/twister.rst                  | 56 +++++++++++++++++++
+ scripts/pylib/twister/twisterlib/handlers.py  | 10 +++-
+ scripts/pylib/twister/twisterlib/harness.py   | 48 ++++++++++++++++
+ .../pylib/twister/twisterlib/testinstance.py  |  2 +-
+ scripts/pylib/twister/twisterlib/testplan.py  |  4 ++
+ scripts/schemas/twister/testsuite-schema.yaml |  6 ++
+ tests/robot/common.robot                      |  7 +++
+ 8 files changed, 164 insertions(+), 2 deletions(-)
+ create mode 100644 tests/robot/common.robot
+
+diff --git a/cmake/emu/renode.cmake b/cmake/emu/renode.cmake
+index 8a00999900..ab26cfeaf8 100644
+--- a/cmake/emu/renode.cmake
++++ b/cmake/emu/renode.cmake
+@@ -27,3 +27,36 @@ add_custom_target(run_renode
+   DEPENDS ${logical_target_for_zephyr_elf}
+   USES_TERMINAL
+   )
++
++find_program(
++  RENODE_TEST
++  renode-test
++  )
++
++set(RENODE_TEST_FLAGS
++  --variable ELF:@${APPLICATION_BINARY_DIR}/zephyr/${KERNEL_ELF_NAME}
++  --variable RESC:@${RENODE_SCRIPT}
++  --variable UART:${RENODE_UART}
++  --variable KEYWORDS:${ZEPHYR_BASE}/tests/robot/common.robot
++  --results-dir ${APPLICATION_BINARY_DIR}
++  )
++
++add_custom_target(run_renode_test
++  COMMAND /bin/sh -c "\
++    if [ -z $$ROBOT_FILES ] \;\
++    then\
++        echo ''\;\
++        echo '--- Error: Robot file path is required to run Robot tests in Renode. To provide the path please set the ROBOT_FILES variable.'\;\
++        echo '--- To rerun the test with west execute:'\;\
++        echo '--- ROBOT_FILES=\\<FILES\\> west build -p -b \\<BOARD\\> -s \\<SOURCE_DIR\\> -t run_renode_test'\;\
++        echo ''\;\
++        exit 1\;\
++    fi\;"
++  COMMAND
++  ${RENODE_TEST}
++  ${RENODE_TEST_FLAGS}
++  ${APPLICATION_SOURCE_DIR}/$$ROBOT_FILES
++  WORKING_DIRECTORY ${APPLICATION_BINARY_DIR}
++  DEPENDS ${logical_target_for_zephyr_elf}
++  USES_TERMINAL
++  )
+diff --git a/doc/develop/test/twister.rst b/doc/develop/test/twister.rst
+index 2101f7bcae..4e842cddb7 100644
+--- a/doc/develop/test/twister.rst
++++ b/doc/develop/test/twister.rst
+@@ -416,6 +416,7 @@ harness: <string>
+     - console
+     - pytest
+     - gtest
++    - robot
+ 
+     Harnesses ``ztest``, ``gtest`` and ``console`` are based on parsing of the
+     output and matching certain phrases. ``ztest`` and ``gtest`` harnesses look
+@@ -423,6 +424,8 @@ harness: <string>
+     harness if you've already got tests written in the gTest framework and do
+     not wish to update them to zTest. The ``console`` harness tells Twister to
+     parse a test's text output for a regex defined in the test's YAML file.
++    The ``robot`` harness is used to execute Robot Framework test suites
++    in the Renode simulation framework.
+ 
+     Some widely used harnesses that are not supported yet:
+ 
+@@ -497,6 +500,9 @@ harness_config: <harness configuration options>
+     pytest_args: <list of arguments> (default empty)
+         Specify a list of additional arguments to pass to ``pytest``.
+ 
++    robot_test_path: <robot file path> (default empty)
++        Specify a path to a file containing a Robot Framework test suite to be run.
++
+     The following is an example yaml file with a few harness_config options.
+ 
+     ::
+@@ -530,6 +536,16 @@ harness_config: <harness configuration options>
+             harness_config:
+               pytest_root: [pytest directory name]
+ 
++    The following is an example yaml file with robot harness_config options.
++
++    ::
++
++        tests:
++          robot.example:
++            harness: robot
++            harness_config:
++              robot_test_path: [robot file path]
++
+ filter: <expression>
+     Filter whether the testcase should be run by evaluating an expression
+     against an environment containing the following values:
+@@ -1138,3 +1154,43 @@ dependencies between test cases.  For native_posix platforms, you can provide
+ the seed to the random number generator by providing ``-seed=value`` as an
+ argument to twister. See :ref:`Shuffling Test Sequence <ztest_shuffle>` for more
+ details.
++
++Robot Framework Tests
++*********************
++Zephyr supports `Robot Framework <https://robotframework.org/>`_ as one of solutions for automated testing.
++
++Robot files allow you to express interactive test scenarios in human-readable text format and execute them in simulation or against hardware.
++At this moment Zephyr integration supports running Robot tests in the `Renode <https://renode.io/>`_ simulation framework.
++
++To execute a Robot test suite with twister, run the following command:
++
++.. tabs::
++
++   .. group-tab:: Linux
++
++      .. code-block:: bash
++
++         $ ./scripts/twister --platform hifive1 --test samples/subsys/shell/shell_module/sample.shell.shell_module.robot
++
++   .. group-tab:: Windows
++
++      .. code-block:: bat
++
++         python .\scripts\twister --platform hifive1 --test samples/subsys/shell/shell_module/sample.shell.shell_module.robot
++
++It's also possible to run it by `west` directly, with:
++
++.. code-block:: bash
++
++   $ ROBOT_FILES=shell_module.robot west build -p -b hifive1 -s samples/subsys/shell/shell_module -t run_renode_test
++
++Writing Robot tests
++===================
++
++For the list of keywords provided by the Robot Framework itself, refer to `the official Robot documentation <https://robotframework.org/robotframework/>`_.
++
++Information on writing and running Robot Framework tests in Renode can be found in `the testing section <https://renode.readthedocs.io/en/latest/introduction/testing.html>`_ of Renode documentation.
++It provides a list of the most commonly used keywords together with links to the source code where those are defined.
++
++It's possible to extend the framework by adding new keywords expressed directly in Robot test suite files, as an external Python library or, like Renode does it, dynamically via XML-RPC.
++For details see the `extending Robot Framework <https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#extending-robot-framework>`_ section in the official Robot documentation.
+diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
+index a390e558f2..84f39610ae 100755
+--- a/scripts/pylib/twister/twisterlib/handlers.py
++++ b/scripts/pylib/twister/twisterlib/handlers.py
+@@ -229,7 +229,11 @@ class BinaryHandler(Handler):
+         harness = harness_import.instance
+         harness.configure(self.instance)
+ 
+-        if self.call_make_run:
++        robot_test = getattr(harness, "is_robot_test", False)
++
++        if robot_test:
++            command = [self.generator_cmd, "run_renode_test"]
++        elif self.call_make_run:
+             command = [self.generator_cmd, "run"]
+         elif self.call_west_flash:
+             command = ["west", "flash", "--skip-rebuild", "-d", self.build_dir]
+@@ -269,6 +273,10 @@ class BinaryHandler(Handler):
+             env["UBSAN_OPTIONS"] = "log_path=stdout:halt_on_error=1:" + \
+                                   env.get("UBSAN_OPTIONS", "")
+ 
++        if robot_test:
++            harness.run_robot_test(command, self)
++            return
++
+         with subprocess.Popen(command, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, cwd=self.build_dir, env=env) as proc:
+             logger.debug("Spawning BinaryHandler Thread for %s" % self.name)
+diff --git a/scripts/pylib/twister/twisterlib/harness.py b/scripts/pylib/twister/twisterlib/harness.py
+index 74b8d1311f..b268a67b59 100644
+--- a/scripts/pylib/twister/twisterlib/harness.py
++++ b/scripts/pylib/twister/twisterlib/harness.py
+@@ -7,6 +7,8 @@ import shlex
+ from collections import OrderedDict
+ import xml.etree.ElementTree as ET
+ import logging
++import time
++import sys
+ 
+ logger = logging.getLogger('twister')
+ logger.setLevel(logging.DEBUG)
+@@ -97,6 +99,52 @@ class Harness:
+         elif self.GCOV_END in line:
+             self.capture_coverage = False
+ 
++class Robot(Harness):
++
++    is_robot_test = True
++
++    def configure(self, instance):
++        super(Robot, self).configure(instance)
++        self.instance = instance
++
++        config = instance.testsuite.harness_config
++        if config:
++            self.path = config.get('robot_test_path', None)
++
++    def handle(self, line):
++        ''' Test cases that make use of this harness care about results given
++            by Robot Framework which is called in run_robot_test(), so works of this
++            handle is trying to give a PASS or FAIL to avoid timeout, nothing
++            is writen into handler.log
++        '''
++        self.instance.state = "passed"
++        tc = self.instance.get_case_or_create(self.id)
++        tc.status = "passed"
++
++    def run_robot_test(self, command, handler):
++
++        start_time = time.time()
++        env = os.environ.copy()
++        env["ROBOT_FILES"] = self.path
++
++        with subprocess.Popen(command, stdout=subprocess.PIPE,
++                stderr=subprocess.STDOUT, cwd=self.instance.build_dir, env=env) as cmake_proc:
++            out, _ = cmake_proc.communicate()
++
++            self.instance.execution_time = time.time() - start_time
++
++            if cmake_proc.returncode == 0:
++                self.instance.status = "passed"
++            else:
++                logger.error("Robot test failure: %s for %s" %
++                             (handler.sourcedir, self.instance.platform.name))
++                self.instance.status = "failed"
++
++            if out:
++                with open(os.path.join(self.instance.build_dir, handler.log), "wt") as log:
++                    log_msg = out.decode(sys.getdefaultencoding())
++                    log.write(log_msg)
++
+ class Console(Harness):
+ 
+     def configure(self, instance):
+diff --git a/scripts/pylib/twister/twisterlib/testinstance.py b/scripts/pylib/twister/twisterlib/testinstance.py
+index f69efd59ea..b4be52d42b 100644
+--- a/scripts/pylib/twister/twisterlib/testinstance.py
++++ b/scripts/pylib/twister/twisterlib/testinstance.py
+@@ -129,7 +129,7 @@ class TestInstance:
+     def testsuite_runnable(testsuite, fixtures):
+         can_run = False
+         # console harness allows us to run the test and capture data.
+-        if testsuite.harness in [ 'console', 'ztest', 'pytest', 'test', 'gtest']:
++        if testsuite.harness in [ 'console', 'ztest', 'pytest', 'test', 'gtest', 'robot']:
+             can_run = True
+             # if we have a fixture that is also being supplied on the
+             # command-line, then we need to run the test, not just build it.
+diff --git a/scripts/pylib/twister/twisterlib/testplan.py b/scripts/pylib/twister/twisterlib/testplan.py
+index 3b56f2da00..9a3191bbbf 100755
+--- a/scripts/pylib/twister/twisterlib/testplan.py
++++ b/scripts/pylib/twister/twisterlib/testplan.py
+@@ -787,6 +787,10 @@ class TestPlan:
+                 if plat.ram < ts.min_ram:
+                     instance.add_filter("Not enough RAM", Filters.PLATFORM)
+ 
++                if ts.harness:
++                    if ts.harness == 'robot' and plat.simulation != 'renode':
++                        instance.add_filter("No robot support for the selected platform", Filters.SKIP)
++
+                 if ts.depends_on:
+                     dep_intersection = ts.depends_on.intersection(set(plat.supported))
+                     if dep_intersection != set(ts.depends_on):
+diff --git a/scripts/schemas/twister/testsuite-schema.yaml b/scripts/schemas/twister/testsuite-schema.yaml
+index 02ad2a497d..c50d114480 100644
+--- a/scripts/schemas/twister/testsuite-schema.yaml
++++ b/scripts/schemas/twister/testsuite-schema.yaml
+@@ -107,6 +107,9 @@ mapping:
+             required: false
+             sequence:
+               - type: str
++          "robot_test_path":
++            type: str
++            required: false
+           "record":
+             type: map
+             required: false
+@@ -292,6 +295,9 @@ mapping:
+                 required: false
+                 sequence:
+                   - type: str
++              "robot_test_path":
++                type: str
++                required: false
+               "record":
+                 type: map
+                 required: false
+diff --git a/tests/robot/common.robot b/tests/robot/common.robot
+new file mode 100644
+index 0000000000..55c52d915c
+--- /dev/null
++++ b/tests/robot/common.robot
+@@ -0,0 +1,7 @@
++# SPDX-License-Identifier: Apache-2.0
++
++*** Keywords ***
++Prepare Machine
++    Execute Command           $bin = ${ELF}
++    Execute Command           include ${RESC}
++    Create Terminal Tester    ${UART}
+-- 
+2.41.0
+

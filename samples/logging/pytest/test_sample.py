@@ -13,6 +13,8 @@ from golioth import Client, LogEntry
 import pytest
 import trio
 
+from twister_harness.device.device_abstract import DeviceAbstract
+
 
 # This is the same as using the @pytest.mark.anyio on all test functions in the module
 pytestmark = pytest.mark.anyio
@@ -83,7 +85,7 @@ def process_log(expected_logs: List[Tuple[str,
     return counter
 
 
-async def test_lightdb_counter_observe(initial_timeout, device):
+async def test_lightdb_counter_observe(initial_timeout, device, dut: DeviceAbstract):
     counter_min_expected = 1
     counter_max_expected = 5
     counter_max = -1

@@ -1,20 +1,18 @@
 manifest:
   projects:
     - name: zephyr
-      revision: 954c4f2a564cb83ad4039a05d0ec6d6ff8aa1e82
+      revision: 6e72e401f26c0bd12f37431f2887212d07ee8319  # v3.4.0+
       url: https://github.com/zephyrproject-rtos/zephyr
       west-commands: scripts/west-commands.yml
       import: true
 
-    - name: mcuboot
-      revision: 1558e7ab0aadb4eac11f03befb5ccd3fa3f0aafe
-      url: https://github.com/zephyrproject-rtos/mcuboot
-      path: bootloader/mcuboot
-      submodules:
-        - name: esp-idf
-          path: boot/espressif/hal/esp-idf
-        - name: mbedtls
-          path: ext/mbedtls
+    - name: hal_espressif
+      revision: 322f6389e21d08845486b5ebe1a6e5cb077981b8
+      url: https://github.com/zephyrproject-rtos/hal_espressif
+      path: modules/hal/espressif
+      west-commands: west/west-commands.yml
+      groups:
+        - hal
 
   self:
     path: modules/lib/golioth

@@ -4,6 +4,7 @@ sample:
 common:
   harness: pytest
   tags: golioth logger socket goliothd
+  timeout: 180
 tests:
   sample.golioth.logging:
     platform_allow: >

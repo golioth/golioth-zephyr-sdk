@@ -18,21 +18,8 @@ from runners.core import BuildConfiguration
 def anyio_backend():
     return 'trio'
 
-# add option "--comdopt" to pytest, or it will report "unknown option"
-# this option is passed from twister.
-def pytest_addoption(parser):
-    parser.addoption(
-        '--cmdopt'
-    )
-
-# define fixture to return value of option "--cmdopt", this fixture
-# will be requested by other fixture of tests.
 @pytest.fixture(scope='session')
-def cmdopt(request):
-    return request.config.getoption('--cmdopt')
-
-@pytest.fixture(scope='session')
-def initial_timeout(cmdopt):
-    build_conf = BuildConfiguration(cmdopt)
+def initial_timeout(request):
+    build_conf = BuildConfiguration(request.config.option.build_dir)
 
     return build_conf['CONFIG_GOLIOTH_SAMPLE_TEST_CONNECT_TIMEOUT']
