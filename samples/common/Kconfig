@@ -35,6 +35,7 @@ config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
 
 config GOLIOTH_SAMPLE_SETTINGS_SHELL
 	bool "Settings shell"
+	depends on SHELL
 	depends on SETTINGS
 	depends on !SETTINGS_SHELL
 	help
