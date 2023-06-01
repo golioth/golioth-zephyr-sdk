@@ -63,6 +63,12 @@ config NET_IPV4
 config NET_IPV6
 	default n
 
+config NET_LOG
+	default y if NETWORKING
+
+config NET_SHELL
+	default y if NETWORKING
+
 config MAIN_STACK_SIZE
 	default 4096
 
