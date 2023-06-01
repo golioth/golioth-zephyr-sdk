@@ -4,6 +4,7 @@ sample:
 common:
   harness: pytest
   tags: golioth socket goliothd
+  timeout: 180
 tests:
   sample.golioth.lightdb_led:
     platform_allow: >

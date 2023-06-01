@@ -30,12 +30,12 @@ Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
  3 files changed, 26 insertions(+), 8 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index 2d554e69ec..ad75625c31 100755
+index 502d2ee865..640340df79 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
-@@ -620,14 +620,15 @@ class DeviceHandler(Handler):
-         harness = harness_import.instance
-         harness.configure(self.instance)
+@@ -616,14 +616,15 @@ class DeviceHandler(Handler):
+         if pre_script:
+             self.run_custom_script(pre_script, 30)
  
 -        try:
 -            serial_device.start(harness, self.log, self.options.coverage)
@@ -57,7 +57,7 @@ index 2d554e69ec..ad75625c31 100755
  
          start_time = time.time()
  
-@@ -670,6 +671,16 @@ class DeviceHandler(Handler):
+@@ -666,6 +667,16 @@ class DeviceHandler(Handler):
              self.run_custom_script(post_flash_script, 30)
  
          if not flash_error:
@@ -75,10 +75,10 @@ index 2d554e69ec..ad75625c31 100755
              serial_device.stop(self.timeout)
          else:
 diff --git a/scripts/pylib/twister/twisterlib/hardwaremap.py b/scripts/pylib/twister/twisterlib/hardwaremap.py
-index 8f429885e5..86b919a3fd 100644
+index 5e90b7c84c..e8167035a8 100644
 --- a/scripts/pylib/twister/twisterlib/hardwaremap.py
 +++ b/scripts/pylib/twister/twisterlib/hardwaremap.py
-@@ -38,6 +38,7 @@ class DUT(object):
+@@ -39,6 +39,7 @@ class DUT(object):
                   id=None,
                   serial=None,
                   serial_baud=None,
@@ -86,7 +86,7 @@ index 8f429885e5..86b919a3fd 100644
                   platform=None,
                   product=None,
                   serial_pty=None,
-@@ -52,6 +53,7 @@ class DUT(object):
+@@ -53,6 +54,7 @@ class DUT(object):
  
          self.serial = serial
          self.baud = serial_baud or 115200
@@ -94,7 +94,7 @@ index 8f429885e5..86b919a3fd 100644
          self.platform = platform
          self.serial_pty = serial_pty
          self._counter = Value("i", 0)
-@@ -234,6 +236,7 @@ class HardwareMap:
+@@ -235,6 +237,7 @@ class HardwareMap:
              runner_params = dut.get('runner_params')
              serial_pty = dut.get('serial_pty')
              serial = dut.get('serial')
@@ -102,7 +102,7 @@ index 8f429885e5..86b919a3fd 100644
              baud = dut.get('baud', None)
              product = dut.get('product')
              fixtures = dut.get('fixtures', [])
-@@ -248,6 +251,7 @@ class HardwareMap:
+@@ -249,6 +252,7 @@ class HardwareMap:
                            serial_pty=serial_pty,
                            serial=serial,
                            serial_baud=baud,
@@ -125,5 +125,5 @@ index 3ecb064ddf..6e79b5da97 100644
          type: int
          required: false
 -- 
-2.40.0
+2.40.1
 

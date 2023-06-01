@@ -1,0 +1,431 @@
+From 9ef0e45880d2d0ab3644d95fb9285d7eb4de9fbf Mon Sep 17 00:00:00 2001
+From: Yuval Peress <peress@google.com>
+Date: Thu, 18 May 2023 23:36:17 -0600
+Subject: [PATCH] twister: Add support for gTest as a harness
+
+Some 3P logic (Pigweed for example) is already heavily invested in
+gTest as a testing framework. Adding the `gtest` harness enables
+running the existing 3P tests on various Zephyr platforms and configs.
+
+Signed-off-by: Yuval Peress <peress@google.com>
+---
+ doc/develop/test/twister.rst                  |  10 +-
+ scripts/pylib/twister/twisterlib/harness.py   |  87 +++++-
+ .../pylib/twister/twisterlib/testinstance.py  |   4 +-
+ scripts/tests/twister/test_harness.py         | 249 ++++++++++++++++++
+ 4 files changed, 346 insertions(+), 4 deletions(-)
+ create mode 100644 scripts/tests/twister/test_harness.py
+
+diff --git a/doc/develop/test/twister.rst b/doc/develop/test/twister.rst
+index dcfe087b3d..2101f7bcae 100644
+--- a/doc/develop/test/twister.rst
++++ b/doc/develop/test/twister.rst
+@@ -408,8 +408,6 @@ harness: <string>
+     keyboard harness is set on tests that require keyboard interaction to reach
+     verdict on whether a test has passed or failed, however, Twister lack this
+     harness implementation at the momemnt.
+-    The console harness tells Twister to parse a test's text output for a regex
+-    defined in the test's YAML file.
+ 
+     Supported harnesses:
+ 
+@@ -417,6 +415,14 @@ harness: <string>
+     - test
+     - console
+     - pytest
++    - gtest
++
++    Harnesses ``ztest``, ``gtest`` and ``console`` are based on parsing of the
++    output and matching certain phrases. ``ztest`` and ``gtest`` harnesses look
++    for pass/fail/etc. frames defined in those frameworks. Use ``gtest``
++    harness if you've already got tests written in the gTest framework and do
++    not wish to update them to zTest. The ``console`` harness tells Twister to
++    parse a test's text output for a regex defined in the test's YAML file.
+ 
+     Some widely used harnesses that are not supported yet:
+ 
+diff --git a/scripts/pylib/twister/twisterlib/harness.py b/scripts/pylib/twister/twisterlib/harness.py
+index 1231014804..74b8d1311f 100644
+--- a/scripts/pylib/twister/twisterlib/harness.py
++++ b/scripts/pylib/twister/twisterlib/harness.py
+@@ -12,7 +12,7 @@ logger = logging.getLogger('twister')
+ logger.setLevel(logging.DEBUG)
+ 
+ # pylint: disable=anomalous-backslash-in-string
+-result_re = re.compile(".*(PASS|FAIL|SKIP) - (test_)?(.*) in (\d*[.,]?\d*) seconds")
++result_re = re.compile(".*(PASS|FAIL|SKIP) - (test_)?(.*) in (\\d*[.,]?\\d*) seconds")
+ class Harness:
+     GCOV_START = "GCOV_COVERAGE_DUMP_START"
+     GCOV_END = "GCOV_COVERAGE_DUMP_END"
+@@ -255,6 +255,91 @@ class Pytest(Harness):
+         log.close()
+ 
+ 
++class Gtest(Harness):
++    ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
++    TEST_START_PATTERN = r"\[ RUN      \] (?P<suite_name>.*)\.(?P<test_name>.*)$"
++    TEST_PASS_PATTERN = r"\[       OK \] (?P<suite_name>.*)\.(?P<test_name>.*)$"
++    TEST_FAIL_PATTERN = r"\[  FAILED  \] (?P<suite_name>.*)\.(?P<test_name>.*)$"
++    FINISHED_PATTERN = r"\[==========\] Done running all tests\.$"
++    has_failures = False
++    tc = None
++
++    def handle(self, line):
++        # Strip the ANSI characters, they mess up the patterns
++        non_ansi_line = self.ANSI_ESCAPE.sub('', line)
++
++        # Check if we started running a new test
++        test_start_match = re.search(self.TEST_START_PATTERN, non_ansi_line)
++        if test_start_match:
++            # Add the suite name
++            suite_name = test_start_match.group("suite_name")
++            if suite_name not in self.detected_suite_names:
++                self.detected_suite_names.append(suite_name)
++
++            # Generate the internal name of the test
++            name = "{}.{}.{}".format(self.id, suite_name, test_start_match.group("test_name"))
++
++            # Assert that we don't already have a running test
++            assert (
++                self.tc is None
++            ), "gTest error, {} didn't finish".format(self.tc)
++
++            # Check that the instance doesn't exist yet (prevents re-running)
++            tc = self.instance.get_case_by_name(name)
++            assert tc is None, "gTest error, {} running twice".format(tc)
++
++            # Create the test instance and set the context
++            tc = self.instance.get_case_or_create(name)
++            self.tc = tc
++            self.tc.status = "started"
++            self.testcase_output += line + "\n"
++            self._match = True
++
++        # Check if the test run finished
++        finished_match = re.search(self.FINISHED_PATTERN, non_ansi_line)
++        if finished_match:
++            tc = self.instance.get_case_or_create(self.id)
++            if self.has_failures or self.tc is not None:
++                self.state = "failed"
++                tc.status = "failed"
++            else:
++                self.state = "passed"
++                tc.status = "passed"
++            return
++
++        # Check if the individual test finished
++        state, name = self._check_result(non_ansi_line)
++        if state is None or name is None:
++            # Nothing finished, keep processing lines
++            return
++
++        # Get the matching test and make sure it's the same as the current context
++        tc = self.instance.get_case_by_name(name)
++        assert (
++            tc is not None and tc == self.tc
++        ), "gTest error, mismatched tests. Expected {} but got {}".format(self.tc, tc)
++
++        # Test finished, clear the context
++        self.tc = None
++
++        # Update the status of the test
++        tc.status = state
++        if tc.status == "failed":
++            self.has_failures = True
++            tc.output = self.testcase_output
++        self.testcase_output = ""
++        self._match = False
++
++    def _check_result(self, line):
++        test_pass_match = re.search(self.TEST_PASS_PATTERN, line)
++        if test_pass_match:
++            return "passed", "{}.{}.{}".format(self.id, test_pass_match.group("suite_name"), test_pass_match.group("test_name"))
++        test_fail_match = re.search(self.TEST_FAIL_PATTERN, line)
++        if test_fail_match:
++            return "failed", "{}.{}.{}".format(self.id, test_fail_match.group("suite_name"), test_fail_match.group("test_name"))
++        return None, None
++
++
+ class Test(Harness):
+     RUN_PASSED = "PROJECT EXECUTION SUCCESSFUL"
+     RUN_FAILED = "PROJECT EXECUTION FAILED"
+diff --git a/scripts/pylib/twister/twisterlib/testinstance.py b/scripts/pylib/twister/twisterlib/testinstance.py
+index e0182b871e..f69efd59ea 100644
+--- a/scripts/pylib/twister/twisterlib/testinstance.py
++++ b/scripts/pylib/twister/twisterlib/testinstance.py
+@@ -28,6 +28,8 @@ class TestInstance:
+         out directory used is <outdir>/<platform>/<test case name>
+     """
+ 
++    __test__ = False
++
+     def __init__(self, testsuite, platform, outdir):
+ 
+         self.testsuite = testsuite
+@@ -127,7 +129,7 @@ class TestInstance:
+     def testsuite_runnable(testsuite, fixtures):
+         can_run = False
+         # console harness allows us to run the test and capture data.
+-        if testsuite.harness in [ 'console', 'ztest', 'pytest', 'test']:
++        if testsuite.harness in [ 'console', 'ztest', 'pytest', 'test', 'gtest']:
+             can_run = True
+             # if we have a fixture that is also being supplied on the
+             # command-line, then we need to run the test, not just build it.
+diff --git a/scripts/tests/twister/test_harness.py b/scripts/tests/twister/test_harness.py
+new file mode 100644
+index 0000000000..a33d6431ab
+--- /dev/null
++++ b/scripts/tests/twister/test_harness.py
+@@ -0,0 +1,249 @@
++#!/usr/bin/env python3
++
++# Copyright(c) 2023 Google LLC
++# SPDX-License-Identifier: Apache-2.0
++
++"""
++This test file contains testsuites for the Harness classes of twister
++"""
++import mock
++import sys
++import os
++import pytest
++
++ZEPHYR_BASE = os.getenv("ZEPHYR_BASE")
++sys.path.insert(0, os.path.join(ZEPHYR_BASE, "scripts/pylib/twister"))
++
++from twisterlib.harness import Gtest
++from twisterlib.testinstance import TestInstance
++
++GTEST_START_STATE = " RUN      "
++GTEST_PASS_STATE = "       OK "
++GTEST_FAIL_STATE = "  FAILED  "
++SAMPLE_GTEST_START = (
++    "[00:00:00.000,000] [0m<inf> label:  [==========] Running all tests.[0m"
++)
++SAMPLE_GTEST_FMT = "[00:00:00.000,000] [0m<inf> label:  [{state}] {suite}.{test}[0m"
++SAMPLE_GTEST_END = (
++    "[00:00:00.000,000] [0m<inf> label:  [==========] Done running all tests.[0m"
++)
++
++
++def process_logs(harness, logs):
++    for line in logs:
++        harness.handle(line)
++
++
++@pytest.fixture
++def gtest():
++    mock_platform = mock.Mock()
++    mock_platform.name = "mock_platform"
++    mock_testsuite = mock.Mock()
++    mock_testsuite.name = "mock_testsuite"
++    mock_testsuite.id = "id"
++    mock_testsuite.testcases = []
++    instance = TestInstance(testsuite=mock_testsuite, platform=mock_platform, outdir="")
++
++    harness = Gtest()
++    harness.configure(instance)
++    return harness
++
++
++def test_gtest_start_test_no_suites_detected(gtest):
++    process_logs(gtest, [SAMPLE_GTEST_START])
++    assert len(gtest.detected_suite_names) == 0
++    assert gtest.state is None
++
++
++def test_gtest_start_test(gtest):
++    process_logs(
++        gtest,
++        [
++            SAMPLE_GTEST_START,
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_START_STATE, suite="suite_name", test="test_name"
++            ),
++        ],
++    )
++    assert gtest.state is None
++    assert len(gtest.detected_suite_names) == 1
++    assert gtest.detected_suite_names[0] == "suite_name"
++    assert gtest.instance.get_case_by_name("id.suite_name.test_name") is not None
++    assert (
++        gtest.instance.get_case_by_name("id.suite_name.test_name").status == "started"
++    )
++
++
++def test_gtest_pass(gtest):
++    process_logs(
++        gtest,
++        [
++            SAMPLE_GTEST_START,
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_START_STATE, suite="suite_name", test="test_name"
++            ),
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_PASS_STATE, suite="suite_name", test="test_name"
++            ),
++        ],
++    )
++    assert gtest.state is None
++    assert len(gtest.detected_suite_names) == 1
++    assert gtest.detected_suite_names[0] == "suite_name"
++    assert gtest.instance.get_case_by_name("id.suite_name.test_name") is not None
++    assert gtest.instance.get_case_by_name("id.suite_name.test_name").status == "passed"
++
++
++def test_gtest_failed(gtest):
++    process_logs(
++        gtest,
++        [
++            SAMPLE_GTEST_START,
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_START_STATE, suite="suite_name", test="test_name"
++            ),
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_FAIL_STATE, suite="suite_name", test="test_name"
++            ),
++        ],
++    )
++    assert gtest.state is None
++    assert len(gtest.detected_suite_names) == 1
++    assert gtest.detected_suite_names[0] == "suite_name"
++    assert gtest.instance.get_case_by_name("id.suite_name.test_name") is not None
++    assert gtest.instance.get_case_by_name("id.suite_name.test_name").status == "failed"
++
++
++def test_gtest_all_pass(gtest):
++    process_logs(
++        gtest,
++        [
++            SAMPLE_GTEST_START,
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_START_STATE, suite="suite_name", test="test_name"
++            ),
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_PASS_STATE, suite="suite_name", test="test_name"
++            ),
++            SAMPLE_GTEST_END,
++        ],
++    )
++    assert gtest.state == "passed"
++    assert len(gtest.detected_suite_names) == 1
++    assert gtest.detected_suite_names[0] == "suite_name"
++    assert gtest.instance.get_case_by_name("id.suite_name.test_name") is not None
++    assert gtest.instance.get_case_by_name("id.suite_name.test_name").status == "passed"
++
++
++def test_gtest_one_fail(gtest):
++    process_logs(
++        gtest,
++        [
++            SAMPLE_GTEST_START,
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_START_STATE, suite="suite_name", test="test0"
++            ),
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_PASS_STATE, suite="suite_name", test="test0"
++            ),
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_START_STATE, suite="suite_name", test="test1"
++            ),
++            SAMPLE_GTEST_FMT.format(
++                state=GTEST_FAIL_STATE, suite="suite_name", test="test1"
++            ),
++            SAMPLE_GTEST_END,
++        ],
++    )
++    assert gtest.state == "failed"
++    assert len(gtest.detected_suite_names) == 1
++    assert gtest.detected_suite_names[0] == "suite_name"
++    assert gtest.instance.get_case_by_name("id.suite_name.test0") is not None
++    assert gtest.instance.get_case_by_name("id.suite_name.test0").status == "passed"
++    assert gtest.instance.get_case_by_name("id.suite_name.test1") is not None
++    assert gtest.instance.get_case_by_name("id.suite_name.test1").status == "failed"
++
++
++def test_gtest_missing_result(gtest):
++    with pytest.raises(
++        AssertionError,
++        match=r"gTest error, id.suite_name.test0 didn't finish",
++    ):
++        process_logs(
++            gtest,
++            [
++                SAMPLE_GTEST_START,
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_START_STATE, suite="suite_name", test="test0"
++                ),
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_START_STATE, suite="suite_name", test="test1"
++                ),
++            ],
++        )
++
++
++def test_gtest_mismatch_result(gtest):
++    with pytest.raises(
++        AssertionError,
++        match=r"gTest error, mismatched tests. Expected id.suite_name.test0 but got None",
++    ):
++        process_logs(
++            gtest,
++            [
++                SAMPLE_GTEST_START,
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_START_STATE, suite="suite_name", test="test0"
++                ),
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_PASS_STATE, suite="suite_name", test="test1"
++                ),
++            ],
++        )
++
++
++def test_gtest_repeated_result(gtest):
++    with pytest.raises(
++        AssertionError,
++        match=r"gTest error, mismatched tests. Expected id.suite_name.test1 but got id.suite_name.test0",
++    ):
++        process_logs(
++            gtest,
++            [
++                SAMPLE_GTEST_START,
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_START_STATE, suite="suite_name", test="test0"
++                ),
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_PASS_STATE, suite="suite_name", test="test0"
++                ),
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_START_STATE, suite="suite_name", test="test1"
++                ),
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_PASS_STATE, suite="suite_name", test="test0"
++                ),
++            ],
++        )
++
++
++def test_gtest_repeated_run(gtest):
++    with pytest.raises(
++        AssertionError,
++        match=r"gTest error, id.suite_name.test0 running twice",
++    ):
++        process_logs(
++            gtest,
++            [
++                SAMPLE_GTEST_START,
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_START_STATE, suite="suite_name", test="test0"
++                ),
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_PASS_STATE, suite="suite_name", test="test0"
++                ),
++                SAMPLE_GTEST_FMT.format(
++                    state=GTEST_START_STATE, suite="suite_name", test="test0"
++                ),
++            ],
++        )
+-- 
+2.41.0
+

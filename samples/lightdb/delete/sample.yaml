@@ -4,6 +4,7 @@ sample:
 common:
   harness: pytest
   tags: golioth lightdb socket goliothd
+  timeout: 180
 tests:
   sample.golioth.lightdb_delete:
     platform_allow: >

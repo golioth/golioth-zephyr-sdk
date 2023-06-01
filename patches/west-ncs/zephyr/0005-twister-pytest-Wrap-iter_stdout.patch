@@ -1,0 +1,166 @@
+From 27b78086c1625601098c69541184e8bb3b23480e Mon Sep 17 00:00:00 2001
+From: Grzegorz Chwierut <grzegorz.chwierut@nordicsemi.no>
+Date: Wed, 31 May 2023 16:36:42 +0200
+Subject: [PATCH] twister: pytest: Wrap iter_stdout
+
+Added waiting for prompt instead of calling time.sleep,
+to fix issue with longer setting up platforms with TF-M
+enabled. Wrapped iter_stdout generator, to avoid issues
+when generator is created and called multiple times
+in test scenarios.
+Fixes: #58747
+
+Signed-off-by: Grzegorz Chwierut <grzegorz.chwierut@nordicsemi.no>
+---
+ .../twister_harness/device/device_abstract.py | 39 +++++++------------
+ .../device/hardware_adapter.py                |  4 +-
+ .../twister_harness/device/qemu_adapter.py    | 15 ++++---
+ .../device/simulator_adapter.py               |  4 +-
+ 4 files changed, 28 insertions(+), 34 deletions(-)
+
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_abstract.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_abstract.py
+index 13db01d48c..5f2086bb86 100644
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_abstract.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_abstract.py
+@@ -25,6 +25,7 @@ class DeviceAbstract(abc.ABC):
+         self.device_config: DeviceConfig = device_config
+         self.handler_log_file: LogFile = NullLogFile.create()
+         self.device_log_file: LogFile = NullLogFile.create()
++        self.iter_object: Generator[str, None, None] | None = None
+ 
+     def __repr__(self) -> str:
+         return f'{self.__class__.__name__}()'
+@@ -55,11 +56,6 @@ class DeviceAbstract(abc.ABC):
+         :param timeout: time out in seconds
+         """
+ 
+-    @property
+-    @abc.abstractmethod
+-    def iter_stdout(self) -> Generator[str, None, None]:
+-        """Iterate stdout from a device."""
+-
+     @abc.abstractmethod
+     def write(self, data: bytes) -> None:
+         """Write data bytes to device"""
+@@ -73,22 +69,17 @@ class DeviceAbstract(abc.ABC):
+     def stop(self) -> None:
+         """Stop device."""
+ 
+-    # @abc.abstractmethod
+-    # def read(self, size=1) -> None:
+-    #     """Read size bytes from device"""
+-
+-    # def read_until(self, expected, size=None):
+-    #     """Read until an expected bytes sequence is found"""
+-    #     lenterm = len(expected)
+-    #     line = bytearray()
+-    #     while True:
+-    #         c = self.read(1)
+-    #         if c:
+-    #             line += c
+-    #             if line[-lenterm:] == expected:
+-    #                 break
+-    #             if size is not None and len(line) >= size:
+-    #                 break
+-    #         else:
+-    #             break
+-    #     return bytes(line)
++    @abc.abstractmethod
++    def iter_stdout_lines(self) -> Generator[str, None, None]:
++        """A generator that yields lines read from device"""
++
++    @property
++    def iter_stdout(self) -> Generator[str, None, None]:
++        """
++        Get generator object to iterate stdout from a device.
++        This wrapper method is added to avoid problems, when
++        user creates an instance of generator multiple times.
++        """
++        if not self.iter_object:
++            self.iter_object = self.iter_stdout_lines()
++        return self.iter_object
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/hardware_adapter.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/hardware_adapter.py
+index e0d34f9f01..f97eb73e72 100644
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/hardware_adapter.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/hardware_adapter.py
+@@ -201,8 +201,7 @@ class HardwareAdapter(DeviceAbstract):
+             if self.device_config.post_flash_script:
+                 self.run_custom_script(self.device_config.post_flash_script, 30)
+ 
+-    @property
+-    def iter_stdout(self) -> Generator[str, None, None]:
++    def iter_stdout_lines(self) -> Generator[str, None, None]:
+         """Return output from serial."""
+         if not self.connection:
+             return
+@@ -212,6 +211,7 @@ class HardwareAdapter(DeviceAbstract):
+             stream = self.connection.readline()
+             self.handler_log_file.handle(data=stream)
+             yield stream.decode(errors='ignore').strip()
++        self.iter_object = None
+ 
+     def write(self, data: bytes) -> None:
+         """Write data to serial"""
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/qemu_adapter.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/qemu_adapter.py
+index 4c649b9e2e..117d1f8a41 100755
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/qemu_adapter.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/qemu_adapter.py
+@@ -145,12 +145,11 @@ class QemuAdapter(DeviceAbstract):
+             logger.error(msg)
+             raise TwisterHarnessException(msg)
+ 
+-    @property
+-    def iter_stdout(self) -> Generator[str, None, None]:
++    def iter_stdout_lines(self) -> Generator[str, None, None]:
+         if not self.connection:
+             return
+-        # fifo file can be not create yet, so we need to wait for a while
+-        self._wait_for_fifo()
++        if not self.connection.is_open:
++            self._wait_for_fifo()
+ 
+         # create unblocking reading from fifo file
+         q: Queue = Queue()
+@@ -184,11 +183,15 @@ class QemuAdapter(DeviceAbstract):
+             pass
+         finally:
+             t.join(1)
++            self.iter_object = None
+ 
+     def write(self, data: bytes) -> None:
+         """Write data to serial"""
+-        if self.connection:
+-            self.connection.write(data)
++        if not self.connection:
++            return
++        if not self.connection.is_open:
++            self._wait_for_fifo()
++        self.connection.write(data)
+ 
+     def initialize_log_files(self):
+         self.handler_log_file = HandlerLogFile.create(build_dir=self.device_config.build_dir)
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/simulator_adapter.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/simulator_adapter.py
+index 558e206adf..dda769a618 100755
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/simulator_adapter.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/simulator_adapter.py
+@@ -166,8 +166,7 @@ class SimulatorAdapterBase(DeviceAbstract, abc.ABC):
+         if self._exc:
+             raise self._exc
+ 
+-    @property
+-    def iter_stdout(self) -> Generator[str, None, None]:
++    def iter_stdout_lines(self) -> Generator[str, None, None]:
+         """Return output from serial."""
+         while True:
+             stream = self.queue.get()
+@@ -177,6 +176,7 @@ class SimulatorAdapterBase(DeviceAbstract, abc.ABC):
+             self.handler_log_file.handle(data=stream + '\n')
+             yield stream
+             self.queue.task_done()
++        self.iter_object = None
+ 
+     def write(self, data: bytes) -> None:
+         """Write data to serial"""
+-- 
+2.41.0
+

@@ -10,18 +10,46 @@ import os
 from pathlib import Path
 import re
 import subprocess
+from typing import Generator, Type
 
 from golioth import Artifact, Client, LogEntry, LogsMonitor, Project, Release
 from imgtool.image import Image, VerifyResult
 import pytest
 import trio
 
+from twister_harness.device.device_abstract import DeviceAbstract
+from twister_harness.device.factory import DeviceFactory
+from twister_harness.twister_harness_config import DeviceConfig, TwisterHarnessConfig
+
+from build_info import BuildInfo
+
 
 # This is the same as using the @pytest.mark.anyio on all test functions in the module
 pytestmark = pytest.mark.anyio
 
 
-PROJECT_NAME = Path(__file__).parents[1].name
+@pytest.fixture(scope='session')
+def dut(request: pytest.FixtureRequest) -> Generator[DeviceAbstract, None, None]:
+    """Return device instance."""
+    twister_harness_config: TwisterHarnessConfig = request.config.twister_harness_config  # type: ignore
+    device_config: DeviceConfig = twister_harness_config.devices[0]
+    device_type = device_config.type
+
+    device_class: Type[DeviceAbstract] = DeviceFactory.get_device(device_type)
+
+    device = device_class(device_config)
+
+    try:
+        device.generate_command()
+        device.initialize_log_files()
+        device.flash_and_run()
+        device.connect()
+        yield device
+    except KeyboardInterrupt:
+        pass
+    finally:  # to make sure we close all running processes after user broke execution
+        device.disconnect()
+        device.stop()
 
 
 @pytest.fixture(scope='session')
@@ -82,24 +110,15 @@ class Firmware:
         return '.'.join([str(x) for x in version_bin[:3]])
 
 
-def create_dummy_firmware_sysbuild(running_dir: Path, version: str) -> Path:
-    new_fw_path = running_dir / "new-firmware.bin"
+def create_dummy_firmware_sysbuild(build: BuildInfo, version: str) -> Path:
+    new_fw_path = build.path / "new-firmware.bin"
 
     logging.info("Extracting signature file")
-    cmake = subprocess.run(["cmake", "-LA", "-N", str(running_dir)],
-                           stdout=subprocess.PIPE,
-                           check=True)
-    key_file_match = re.search(rb'mcuboot_(?:espressif_)?' + \
-                               rb'CONFIG_BOOT_SIGNATURE_KEY_FILE[^=]*="(.*)"',
-                               cmake.stdout)
-    if not key_file_match:
-        raise RuntimeError("Key file could not be extracted")
-
-    key_file = key_file_match[1].decode()
+    key_file = build.conf['CONFIG_MCUBOOT_SIGNATURE_KEY_FILE']
 
     logging.info("Creating dummy firmware %s", str(new_fw_path))
     cmd = ["west", "sign",
-           "-d", str(running_dir / PROJECT_NAME),
+           "-d", str(build.path),
            "-t", "imgtool",
            "--no-hex",
            "-B", str(new_fw_path),
@@ -115,31 +134,25 @@ def create_dummy_firmware_sysbuild(running_dir: Path, version: str) -> Path:
     return new_fw_path
 
 
-def create_dummy_firmware_ncs(running_dir: Path, version: str) -> Path:
+def create_dummy_firmware_ncs(build: BuildInfo, version: str) -> Path:
     logging.info("Replacing mcuboot version")
 
-    config_path = running_dir / "zephyr" / ".config"
+    config_path = build.path / "zephyr" / ".config"
     config_old = config_path.read_text()
     config_new = re.sub(f'CONFIG_MCUBOOT_IMAGE_VERSION=.*',
                         f'CONFIG_MCUBOOT_IMAGE_VERSION="{version}"',
                         config_old)
     config_path.write_text(config_new)
 
-    cmd = ["west", "build", "-d", str(running_dir)]
+    cmd = ["west", "build", "-d", str(build.path)]
     logging.info("Running %s", cmd)
     subprocess.run(cmd, check=True)
 
-    return running_dir / "zephyr" / "app_update.bin"
+    return build.path / "zephyr" / "app_update.bin"
 
 
-def create_dummy_firmware(running_dir: Path, version: str) -> Path:
-    if (running_dir / "pm.config").is_file():
-        return create_dummy_firmware_ncs(running_dir, version)
-
-    if (running_dir / PROJECT_NAME).is_dir():
-        return create_dummy_firmware_sysbuild(running_dir, version)
-
-    raise RuntimeError("Unsupported build directory structure")
+def create_dummy_firmware(build: BuildInfo, version: str) -> Path:
+    return eval(f'create_dummy_firmware_{build.variant}')(build, version)
 
 
 @asynccontextmanager
@@ -174,12 +187,12 @@ async def temp_release_with_artifact(project: Project, firmware: Firmware):
             yield release
 
 
-async def test_dfu(cmdopt, initial_timeout, project, diagnostics):
+async def test_dfu(build_info: BuildInfo, initial_timeout, project, diagnostics, dut: DeviceAbstract):
     # Wait 2s to be (almost) sure that logs will show updated firmware version
     # TODO: register on logs 2s from the past, so that sleep won't be needed
     await trio.sleep(2)
 
-    firmware = Firmware(create_dummy_firmware(Path(cmdopt), '2.0.0'))
+    firmware = Firmware(create_dummy_firmware(build_info, '2.0.0'))
     async with temp_release_with_artifact(project, firmware):
         log = await diagnostics.expect(initial_timeout, 'DOWNLOADING')
         assert log.metadata['target'] == firmware.version, 'Incorrect target version'
