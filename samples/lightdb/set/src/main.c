@@ -68,7 +68,7 @@ static void counter_set_sync(int counter)
 	LOG_DBG("Counter successfully set");
 }
 
-void main(void)
+int main(void)
 {
 	int counter = 0;
 
@@ -102,4 +102,6 @@ void main(void)
 		counter++;
 		k_sleep(K_SECONDS(5));
 	}
+
+	return 0;
 }

@@ -61,7 +61,7 @@ static void counter_get_sync(struct golioth_client *client)
 	LOG_HEXDUMP_INF(value, len, "Counter (sync)");
 }
 
-void main(void)
+int main(void)
 {
 	LOG_DBG("Start LightDB get sample");
 
@@ -87,4 +87,6 @@ void main(void)
 
 		k_sleep(K_SECONDS(5));
 	}
+
+	return 0;
 }

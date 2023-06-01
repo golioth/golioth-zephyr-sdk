@@ -120,7 +120,7 @@ static void temperature_push_sync(const struct sensor_value *temp)
 	LOG_DBG("Temperature successfully pushed");
 }
 
-void main(void)
+int main(void)
 {
 	struct sensor_value temp;
 	int err;
@@ -163,4 +163,6 @@ void main(void)
 
 		k_sleep(K_SECONDS(5));
 	}
+
+	return 0;
 }

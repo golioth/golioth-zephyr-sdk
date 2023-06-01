@@ -50,7 +50,7 @@ static void golioth_on_connect(struct golioth_client *client)
 	}
 }
 
-void main(void)
+int main(void)
 {
 	int counter = 0;
 	int err;
@@ -81,4 +81,6 @@ void main(void)
 		++counter;
 		k_sleep(K_SECONDS(_loop_delay_s));
 	}
+
+	return 0;
 }

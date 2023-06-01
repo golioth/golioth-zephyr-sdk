@@ -56,7 +56,7 @@ static void counter_delete_sync(struct golioth_client *client)
 	LOG_DBG("Counter deleted successfully");
 }
 
-void main(void)
+int main(void)
 {
 	LOG_DBG("Start LightDB delete sample");
 
@@ -82,4 +82,6 @@ void main(void)
 
 		k_sleep(K_SECONDS(5));
 	}
+
+	return 0;
 }

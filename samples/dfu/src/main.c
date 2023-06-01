@@ -158,7 +158,7 @@ static void golioth_on_connect(struct golioth_client *client)
 	}
 }
 
-void main(void)
+int main(void)
 {
 	int err;
 
@@ -233,7 +233,7 @@ void main(void)
 	err = boot_request_upgrade(BOOT_UPGRADE_TEST);
 	if (err) {
 		LOG_ERR("Failed to request upgrade: %d", err);
-		return;
+		return err;
 	}
 
 	LOG_INF("Rebooting in %d second(s)", REBOOT_DELAY_SEC);
@@ -244,4 +244,6 @@ void main(void)
 	k_sleep(K_SECONDS(REBOOT_DELAY_SEC));
 
 	sys_reboot(SYS_REBOOT_COLD);
+
+	return 0;
 }

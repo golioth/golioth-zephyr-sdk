@@ -49,7 +49,7 @@ static void golioth_on_connect(struct golioth_client *client)
 	}
 }
 
-void main(void)
+int main(void)
 {
 	LOG_DBG("Start RPC sample");
 
@@ -69,4 +69,6 @@ void main(void)
 	while (true) {
 		k_sleep(K_SECONDS(5));
 	}
+
+	return 0;
 }
