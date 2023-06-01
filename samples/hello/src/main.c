@@ -20,7 +20,7 @@ static void golioth_on_connect(struct golioth_client *client)
 	k_sem_give(&connected);
 }
 
-void main(void)
+int main(void)
 {
 	int counter = 0;
 	int err;
@@ -46,4 +46,6 @@ void main(void)
 		++counter;
 		k_sleep(K_SECONDS(5));
 	}
+
+	return 0;
 }

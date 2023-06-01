@@ -30,7 +30,7 @@ static void func_2(int counter)
 	LOG_DBG("Log 2: %d", counter);
 }
 
-void main(void)
+int main(void)
 {
 	int counter = 0;
 
@@ -57,4 +57,6 @@ void main(void)
 
 		k_sleep(K_SECONDS(5));
 	}
+
+	return 0;
 }
