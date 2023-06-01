@@ -4,6 +4,7 @@ sample:
 common:
   harness: pytest
   tags: golioth socket goliothd
+  timeout: 600
 tests:
   sample.golioth.dfu.build_only:
     build_only: true
