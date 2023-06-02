@@ -10,6 +10,7 @@ zephyr_library_sources_ifdef(CONFIG_GOLIOTH_FW fw.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_RPC rpc.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_SETTINGS settings.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_SYSTEM_CLIENT system_client.c)
+zephyr_library_sources_ifdef(CONFIG_ZCBOR zcbor_utils.c)
 
 if(CONFIG_GOLIOTH_AUTH_METHOD_CERT)
   set(path ${CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH})
