@@ -85,7 +85,7 @@ Golioth Services
 - `LightDB Stream`_
 - `Logging`_
 - `OTA`_
-- `CoAP Authentication`_
+- `Authentication`_
 
 Device matrix
 *************
@@ -176,4 +176,4 @@ During release testing, all boards and services are verified using sample applic
 .. _LightDB Stream: https://docs.golioth.io/reference/protocols/coap/lightdb-stream
 .. _Logging: https://docs.golioth.io/reference/protocols/coap/logging
 .. _OTA: https://docs.golioth.io/reference/protocols/coap/ota
-.. _CoAP Authentication: https://docs.golioth.io/reference/protocols/coap/auth
+.. _Authentication: https://docs.golioth.io/firmware/zephyr-device-sdk/authentication
