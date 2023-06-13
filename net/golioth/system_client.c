@@ -31,16 +31,10 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #define TLS_PSK			""
 #endif
 
-#ifdef CONFIG_MBEDTLS_PSK_MAX_LEN
-#define PSK_MAX_LEN		CONFIG_MBEDTLS_PSK_MAX_LEN
+#if defined(CONFIG_MBEDTLS_BUILTIN) && defined(CONFIG_MBEDTLS_PSK_MAX_LEN) && \
+	!defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
 BUILD_ASSERT(sizeof(TLS_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
 	     "PSK exceeds mbedTLS configured maximum PSK length");
-#else
-/*
- * Support NCS mirror of Zephyr, which does not have CONFIG_MBEDTLS_PSK_MAX_LEN
- * defined yet.
- */
-#define PSK_MAX_LEN		64
 #endif
 
 static const uint8_t tls_ca_crt[] = {
@@ -481,9 +475,9 @@ void golioth_system_client_stop(void)
  * credentials are stored. This means that we need to allocate memory for
  * credentials ourselves.
  */
-static uint8_t golioth_dtls_psk[PSK_MAX_LEN];
+static uint8_t golioth_dtls_psk[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_MAX_LEN];
 static size_t golioth_dtls_psk_len;
-static uint8_t golioth_dtls_psk_id[64];
+static uint8_t golioth_dtls_psk_id[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID_MAX_LEN];
 static size_t golioth_dtls_psk_id_len;
 
 static void golioth_settings_check_credentials(void)
