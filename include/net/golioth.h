@@ -7,10 +7,6 @@
 #ifndef GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 #define GOLIOTH_INCLUDE_NET_GOLIOTH_H_
 
-#include <net/golioth/lightdb.h>
-#include <net/golioth/rpc.h>
-#include <net/golioth/settings.h>
-#include <net/golioth/stream.h>
 #include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/coap.h>
@@ -35,6 +31,11 @@ enum golioth_content_format {
 	GOLIOTH_CONTENT_FORMAT_APP_JSON = COAP_CONTENT_FORMAT_APP_JSON,
 	GOLIOTH_CONTENT_FORMAT_APP_CBOR = COAP_CONTENT_FORMAT_APP_CBOR,
 };
+
+#include <net/golioth/lightdb.h>
+#include <net/golioth/rpc.h>
+#include <net/golioth/settings.h>
+#include <net/golioth/stream.h>
 
 /**
  * @brief (D)TLS credentials of Golioth client.
