@@ -36,6 +36,10 @@ enum golioth_content_format {
 	GOLIOTH_CONTENT_FORMAT_APP_CBOR = COAP_CONTENT_FORMAT_APP_CBOR,
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief (D)TLS credentials of Golioth client.
  */
@@ -232,5 +236,9 @@ void golioth_poll_prepare(struct golioth_client *client, int64_t now,
 			  int *fd, int64_t *timeout);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_H_ */

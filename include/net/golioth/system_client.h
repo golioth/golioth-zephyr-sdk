@@ -9,6 +9,10 @@
 
 #include <net/golioth.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern struct golioth_client _golioth_system_client;
 
 /**
@@ -33,5 +37,9 @@ void golioth_system_client_stop(void);
 #define GOLIOTH_SYSTEM_CLIENT_GET()	(&_golioth_system_client)
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_SYSTEM_CLIENT_H_ */
