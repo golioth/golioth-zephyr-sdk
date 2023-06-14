@@ -267,20 +267,6 @@ config GOLIOTH_SYSTEM_CLIENT_CA_PATH
 
 	  Absolute path or relative to application root directory (APPLICATION_SOURCE_DIR).
 
-config GOLIOTH_SYSTEM_CLIENT_CRT_PATH
-	string "Public certificate path"
-	help
-	  Path to client's public certificate.
-
-	  Must be in DER (binary) format.
-
-config GOLIOTH_SYSTEM_CLIENT_KEY_PATH
-	string "Private key path"
-	help
-	  Path to client's private key.
-
-	  Must be in DER (binary) format.
-
 endif # GOLIOTH_AUTH_METHOD_CERT
 
 module = GOLIOTH_SYSTEM_CLIENT

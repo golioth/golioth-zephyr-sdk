@@ -11,6 +11,34 @@ menuconfig GOLIOTH_SAMPLES_COMMON
 
 if GOLIOTH_SAMPLES_COMMON
 
+config GOLIOTH_SAMPLE_HARDCODED_CREDENTIALS
+	bool "Hardcoded credentials"
+	default y
+	help
+	  Use hardcoded credentials in samples
+
+if GOLIOTH_SAMPLE_HARDCODED_CREDENTIALS
+
+if GOLIOTH_AUTH_METHOD_CERT
+
+config GOLIOTH_SAMPLE_HARDCODED_CRT_PATH
+	string "Public certificate path"
+	help
+	  Path to client's public certificate.
+
+	  Must be in DER (binary) format.
+
+config GOLIOTH_SAMPLE_HARDCODED_KEY_PATH
+	string "Private key path"
+	help
+	  Path to client's private key.
+
+	  Must be in DER (binary) format.
+
+endif # GOLIOTH_AUTH_METHOD_CERT
+
+endif # GOLIOTH_SAMPLE_HARDCODED_CREDENTIALS
+
 config GOLIOTH_SAMPLE_DHCP_BIND
 	bool "DHCP for samples"
 	depends on NET_L2_ETHERNET

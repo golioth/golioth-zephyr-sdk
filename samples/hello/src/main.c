@@ -8,6 +8,7 @@
 LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 #include <net/golioth/system_client.h>
+#include <samples/common/hardcoded_credentials.h>
 #include <samples/common/net_connect.h>
 #include <zephyr/net/coap.h>
 
@@ -30,6 +31,12 @@ int main(void)
 	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
 		net_connect();
 	}
+
+	/* Note: In production, you would provision unique credentials onto each
+	 * device. For simplicity, we provide a utility to hardcode credentials as
+	 * kconfig options in the samples.
+	 */
+	hardcoded_credentials_set();
 
 	client->on_connect = golioth_on_connect;
 	golioth_system_client_start();

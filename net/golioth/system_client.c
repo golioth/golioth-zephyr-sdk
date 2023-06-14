@@ -51,18 +51,6 @@ static const uint8_t tls_ca_crt[] = {
 #endif
 };
 
-static const uint8_t tls_client_crt[] = {
-#if defined(CONFIG_GOLIOTH_SYSTEM_CLIENT_CRT_PATH)
-#include "golioth-systemclient-crt.inc"
-#endif
-};
-
-static const uint8_t tls_client_key[] = {
-#if defined(CONFIG_GOLIOTH_SYSTEM_CLIENT_KEY_PATH)
-#include "golioth-systemclient-key.inc"
-#endif
-};
-
 #if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
 static void golioth_settings_check_credentials(void);
 #else
@@ -141,8 +129,8 @@ static bool golioth_psk_is_valid(const uint8_t *psk, size_t psk_len)
 	return (psk_len > 0);
 }
 
-static int golioth_check_credentials(const uint8_t *psk_id, size_t psk_id_len,
-				     const char *psk, size_t psk_len)
+static int golioth_check_psk_credentials(const uint8_t *psk_id, size_t psk_id_len,
+					 const char *psk, size_t psk_len)
 {
 	int err = 0;
 
@@ -159,12 +147,38 @@ static int golioth_check_credentials(const uint8_t *psk_id, size_t psk_id_len,
 	return err;
 }
 
+static int golioth_check_cert_credentials(void)
+{
+	size_t cred_len = 0;
+	int err = tls_credential_get(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				     TLS_CREDENTIAL_SERVER_CERTIFICATE, NULL, &cred_len);
+	if (err == -ENOENT) {
+		LOG_WRN("Certificate authentication configured, but no client certificate found");
+		goto finish;
+	}
+
+	err = tls_credential_get(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_PRIVATE_KEY, NULL, &cred_len);
+	if (err == -ENOENT) {
+		LOG_WRN("Certificate authentication configured, but no private key found");
+		goto finish;
+	}
+
+	if (err == -EFBIG) {
+		/* EFBIG is expected, because we pass in a zero-length, NULL buffer */
+		err = 0;
+	}
+
+finish:
+	return err;
+}
+
 static int init_tls_auth_psk(void)
 {
 	int err;
 
-	err = golioth_check_credentials(TLS_PSK_ID, sizeof(TLS_PSK_ID) - 1,
-					TLS_PSK, sizeof(TLS_PSK) - 1);
+	err = golioth_check_psk_credentials(TLS_PSK_ID, sizeof(TLS_PSK_ID) - 1,
+					    TLS_PSK, sizeof(TLS_PSK) - 1);
 	if (err) {
 		return err;
 	}
@@ -199,22 +213,6 @@ static int init_tls_auth_cert(void)
 				 tls_ca_crt, ARRAY_SIZE(tls_ca_crt));
 	if (err < 0) {
 		LOG_ERR("Failed to register CA cert: %d", err);
-		return err;
-	}
-
-	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
-				 TLS_CREDENTIAL_SERVER_CERTIFICATE,
-				 tls_client_crt, ARRAY_SIZE(tls_client_crt));
-	if (err < 0) {
-		LOG_ERR("Failed to register server cert: %d", err);
-		return err;
-	}
-
-	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
-				 TLS_CREDENTIAL_PRIVATE_KEY,
-				 tls_client_key, ARRAY_SIZE(tls_client_key));
-	if (err < 0) {
-		LOG_ERR("Failed to register private key: %d", err);
 		return err;
 	}
 
@@ -454,11 +452,19 @@ K_THREAD_DEFINE(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_STACK_SIZE,
 
 void golioth_system_client_start(void)
 {
+	int err = 0;
 	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_PSK)) {
 		golioth_settings_check_credentials();
+	} else if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_CERT)) {
+		err = golioth_check_cert_credentials();
 	}
 
-	k_sem_give(&sys_client_started);
+	if (err == 0) {
+		k_sem_give(&sys_client_started);
+	} else {
+		LOG_WRN("Error loading TLS credentials, golioth system client was not started");
+	}
+
 }
 
 void golioth_system_client_stop(void)
@@ -484,8 +490,8 @@ static size_t golioth_dtls_psk_id_len;
 
 static void golioth_settings_check_credentials(void)
 {
-	golioth_check_credentials(golioth_dtls_psk_id, golioth_dtls_psk_id_len,
-				  golioth_dtls_psk, golioth_dtls_psk_len);
+	golioth_check_psk_credentials(golioth_dtls_psk_id, golioth_dtls_psk_id_len,
+				      golioth_dtls_psk, golioth_dtls_psk_len);
 }
 
 static int golioth_settings_get(const char *name, char *dst, int val_len_max)
