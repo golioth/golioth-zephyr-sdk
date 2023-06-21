@@ -66,12 +66,15 @@ jobs:
     runs-on: [self-hosted, has_twister_nrf52840dk]
 
     container:
-      image: zephyrprojectrtos/ci:v0.26.4
+      image: us-central1-docker.pkg.dev/golioth-common/hil/golioth-zephyr@sha256:94c25569f4617858432a55f9a964d852333e3eda92023d0885973398bf9c7b14
       volumes:
         - /dev:/dev
         - /opt/nrf-command-line-tools:/opt/nrf-command-line-tools
         - /opt/SEGGER/JLink:/opt/SEGGER/JLink
       options: --privileged
+      credentials:
+        username: _json_key_base64
+        password: ${{ secrets.HIL_IMAGE_PULL_SA }}
 
     env:
       ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.1
