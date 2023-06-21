@@ -102,7 +102,8 @@ static int on_rpc(struct golioth_req_rsp *rsp)
 	for (int i = 0; i < client->rpc.num_methods; i++) {
 		const struct golioth_rpc_method *method = &client->rpc.methods[i];
 
-		if (strncmp(method->name, method_buf.ptr, method_buf.len) == 0) {
+		if (strlen(method->name) == method_buf.len &&
+		    strncmp(method->name, method_buf.ptr, method_buf.len) == 0) {
 			matching_method = method;
 			break;
 		}
