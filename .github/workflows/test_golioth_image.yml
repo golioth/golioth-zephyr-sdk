@@ -1,0 +1,52 @@
+name: Test Golioth Image
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+
+  img_test:
+    runs-on: [self-hosted, has_twister_nrf52840dk]
+
+    container:
+      image: us-central1-docker.pkg.dev/golioth-common/hil/golioth-zephyr@sha256:94c25569f4617858432a55f9a964d852333e3eda92023d0885973398bf9c7b14
+      volumes:
+        - /dev:/dev
+      options: --privileged
+      credentials:
+        username: _json_key_base64
+        password: ${{ secrets.HIL_IMAGE_PULL_SA }}
+
+    env:
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.1
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: modules/lib/golioth
+
+      - name: Check devices
+        run: |
+          ls -lah
+          which nrfjprog
+          ls -lah /dev/serial/by-id
+
+          nrfjprog -i
+
+      - name: Test build
+        run: |
+          mkdir -p .west
+          cat <<EOF > .west/config
+          [manifest]
+          path = modules/lib/golioth
+          file = .ci-west-zephyr.yml
+          EOF
+          ls -lah
+
+          cd modules/lib/golioth/samples/hello
+          west build -b esp32 .
