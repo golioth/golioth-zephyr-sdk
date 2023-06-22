@@ -26,7 +26,7 @@ async def cli():
         # succeed, but unfortunately sometimes data is missing.
         await trio.sleep(0.5)
 
-        lightdb_path = f'test/get/{json_file.name}'
+        lightdb_path = f'test/get/{json_file.stem}'
         print(f'Setting content of {lightdb_path}')
         await device.lightdb.set(lightdb_path, json_file.read_text())
 
