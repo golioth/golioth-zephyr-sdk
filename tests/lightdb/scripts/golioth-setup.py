@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import os
 from pathlib import Path
 
@@ -27,9 +28,11 @@ async def cli():
         await trio.sleep(0.5)
 
         lightdb_path = f'test/get/{json_file.stem}'
-        print(f'Setting content of {lightdb_path}')
-        await device.lightdb.set(lightdb_path, json_file.read_text())
 
+        with json_file.open('r') as json_fp:
+            value = json.load(json_fp)
+            print(f'Setting content of {lightdb_path}')
+            await device.lightdb.set(lightdb_path, value)
 
 if __name__ == '__main__':
     cli(_anyio_backend='trio')
