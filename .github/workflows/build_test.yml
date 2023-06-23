@@ -69,5 +69,4 @@ jobs:
           name: twister-artifacts
           path: |
             reports/*
-            twister-out/**/build.log
-            twister-out/**/handler.log
+            twister-out/**/*.log
