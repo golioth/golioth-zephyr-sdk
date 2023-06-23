@@ -1,6 +1,7 @@
 manifest:
   self:
     path: modules/lib/golioth
+    west-commands: scripts/west-commands.yml
     import:
       file: west-zephyr.yml
       name-allowlist:
@@ -16,3 +17,6 @@ manifest:
         - tinycrypt
         - zcbor
         - zephyr
+    userdata:
+      patches_dirs:
+        - patches/west-zephyr
