@@ -105,8 +105,7 @@ pre-commit:
     when: always
     paths:
       - reports/*
-      - twister-out/**/build.log
-      - twister-out/**/handler.log
+      - twister-out/**/*.log
     reports:
       junit: reports/twister.xml
 
