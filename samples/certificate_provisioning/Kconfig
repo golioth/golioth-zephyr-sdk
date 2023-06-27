@@ -1,0 +1,9 @@
+# Copyright (c) 2023 Golioth, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Golioth application options"
+
+config NET_BUF_TX_COUNT
+	default 32 if GOLIOTH_AUTH_METHOD_CERT && WIFI_ESP_AT
+
+source "Kconfig.zephyr"
