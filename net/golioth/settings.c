@@ -143,6 +143,11 @@ static int settings_decode(zcbor_state_t *zsd, void *value)
 	struct zcbor_string label;
 	bool ok;
 
+	if (zcbor_nil_expect(zsd, NULL)) {
+		/* No settings are set */
+		return -ENOENT;
+	}
+
 	ok = zcbor_map_start_decode(zsd);
 	if (!ok) {
 		LOG_WRN("Did not start CBOR list correctly");
@@ -273,6 +278,10 @@ static int on_setting(struct golioth_req_rsp *rsp)
 
 	err = zcbor_map_decode(zsd, map_entries, ARRAY_SIZE(map_entries));
 	if (err) {
+		if (err == -ENOENT) {
+			return 0;
+		}
+
 		LOG_ERR("Failed to parse tstr map");
 		return err;
 	}
