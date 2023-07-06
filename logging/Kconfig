@@ -7,7 +7,7 @@
 config LOG_BACKEND_GOLIOTH
 	bool "Golioth logging backend"
 	depends on LOG
-	depends on !LOG_IMMEDIATE
+	depends on !LOG_MODE_IMMEDIATE
 	depends on GOLIOTH
 	select LOG_OUTPUT
 	select ZCBOR
