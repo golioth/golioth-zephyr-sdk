@@ -7,7 +7,7 @@
 #ifndef __APP_FLASH_H__
 #define __APP_FLASH_H__
 
-#ifdef CONFIG_BOOTLOADER_MCUBOOT
+#ifdef CONFIG_BOOTLOADER_MCUBOOT_COMPATIBLE
 
 #include <zephyr/dfu/flash_img.h>
 #include <zephyr/dfu/mcuboot.h>
@@ -17,7 +17,7 @@ int flash_img_prepare(struct flash_img_context *flash);
 
 extern char current_version_str[sizeof("255.255.65535")];
 
-#else /* CONFIG_BOOTLOADER_MCUBOOT */
+#else /* CONFIG_BOOTLOADER_MCUBOOT_COMPATIBLE */
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -60,6 +60,6 @@ static inline int boot_write_img_confirmed(void)
 
 static char current_version_str[sizeof("255.255.65535")] = "1.0.0";
 
-#endif /* CONFIG_BOOTLOADER_MCUBOOT */
+#endif /* CONFIG_BOOTLOADER_MCUBOOT_COMPATIBLE */
 
 #endif /* __APP_FLASH_H__ */

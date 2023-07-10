@@ -16,4 +16,20 @@ config GOLIOTH_SAMPLE_SETTINGS_SHELL
 
 endif # SETTINGS
 
+config BOOTLOADER_MCUBOOT_COMPATIBLE
+	bool
+	default y if BOOTLOADER_MCUBOOT || BOOTLOADER_NATIVE_SIM
+
+config BOOTLOADER_NATIVE_SIM
+	bool "Native Simulator bootloader support"
+	default y
+
+config MCUBOOT_EXTRA_IMGTOOL_ARGS
+	string "Extra arguments to pass to imgtool when signing"
+	default ""
+	help
+	  When signing (CONFIG_MCUBOOT_SIGNATURE_KEY_FILE is a non-empty
+	  string) you can use this option to pass extra options to
+	  imgtool.  For example, you could set this to "--version 1.2".
+
 source "Kconfig.zephyr"

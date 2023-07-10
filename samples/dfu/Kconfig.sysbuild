@@ -16,6 +16,9 @@ choice BOOTLOADER
 		"$(BOARD)" = "esp32s3_devkitm" || \
 		"$(BOARD)" = "olimex_esp32_evb" || \
 		"$(BOARD)" = "xiao_esp32c3"
+	# Native Simulator
+	default BOOTLOADER_MCUBOOT_NATIVE_SIM if \
+		"$(BOARD)" = "native_sim"
 	# Select Zephyr port of MCUboot for all other cases.
 	default BOOTLOADER_MCUBOOT
 
@@ -29,6 +32,12 @@ config BOOTLOADER_MCUBOOT_ESPRESSIF
 	bool "MCUboot (Espressif port)"
 	help
 	  Include MCUboot (Espressif port) as the bootloader to use
+
+config BOOTLOADER_MCUBOOT_NATIVE_SIM
+	bool "MCUboot (Native Simulator fake bootloader)"
+	depends on "$(BOARD)" = "native_sim"
+	help
+	  Include MCUboot (Native Simulator fake) as the bootloader to use
 
 endchoice
 
@@ -68,4 +77,4 @@ config BOOT_SIGNATURE_KEY_FILE
 	help
 	  Absolute path to key file to use with MCUBoot.
 
-endif
+endif # BOOTLOADER_MCUBOOT_ESPRESSIF

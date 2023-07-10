@@ -1,0 +1,70 @@
+# Copyright (c) 2023 Golioth, Inc.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "MCUboot (Native Simulator fake bootloader)"
+
+config MCUBOOT_NATIVE_SIM_SIGNED_APPLICATION_EXE
+	string "Application executable"
+	help
+	  Path to application executable, which will be invoked by fake MCUboot
+	  bootloader.
+
+config BOOT_USE_MBEDTLS
+	bool
+	default n
+	help
+	  Use mbedTLS for crypto primitives.
+
+config BOOT_USE_TINYCRYPT
+	bool
+	default n
+	help
+	  Use TinyCrypt for crypto primitives.
+
+choice BOOT_SIGNATURE_TYPE
+	prompt "Signature type"
+	default BOOT_SIGNATURE_TYPE_RSA
+
+config BOOT_SIGNATURE_TYPE_NONE
+	bool "No signature; use only hash check"
+
+config BOOT_SIGNATURE_TYPE_RSA
+	bool "RSA signatures"
+	select BOOT_USE_MBEDTLS
+
+if BOOT_SIGNATURE_TYPE_RSA
+config BOOT_SIGNATURE_TYPE_RSA_LEN
+	int "RSA signature length"
+	range 2048 3072
+	default 2048
+endif
+
+config BOOT_SIGNATURE_TYPE_ECDSA_P256
+	bool "Elliptic curve digital signatures with curve P-256"
+	select BOOT_USE_TINYCRYPT
+
+config BOOT_SIGNATURE_TYPE_ED25519
+	bool "Edwards curve digital signatures using ed25519"
+	select BOOT_USE_TINYCRYPT
+
+endchoice
+
+config BOOT_SIGNATURE_KEY_FILE
+	string "PEM key file"
+	default "root-ec-p256.pem" if BOOT_SIGNATURE_TYPE_ECDSA_P256
+	default "root-ed25519.pem" if BOOT_SIGNATURE_TYPE_ED25519
+	default "root-rsa-3072.pem" if BOOT_SIGNATURE_TYPE_RSA && BOOT_SIGNATURE_TYPE_RSA_LEN=3072
+	default "root-rsa-2048.pem" if BOOT_SIGNATURE_TYPE_RSA && BOOT_SIGNATURE_TYPE_RSA_LEN=2048
+	default ""
+	help
+	  You can use either absolute or relative path.
+	  In case relative path is used, the build system assumes that it starts
+	  from the directory where the MCUBoot KConfig configuration file is
+	  located. If the key file is not there, the build system uses relative
+	  path that starts from the MCUBoot repository root directory.
+	  The key file will be parsed by imgtool's getpub command and a .c source
+	  with the public key information will be written in a format expected by
+	  MCUboot.
+
+source "Kconfig.zephyr"

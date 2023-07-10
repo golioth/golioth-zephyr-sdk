@@ -40,3 +40,17 @@ if(SB_CONFIG_BOOTLOADER_MCUBOOT_ESPRESSIF)
 
   set(IMAGES "mcuboot_espressif" "${app_name}")
 endif()
+
+if(SB_CONFIG_BOOTLOADER_MCUBOOT_NATIVE_SIM)
+  set(mcuboot_native_sim_CONFIG_MCUBOOT_NATIVE_SIM_SIGNED_APPLICATION_EXE
+    \"${CMAKE_CURRENT_BINARY_DIR}/${app_name}/zephyr/zephyr.signed.exe\" CACHE STRING
+    "Path to application executable" FORCE
+  )
+
+  ExternalZephyrProject_Add(
+    APPLICATION mcuboot_native_sim
+    SOURCE_DIR ${ZEPHYR_GOLIOTH_MODULE_DIR}/bootloader/mcuboot_native_sim
+  )
+
+  set(IMAGES "mcuboot_native_sim" "${app_name}")
+endif()
