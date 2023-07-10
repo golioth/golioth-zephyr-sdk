@@ -247,3 +247,11 @@ int main(void)
 
 	return 0;
 }
+
+void posix_exit(int exit_code);
+
+void sys_arch_reboot(int type)
+{
+	posix_print_warning("Reboot request %d, ignoring\n", type);
+	posix_exit(0);
+}
