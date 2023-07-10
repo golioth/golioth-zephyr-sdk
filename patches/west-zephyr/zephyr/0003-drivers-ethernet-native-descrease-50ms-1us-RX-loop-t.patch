@@ -1,0 +1,29 @@
+From 9505ea6b04033a0416b466c3da548996ad1be214 Mon Sep 17 00:00:00 2001
+From: Marcin Niestroj <m.niestroj@emb.dev>
+Date: Fri, 7 Jul 2023 18:32:02 +0200
+Subject: [PATCH] drivers: ethernet: native: descrease 50ms -> 1us RX loop
+ timeout
+
+This will lower latencies for high-traffic ethernet applications.
+
+Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
+---
+ drivers/ethernet/eth_native_posix.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/ethernet/eth_native_posix.c b/drivers/ethernet/eth_native_posix.c
+index 44915b4ffc..a64d74d77b 100644
+--- a/drivers/ethernet/eth_native_posix.c
++++ b/drivers/ethernet/eth_native_posix.c
+@@ -379,7 +379,7 @@ static void eth_rx(struct eth_context *ctx)
+ 		if (IS_ENABLED(CONFIG_NET_GPTP)) {
+ 			k_sleep(K_MSEC(1));
+ 		} else {
+-			k_sleep(K_MSEC(50));
++			k_sleep(K_USEC(1));
+ 		}
+ 	}
+ }
+-- 
+2.41.0
+
