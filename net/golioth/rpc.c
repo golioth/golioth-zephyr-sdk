@@ -125,7 +125,7 @@ static int rpc_find_and_call(struct golioth_client *client,
 						 zse,
 						 matching_method->callback_arg);
 
-	ok = zcbor_list_end_encode(zse, SIZE_MAX);
+	ok = zcbor_map_end_encode(zse, SIZE_MAX);
 	if (!ok) {
 		LOG_ERR("Failed to close '%s'", "detail");
 		return -ENOMEM;
