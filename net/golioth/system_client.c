@@ -475,9 +475,9 @@ void golioth_system_client_stop(void)
  * credentials are stored. This means that we need to allocate memory for
  * credentials ourselves.
  */
-static uint8_t golioth_dtls_psk[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_MAX_LEN];
+static uint8_t golioth_dtls_psk[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_MAX_LEN + 1];
 static size_t golioth_dtls_psk_len;
-static uint8_t golioth_dtls_psk_id[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID_MAX_LEN];
+static uint8_t golioth_dtls_psk_id[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID_MAX_LEN + 1];
 static size_t golioth_dtls_psk_id_len;
 
 static void golioth_settings_check_credentials(void)
@@ -550,6 +550,12 @@ static int golioth_settings_set(const char *name, size_t len_rd,
 	if (ret < 0) {
 		LOG_ERR("Failed to read value: %d", (int) ret);
 		return ret;
+	}
+
+	if (ret >= buffer_len) {
+		LOG_ERR("Configured %s does not fit into (%zu bytes) static buffer!",
+			name, buffer_len - 1);
+		return -ENOMEM;
 	}
 
 	*value_len = ret;
