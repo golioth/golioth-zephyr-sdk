@@ -36,11 +36,9 @@ static inline bool zcbor_list_or_map_end(zcbor_state_t *state)
 {
 	if (state->indefinite_length_array) {
 		return *state->payload == 0xff;
-	} else {
-		return state->elem_count == 0;
 	}
 
-	return false;
+	return state->elem_count == 0;
 }
 
 int zcbor_map_int64_decode(zcbor_state_t *zsd, void *value);
