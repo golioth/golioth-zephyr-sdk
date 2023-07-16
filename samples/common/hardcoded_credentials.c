@@ -22,6 +22,24 @@ static const uint8_t tls_client_key[] = {
 #endif
 };
 
+#if defined(CONFIG_GOLIOTH_SAMPLE_HARDCODED_PSK_ID)
+#define HARDCODED_PSK_ID CONFIG_GOLIOTH_SAMPLE_HARDCODED_PSK_ID
+#else
+#define HARDCODED_PSK_ID ""
+#endif
+
+#if defined(CONFIG_GOLIOTH_SAMPLE_HARDCODED_PSK)
+#define HARDCODED_PSK CONFIG_GOLIOTH_SAMPLE_HARDCODED_PSK
+#else
+#define HARDCODED_PSK ""
+#endif
+
+
+#if defined(CONFIG_MBEDTLS_PSK_MAX_LEN) && defined(CONFIG_GOLIOTH_AUTH_METHOD_PSK)
+BUILD_ASSERT(sizeof(CONFIG_GOLIOTH_SAMPLE_HARDCODED_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
+	     "PSK exceeds mbedTLS configured maximum PSK length");
+#endif
+
 static int hardcoded_credentials_init(void)
 {
 	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_CERT)) {
@@ -38,6 +56,21 @@ static int hardcoded_credentials_init(void)
 		if (err < 0) {
 			LOG_ERR("Failed to register private key: %d", err);
 		}
+	} else if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_PSK)) {
+		int err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+					 TLS_CREDENTIAL_PSK,
+					 HARDCODED_PSK, sizeof(HARDCODED_PSK) - 1);
+		if (err < 0) {
+			LOG_ERR("Failed to register PSK: %d", err);
+		}
+
+		err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+					 TLS_CREDENTIAL_PSK_ID,
+					 HARDCODED_PSK_ID, sizeof(HARDCODED_PSK_ID) - 1);
+		if (err < 0) {
+			LOG_ERR("Failed to register PSK ID: %d", err);
+		}
+
 	}
 
 	return 0;

@@ -25,8 +25,8 @@ environment variables:
 .. code-block:: shell
 
    export GOLIOTH_SYSTEM_SERVER_HOST="192.0.2.2"
-   export GOLIOTH_SYSTEM_CLIENT_PSK_ID="my-psk-id"
-   export GOLIOTH_SYSTEM_CLIENT_PSK="my-psk"
+   export GOLIOTH_SAMPLE_HARDCODED_PSK_ID="my-psk-id"
+   export GOLIOTH_SAMPLE_HARDCODED_PSK="my-psk"
 
 Run ``twister``:
 

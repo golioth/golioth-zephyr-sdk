@@ -117,14 +117,14 @@ pre-commit:
 # - GOLIOTH_SYSTEM_SERVER_HOST: used to setup 'golioth' Python script (in this job script) and by device firmware
 # - GOLIOTH_SYSTEM_SERVER_API_PORT: used to setup 'golioth' Python script (in this job script)
 #
-# - GOLIOTH_SYSTEM_CLIENT_PSK_ID: used by device firmware
-# - GOLIOTH_SYSTEM_CLIENT_PSK: used by device firmware
+# - GOLIOTH_SAMPLE_HARDCODED_PSK_ID: used by device firmware
+# - GOLIOTH_SAMPLE_HARDCODED_PSK: used by device firmware
 #
 # It is also assumed that a self-hosted goliothd is used and there is no authentication required by
 # 'golioth' Python script at api URL http://${GOLIOTH_SYSTEM_SERVER_HOST}:${GOLIOTH_SYSTEM_SERVER_API_PORT}.
 #
 # Project with id ${GOLIOTH_PROJECT_ID} needs to exist and device with ${GOLIOTH_DEVICE_NAME} name
-# needs to be provisioned with ${GOLIOTH_SYSTEM_CLIENT_PSK_ID} and ${GOLIOTH_SYSTEM_CLIENT_PSK} as
+# needs to be provisioned with ${GOLIOTH_SAMPLE_HARDCODED_PSK_ID} and ${GOLIOTH_SAMPLE_HARDCODED_PSK} as
 # DTLS credentials.
 #
 twister-qemu-goliothd:

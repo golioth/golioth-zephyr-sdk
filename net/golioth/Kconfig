@@ -248,22 +248,6 @@ config GOLIOTH_SYSTEM_SERVER_PORT
 	help
 	  Defines port number of Golioth server.
 
-if GOLIOTH_AUTH_METHOD_PSK
-
-config GOLIOTH_SYSTEM_CLIENT_PSK_ID
-	string "PSK ID"
-	depends on !GOLIOTH_SYSTEM_SETTINGS
-	help
-	  Defines PSK ID used during DTLS handshake with Golioth server.
-
-config GOLIOTH_SYSTEM_CLIENT_PSK
-	string "PSK"
-	depends on !GOLIOTH_SYSTEM_SETTINGS
-	help
-	  Defines PSK used during DTLS handshake with Golioth server.
-
-endif # GOLIOTH_AUTH_METHOD_PSK
-
 if GOLIOTH_AUTH_METHOD_CERT
 
 config GOLIOTH_SYSTEM_CLIENT_CA_PATH
