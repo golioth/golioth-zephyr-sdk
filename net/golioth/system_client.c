@@ -19,24 +19,6 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 
 #define RX_BUFFER_SIZE		CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 
-#ifdef CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID
-#define TLS_PSK_ID		CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID
-#else
-#define TLS_PSK_ID		""
-#endif
-
-#ifdef CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK
-#define TLS_PSK			CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK
-#else
-#define TLS_PSK			""
-#endif
-
-#if defined(CONFIG_MBEDTLS_BUILTIN) && defined(CONFIG_MBEDTLS_PSK_MAX_LEN) && \
-	!defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
-BUILD_ASSERT(sizeof(TLS_PSK) - 1 <= CONFIG_MBEDTLS_PSK_MAX_LEN,
-	     "PSK exceeds mbedTLS configured maximum PSK length");
-#endif
-
 static const uint8_t tls_ca_crt[] = {
 #if defined(CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH)
 #include "golioth-systemclient-ca.inc"
@@ -165,37 +147,6 @@ finish:
 	return err;
 }
 
-static int init_tls_auth_psk(void)
-{
-	int err;
-
-	err = golioth_check_psk_credentials(TLS_PSK_ID, sizeof(TLS_PSK_ID) - 1,
-					    TLS_PSK, sizeof(TLS_PSK) - 1);
-	if (err) {
-		return err;
-	}
-
-	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
-				 TLS_CREDENTIAL_PSK,
-				 TLS_PSK,
-				 sizeof(TLS_PSK) - 1);
-	if (err < 0) {
-		LOG_ERR("Failed to register PSK: %d", err);
-		return err;
-	}
-
-	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
-				 TLS_CREDENTIAL_PSK_ID,
-				 TLS_PSK_ID,
-				 sizeof(TLS_PSK_ID) - 1);
-	if (err < 0) {
-		LOG_ERR("Failed to register PSK ID: %d", err);
-		return err;
-	}
-
-	return 0;
-}
-
 static int init_tls_auth_cert(void)
 {
 	int err;
@@ -213,9 +164,7 @@ static int init_tls_auth_cert(void)
 
 static int init_tls(void)
 {
-	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_PSK)) {
-		return init_tls_auth_psk();
-	} else if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_CERT)) {
+	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_CERT)) {
 		return init_tls_auth_cert();
 	}
 
