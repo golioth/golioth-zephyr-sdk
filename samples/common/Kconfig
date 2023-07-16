@@ -105,7 +105,6 @@ config GOLIOTH_SAMPLE_WIFI
 
 config GOLIOTH_SAMPLE_WIFI_SETTINGS
 	bool "Load SSID and PSK from settigs subsystem"
-	default y if GOLIOTH_SYSTEM_SETTINGS
 	depends on GOLIOTH_SAMPLE_WIFI
 	depends on SETTINGS
 	help
