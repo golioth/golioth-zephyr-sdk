@@ -7,6 +7,7 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(golioth_hardcoded_credentials, LOG_LEVEL_DBG);
 
+#include <zephyr/init.h>
 #include <zephyr/net/tls_credentials.h>
 
 static const uint8_t tls_client_crt[] = {
@@ -21,7 +22,7 @@ static const uint8_t tls_client_key[] = {
 #endif
 };
 
-void hardcoded_credentials_set(void)
+static int hardcoded_credentials_init(void)
 {
 	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_CERT)) {
 		int err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
@@ -38,4 +39,8 @@ void hardcoded_credentials_set(void)
 			LOG_ERR("Failed to register private key: %d", err);
 		}
 	}
+
+	return 0;
 }
+
+SYS_INIT(hardcoded_credentials_init, APPLICATION, CONFIG_GOLIOTH_SYSTEM_CLIENT_INIT_PRIORITY);

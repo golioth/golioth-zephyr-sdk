@@ -8,7 +8,6 @@
 LOG_MODULE_REGISTER(golioth_hello, LOG_LEVEL_DBG);
 
 #include <net/golioth/system_client.h>
-#include <samples/common/hardcoded_credentials.h>
 #include <samples/common/net_connect.h>
 #include <zephyr/net/coap.h>
 #include <zephyr/device.h>
