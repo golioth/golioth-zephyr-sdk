@@ -28,6 +28,11 @@ void golioth_system_client_start(void);
 void golioth_system_client_stop(void);
 
 /**
+ * @brief Restart Golioth system client
+ */
+void golioth_system_client_request_reconnect(void);
+
+/**
  * @brief Get pointer to Golioth system client instance
  */
 #define GOLIOTH_SYSTEM_CLIENT_GET()	(&_golioth_system_client)
