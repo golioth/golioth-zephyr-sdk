@@ -68,8 +68,18 @@ config GOLIOTH_SAMPLE_NRF91_LTE_MONITOR
 	help
 	  LTE Link Control events monitor for nRF91.
 
+config GOLIOTH_SAMPLE_PSK_SETTINGS
+	bool "Load credentials from persistent settings"
+	default y if !GOLIOTH_SAMPLE_HARDCODED_CREDENTIALS
+	depends on GOLIOTH_AUTH_METHOD_PSK
+	depends on SETTINGS
+	help
+	  When selected, Golioth credentials will be loaded from settings
+	  subsystem.
+
 config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
 	bool "Automatically load settings before main()"
+	default y if GOLIOTH_SAMPLE_PSK_SETTINGS
 	depends on SETTINGS
 	help
 	  Load settings automatically before running main() function. Enable it,
@@ -77,6 +87,7 @@ config GOLIOTH_SAMPLE_SETTINGS_AUTOLOAD
 
 config GOLIOTH_SAMPLE_SETTINGS_SHELL
 	bool "Settings shell"
+	default y if GOLIOTH_SAMPLE_PSK_SETTINGS
 	depends on SHELL
 	depends on SETTINGS
 	depends on !SETTINGS_SHELL

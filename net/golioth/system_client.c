@@ -14,8 +14,8 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #include <zephyr/net/socket.h>
 #include <zephyr/net/tls_credentials.h>
 #include <zephyr/posix/sys/eventfd.h>
-#include <zephyr/settings/settings.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/util.h>
 
 #define RX_BUFFER_SIZE		CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
 
@@ -24,12 +24,6 @@ static const uint8_t tls_ca_crt[] = {
 #include "golioth-systemclient-ca.inc"
 #endif
 };
-
-#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
-static void golioth_settings_check_credentials(void);
-#else
-static inline void golioth_settings_check_credentials(void) {}
-#endif
 
 #define PING_INTERVAL		(CONFIG_GOLIOTH_SYSTEM_CLIENT_PING_INTERVAL_SEC * 1000)
 #define RECV_TIMEOUT		(CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_TIMEOUT_SEC * 1000)
@@ -57,13 +51,6 @@ enum {
 };
 
 static atomic_t flags;
-
-static inline void client_request_reconnect(void)
-{
-	if (!atomic_test_and_set_bit(&flags, FLAG_RECONNECT)) {
-		eventfd_write(fds[POLLFD_EVENT].fd, 1);
-	}
-}
 
 static inline void client_notify_timeout(void)
 {
@@ -103,19 +90,46 @@ static bool golioth_psk_is_valid(const uint8_t *psk, size_t psk_len)
 	return (psk_len > 0);
 }
 
-static int golioth_check_psk_credentials(const uint8_t *psk_id, size_t psk_id_len,
-					 const char *psk, size_t psk_len)
+static int golioth_check_psk_credentials(void)
 {
 	int err = 0;
+	uint8_t credential[MAX(CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_MAX_LEN,
+			       CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID_MAX_LEN)];
+	size_t cred_len = CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID_MAX_LEN;
 
-	if (!golioth_psk_id_is_valid(psk_id, psk_id_len)) {
-		LOG_WRN("Configured PSK-ID is invalid");
-		err = -EINVAL;
+	err = tls_credential_get(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_PSK_ID,
+				 credential, &cred_len);
+	if (err < 0) {
+		LOG_WRN("Could not read PSK-ID: %d", err);
+		goto finish;
 	}
 
-	if (!golioth_psk_is_valid(psk, psk_len)) {
+	if (!golioth_psk_id_is_valid(credential, cred_len)) {
+		LOG_WRN("Configured PSK-ID is invalid");
+		err = -EINVAL;
+		goto finish;
+	}
+
+	cred_len = CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_MAX_LEN;
+	err = tls_credential_get(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG,
+				 TLS_CREDENTIAL_PSK,
+				 credential, &cred_len);
+	if (err < 0) {
+		LOG_WRN("Could not read PSK: %d", err);
+		goto finish;
+	}
+
+	if (!golioth_psk_is_valid(credential, cred_len)) {
 		LOG_WRN("Configured PSK is invalid");
 		err = -EINVAL;
+		goto finish;
+	}
+
+finish:
+	/* Assume credentials are valid if we can't access them */
+	if (err == -EACCES) {
+		err = 0;
 	}
 
 	return err;
@@ -220,15 +234,7 @@ static int golioth_system_init(void)
 		return err;
 	}
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SYSTEM_SETTINGS)) {
-		err = settings_subsys_init();
-		if (err) {
-			LOG_ERR("Failed to initialize settings subsystem: %d", err);
-			return err;
-		}
-	} else {
-		init_tls();
-	}
+	init_tls();
 
 	return 0;
 }
@@ -395,7 +401,7 @@ void golioth_system_client_start(void)
 {
 	int err = 0;
 	if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_PSK)) {
-		golioth_settings_check_credentials();
+		err = golioth_check_psk_credentials();
 	} else if (IS_ENABLED(CONFIG_GOLIOTH_AUTH_METHOD_CERT)) {
 		err = golioth_check_cert_credentials();
 	}
@@ -403,7 +409,8 @@ void golioth_system_client_start(void)
 	if (err == 0) {
 		k_sem_give(&sys_client_started);
 	} else {
-		LOG_WRN("Error loading TLS credentials, golioth system client was not started");
+		LOG_WRN("Error loading TLS credentials, golioth system client was not started: %d",
+			err);
 	}
 
 }
@@ -417,132 +424,9 @@ void golioth_system_client_stop(void)
 	}
 }
 
-#if defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS)
-
-/*
- * TLS credentials subsystem just remembers pointers to memory areas where
- * credentials are stored. This means that we need to allocate memory for
- * credentials ourselves.
- */
-static uint8_t golioth_dtls_psk[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_MAX_LEN + 1];
-static size_t golioth_dtls_psk_len;
-static uint8_t golioth_dtls_psk_id[CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK_ID_MAX_LEN + 1];
-static size_t golioth_dtls_psk_id_len;
-
-static void golioth_settings_check_credentials(void)
+void golioth_system_client_request_reconnect(void)
 {
-	golioth_check_psk_credentials(golioth_dtls_psk_id, golioth_dtls_psk_id_len,
-				      golioth_dtls_psk, golioth_dtls_psk_len);
+	if (!atomic_test_and_set_bit(&flags, FLAG_RECONNECT)) {
+		eventfd_write(fds[POLLFD_EVENT].fd, 1);
+	}
 }
-
-static int golioth_settings_get(const char *name, char *dst, int val_len_max)
-{
-	uint8_t *val;
-	size_t val_len;
-
-	if (!strcmp(name, "psk")) {
-		val = golioth_dtls_psk;
-		val_len = strlen(golioth_dtls_psk);
-	} else if (!strcmp(name, "psk-id")) {
-		val = golioth_dtls_psk_id;
-		val_len = strlen(golioth_dtls_psk_id);
-	} else {
-		LOG_WRN("Unsupported key '%s'", name);
-		return -ENOENT;
-	}
-
-	if (val_len > val_len_max) {
-		LOG_ERR("Not enough space (%zu %d)", val_len, val_len_max);
-		return -ENOMEM;
-	}
-
-	memcpy(dst, val, val_len);
-
-	return val_len;
-}
-
-static int golioth_settings_set(const char *name, size_t len_rd,
-				settings_read_cb read_cb, void *cb_arg)
-{
-	enum tls_credential_type type;
-	uint8_t *value;
-	size_t *value_len;
-	size_t buffer_len;
-	ssize_t ret;
-	int err;
-
-	if (!strcmp(name, "psk")) {
-		type = TLS_CREDENTIAL_PSK;
-		value = golioth_dtls_psk;
-		value_len = &golioth_dtls_psk_len;
-		buffer_len = sizeof(golioth_dtls_psk);
-	} else if (!strcmp(name, "psk-id")) {
-		type = TLS_CREDENTIAL_PSK_ID;
-		value = golioth_dtls_psk_id;
-		value_len = &golioth_dtls_psk_id_len;
-		buffer_len = sizeof(golioth_dtls_psk_id);
-	} else {
-		LOG_ERR("Unsupported key '%s'", name);
-		return -ENOTSUP;
-	}
-
-	if (IS_ENABLED(CONFIG_SETTINGS_RUNTIME)) {
-		err = tls_credential_delete(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG, type);
-		if (err && err != -ENOENT) {
-			LOG_ERR("Failed to delete cred %s: %d",
-				name, err);
-			return err;
-		}
-	}
-
-	ret = read_cb(cb_arg, value, buffer_len);
-	if (ret < 0) {
-		LOG_ERR("Failed to read value: %d", (int) ret);
-		return ret;
-	}
-
-	if (ret >= buffer_len) {
-		LOG_ERR("Configured %s does not fit into (%zu bytes) static buffer!",
-			name, buffer_len - 1);
-		return -ENOMEM;
-	}
-
-	*value_len = ret;
-
-	LOG_DBG("Name: %s", name);
-	LOG_HEXDUMP_DBG(value, *value_len, "value");
-
-	switch (type) {
-	case TLS_CREDENTIAL_PSK_ID:
-		if (!golioth_psk_id_is_valid(value, *value_len)) {
-			LOG_WRN("Configured PSK-ID is invalid");
-			return -EINVAL;
-		}
-		break;
-	case TLS_CREDENTIAL_PSK:
-		if (!golioth_psk_is_valid(value, *value_len)) {
-			LOG_WRN("Configured PSK is invalid");
-			return -EINVAL;
-		}
-		break;
-	default:
-		break;
-	}
-
-	err = tls_credential_add(CONFIG_GOLIOTH_SYSTEM_CLIENT_CREDENTIALS_TAG, type,
-				 value, *value_len);
-	if (err) {
-		LOG_ERR("Failed to add cred %s: %d", name, err);
-		return err;
-	}
-
-	client_request_reconnect();
-
-	return 0;
-}
-
-SETTINGS_STATIC_HANDLER_DEFINE(golioth, "golioth",
-	IS_ENABLED(CONFIG_SETTINGS_RUNTIME) ? golioth_settings_get : NULL,
-	golioth_settings_set, NULL, NULL);
-
-#endif /* defined(CONFIG_GOLIOTH_SYSTEM_SETTINGS) */
