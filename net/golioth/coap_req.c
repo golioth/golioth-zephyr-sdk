@@ -226,8 +226,9 @@ static int golioth_coap_req_reply_handler(struct golioth_coap_req *req,
 
 	block2 = coap_get_option_int(response, COAP_OPTION_BLOCK2);
 	if (block2 != -ENOENT) {
-		size_t new_offset;
+		size_t want_offset = req->block_ctx.current;
 		size_t cur_offset;
+		size_t new_offset;
 
 		err = coap_update_from_block(response, &req->block_ctx);
 		if (err) {
@@ -245,6 +246,13 @@ static int golioth_coap_req_reply_handler(struct golioth_coap_req *req,
 		}
 
 		cur_offset = req->block_ctx.current;
+		if (cur_offset < want_offset) {
+			LOG_WRN("Block at %zu already received, ignoring", cur_offset);
+
+			req->block_ctx.current = want_offset;
+
+			return 0;
+		}
 
 		new_offset = coap_next_block_for_option(response, &req->block_ctx,
 							COAP_OPTION_BLOCK2);
