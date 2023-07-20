@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: jorisroovers/gitlint:0.15.1
+      image: jorisroovers/gitlint:0.19.1
 
     steps:
       - uses: actions/checkout@v3
@@ -18,4 +18,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run gitlint
-        run: gitlint --commits origin/main..
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          gitlint --commits origin/main..
