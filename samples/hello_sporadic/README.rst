@@ -1,5 +1,5 @@
 Golioth Hello Sporadic sample
-####################
+#############################
 
 Overview
 ********
