@@ -174,6 +174,6 @@ retrieves it every time that it's updated. The value can be updates as such:
    goliothctl lightdb set <device-name> /counter -b 12
 
 
-.. _Networking with QEMU: https://docs.zephyrproject.org/3.3.0/connectivity/networking/qemu_setup.html
-.. _ESP32: https://docs.zephyrproject.org/3.3.0/boards/xtensa/esp32/doc/index.html
+.. _Networking with QEMU: https://docs.zephyrproject.org/3.4.0/connectivity/networking/qemu_setup.html
+.. _ESP32: https://docs.zephyrproject.org/3.4.0/boards/xtensa/esp32/doc/index.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
