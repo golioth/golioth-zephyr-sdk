@@ -108,7 +108,7 @@ pre-commit:
       - twister-out/**/build.log
       - twister-out/**/handler.log
     reports:
-      junit: reports/twister.xml
+      junit: reports/**/twister.xml
 
 #
 # Job depends on following environment variables:
@@ -166,31 +166,34 @@ twister-qemu-goliothd:
       -T modules/lib/golioth
   artifacts:
     reports:
-      junit: reports/twister_report.xml
+      junit: reports/**/twister_report.xml
 
 twister:
   extends: .twister
   script:
     - west blobs fetch hal_espressif
+    - rm -rf reports twister-out
     # Build and run all non-goliothd samples/tests
     - >
       zephyr/scripts/twister
       --force-color
+      --no-clean
       -e goliothd
       -p esp32
       -p nrf52840dk_nrf52840
       -p qemu_x86
-      -o reports
+      -o reports/non_goliothd
       -T modules/lib/golioth
     # Build-only all goliothd samples/tests
     - >
       zephyr/scripts/twister
       --force-color
+      --no-clean
       -t goliothd -b
       -p esp32
       -p nrf52840dk_nrf52840
       -p qemu_x86
-      -o reports
+      -o reports/goliothd
       -T modules/lib/golioth
 
 twister-ncs:

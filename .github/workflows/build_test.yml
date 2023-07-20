@@ -43,21 +43,23 @@ jobs:
       - name: Run twister (non goliothd)
         run: >
           zephyr/scripts/twister
+          --no-clean
           -e goliothd
           -p esp32
           -p nrf52840dk_nrf52840
           -p qemu_x86
-          -o reports
+          -o reports/non_goliothd
           -T modules/lib/golioth
 
       - name: Run twister (goliothd)
         run: >
           zephyr/scripts/twister
+          --no-clean
           -t goliothd -b
           -p esp32
           -p nrf52840dk_nrf52840
           -p qemu_x86
-          -o reports
+          -o reports/goliothd
           -T modules/lib/golioth
 
       - name: Upload artifacts
