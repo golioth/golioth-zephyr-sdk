@@ -1,6 +1,6 @@
 sample:
-  description: Say Hello to Golioth server
-  name: hello
+  description: Say Hello (sporadically) to Golioth server
+  name: hello_sporadic
 common:
   harness: net
   platform_allow: >
@@ -11,4 +11,4 @@ common:
     qemu_x86
   tags: golioth socket
 tests:
-  sample.golioth.hello: {}
+  sample.golioth.hello_sporadic: {}
