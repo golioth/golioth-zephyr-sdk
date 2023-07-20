@@ -272,7 +272,7 @@ Related documentation:
 - `Signing Binaries`_
 - `Flash map`_
 
-.. _MCUboot: https://docs.zephyrproject.org/3.3.0/services/device_mgmt/dfu.html#mcuboot
-.. _Signing Binaries: https://docs.zephyrproject.org/3.3.0/develop/west/sign.html#west-sign
-.. _Flash map: https://docs.zephyrproject.org/3.3.0/services/storage/flash_map/flash_map.html
+.. _MCUboot: https://docs.zephyrproject.org/3.4.0/services/device_mgmt/dfu.html#mcuboot
+.. _Signing Binaries: https://docs.zephyrproject.org/3.4.0/develop/west/sign.html#west-sign
+.. _Flash map: https://docs.zephyrproject.org/3.4.0/services/storage/flash_map/flash_map.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html

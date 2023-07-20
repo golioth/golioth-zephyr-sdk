@@ -198,6 +198,6 @@ This is how logs are visible
    [2021-04-08 14:20:32 +0000 UTC] level:DEBUG module:"golioth_logging" message:"Log 2: 0" metadata:{fields:{key:"func" value:{string_value:"func_2"}} fields:{key:"index" value:{number_value:8}} fields:{key:"uptime" value:{number_value:100000}}} device_id:"xxxxxxxxxxxxxxxxxxxxxxxx"
    [2021-04-08 14:20:32 +0000 UTC] level:DEBUG module:"golioth_logging" message:"Log 1: 0" metadata:{fields:{key:"func" value:{string_value:"func_1"}} fields:{key:"index" value:{number_value:7}} fields:{key:"uptime" value:{number_value:100000}}} device_id:"xxxxxxxxxxxxxxxxxxxxxxxx"
 
-.. _Networking with QEMU: https://docs.zephyrproject.org/3.3.0/connectivity/networking/qemu_setup.html
-.. _ESP32: https://docs.zephyrproject.org/3.3.0/boards/xtensa/esp32/doc/index.html
+.. _Networking with QEMU: https://docs.zephyrproject.org/3.4.0/connectivity/networking/qemu_setup.html
+.. _ESP32: https://docs.zephyrproject.org/3.4.0/boards/xtensa/esp32/doc/index.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
