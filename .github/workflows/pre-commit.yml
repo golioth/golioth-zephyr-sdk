@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: kiwicom/pre-commit:2.9.3
+      image: kiwicom/pre-commit:3.0.4
 
     steps:
       - uses: actions/checkout@v3
@@ -19,6 +19,7 @@ jobs:
 
       - name: Run pre-commit
         run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
           CODE=0 # run pre-commit
           for CID in `git rev-list --reverse origin/main..`; do
               git show $CID -s --format='    pre-commit %h ("%s")'
