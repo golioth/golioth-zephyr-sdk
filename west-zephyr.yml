@@ -1,18 +1,10 @@
 manifest:
   projects:
     - name: zephyr
-      revision: 6e72e401f26c0bd12f37431f2887212d07ee8319  # v3.4.0+
+      revision: f38e6aa0d17c9bfa4d2d10753b86850b9f5ca54a  # v3.4.0+
       url: https://github.com/zephyrproject-rtos/zephyr
       west-commands: scripts/west-commands.yml
       import: true
-
-    - name: hal_espressif
-      revision: 322f6389e21d08845486b5ebe1a6e5cb077981b8
-      url: https://github.com/zephyrproject-rtos/hal_espressif
-      path: modules/hal/espressif
-      west-commands: west/west-commands.yml
-      groups:
-        - hal
 
   self:
     path: modules/lib/golioth
