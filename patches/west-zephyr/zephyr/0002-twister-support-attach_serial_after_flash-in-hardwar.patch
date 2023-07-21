@@ -30,10 +30,10 @@ Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
  3 files changed, 26 insertions(+), 8 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index 502d2ee865..640340df79 100755
+index 3c5e53b029..a7b2ea9b65 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
-@@ -616,14 +616,15 @@ class DeviceHandler(Handler):
+@@ -617,14 +617,15 @@ class DeviceHandler(Handler):
          if pre_script:
              self.run_custom_script(pre_script, 30)
  
@@ -57,7 +57,7 @@ index 502d2ee865..640340df79 100755
  
          start_time = time.time()
  
-@@ -666,6 +667,16 @@ class DeviceHandler(Handler):
+@@ -667,6 +668,16 @@ class DeviceHandler(Handler):
              self.run_custom_script(post_flash_script, 30)
  
          if not flash_error:
