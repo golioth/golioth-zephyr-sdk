@@ -104,8 +104,10 @@ def create_dummy_firmware_sysbuild(running_dir: Path, version: str) -> Path:
            "--no-hex",
            "-B", str(new_fw_path),
            "--",
-           "--key", key_file,
            "--version", version]
+
+    if key_file:
+        cmd += ["--key", key_file]
 
     logging.info("Signing dummy firmware: %s", cmd)
     subprocess.run(cmd, check=True)
