@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2022-08-04
+### Added
+- asynchronous API for reporting FW state: `golioth_fw_report_state_cb()`
+- new features in Python library for REST API calls
+  - artifacts and releases handling
+  - monitoring of LightDB State and LightDB Stream
+- Kconfig option for RPC maximum response length
+- Kconfig options for maximum PSK-ID and PSK lengths
+- certificate provisioning sample
+
+### Fixed
+- length verification of called RPC method
+- ignoring previously received CoAP blocks (fixes DFU with high-latency networks)
+
+### Changed
+- converted all remaining pytest test scripts from using `goliothctl` to Python library for REST API
+  calls
+- utilize *sysbuild* for DFU sample
+- moved common configuration options from samples' `prj.conf` files to
+  `samples/common/Kconfig.defconfig`
+- reduced default mbedTLS content length with NCS
+- converted `void main()` to `int main()` in all samples
+- moved from QCBOR to zcbor library
+- disabled `MSG_TRUNC` use in `recv()` with offloaded sockets by default (makes it compatible with
+  nRF91 offloaded TLS sockets)
+- moved from `esp32` board to `esp32_devkitc_wroom` (as in Zephyr upstream)
+- refactored certificate generation script and moved to `samples/common/`
+- moved hardcoded (via Kconfig) certificates from Golioth library to samples and renamed from
+  `CONFIG_GOLIOTH_SYSTEM_CLIENT_*_PATH` to `CONFIG_GOLIOTH_SAMPLE_HARDCODED_*_PATH`
+- moved hardcoded (via Kconfig) PSK-ID/PSK credentials from Golioth library to samples and renamed
+  from `CONFIG_GOLIOTH_SYSTEM_CLIENT_PSK*` to `CONFIG_GOLIOTH_SAMPLE_HARDCODED_PSK*`
+- use hardcoded PSK-ID/PSK credentials by default for all samples (DFU and settings samples need to
+  be configured explicitly to use persistent storage) to increase consistency across samples
+- verified with NCS v2.4.0
+- verified with Zephyr v3.4.0+
+
 ## [0.6.0] - 2022-03-17
 ### Added
 - LTE link monitor for nRF91
