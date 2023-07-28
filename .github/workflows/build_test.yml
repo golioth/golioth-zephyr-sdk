@@ -45,7 +45,7 @@ jobs:
           zephyr/scripts/twister
           --no-clean
           -e goliothd
-          -p esp32
+          -p esp32_devkitc_wroom
           -p nrf52840dk_nrf52840
           -p qemu_x86
           -o reports/non_goliothd
@@ -56,7 +56,7 @@ jobs:
           zephyr/scripts/twister
           --no-clean
           -t goliothd -b
-          -p esp32
+          -p esp32_devkitc_wroom
           -p nrf52840dk_nrf52840
           -p qemu_x86
           -o reports/goliothd

@@ -103,7 +103,7 @@ ESP32
 
 Configure the following Kconfig options based on your WiFi AP credentials
 by adding these lines to configuration file (e.g. ``prj.conf`` or
-``board/esp32.conf``):
+``board/esp32_devkitc_wroom.conf``):
 
 .. code-block:: cfg
 
@@ -115,7 +115,7 @@ sample application (i.e., ``samples/settings``) and type:
 
 .. code-block:: console
 
-   $ west build -b esp32 samples/settings
+   $ west build -b esp32_devkitc_wroom samples/settings
    $ west flash
 
 Configure PSK-ID and PSK using the device shell based on your Golioth credentials and reboot:

@@ -56,7 +56,7 @@ Configure the following Kconfig options based on your WiFi AP credentials:
 - GOLIOTH_SAMPLE_WIFI_PSK   - WiFi PSK
 
 by adding these lines to configuration file (e.g. ``prj.conf`` or
-``board/esp32.conf``):
+``board/esp32_devkitc_wroom.conf``):
 
 .. code-block:: cfg
 
@@ -68,7 +68,7 @@ sample application (i.e., ``samples/lightdb_led``) and type:
 
 .. code-block:: console
 
-   $ west build -b esp32 samples/lightdb_led
+   $ west build -b esp32_devkitc_wroom samples/lightdb_led
    $ west flash
 
 See `ESP32`_ for details on how to use ESP32 board.

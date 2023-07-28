@@ -13,7 +13,7 @@ tests:
   sample.golioth.dfu.sysbuild:
     sysbuild: true
     platform_allow: >
-      esp32
+      esp32_devkitc_wroom
       mimxrt1060_evkb
       nrf52840dk_nrf52840
     extra_args:
