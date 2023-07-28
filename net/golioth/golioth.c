@@ -529,11 +529,13 @@ static int golioth_recv(struct golioth_client *client, uint8_t *data,
 
 int golioth_process_rx(struct golioth_client *client)
 {
+	int flags = ZSOCK_MSG_DONTWAIT |
+		(IS_ENABLED(CONFIG_GOLIOTH_RECV_USE_MSG_TRUNC) ? ZSOCK_MSG_TRUNC : 0);
 	int ret;
 	int err;
 
 	ret = golioth_recv(client, client->rx_buffer, client->rx_buffer_len,
-			   ZSOCK_MSG_DONTWAIT | ZSOCK_MSG_TRUNC);
+			   flags);
 	if (ret == -EAGAIN || ret == -EWOULDBLOCK) {
 		/* no pending data */
 		return 0;
