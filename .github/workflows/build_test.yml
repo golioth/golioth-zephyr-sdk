@@ -44,7 +44,7 @@ jobs:
         run: >
           zephyr/scripts/twister
           -e goliothd
-          -p esp32
+          -p esp32_devkitc_wroom
           -p nrf52840dk_nrf52840
           -p qemu_x86
           -o reports
@@ -54,7 +54,7 @@ jobs:
         run: >
           zephyr/scripts/twister
           -t goliothd -b
-          -p esp32
+          -p esp32_devkitc_wroom
           -p nrf52840dk_nrf52840
           -p qemu_x86
           -o reports

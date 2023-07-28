@@ -11,13 +11,13 @@ common:
 tests:
   sample.golioth.hello.psk.fast.default:
     platform_allow: >
-      esp32
+      esp32_devkitc_wroom
       mimxrt1060_evkb
       nrf52840dk_nrf52840
       qemu_x86
   sample.golioth.hello.psk.fast.gcm:
     platform_allow: >
-      esp32
+      esp32_devkitc_wroom
       mimxrt1060_evkb
       nrf52840dk_nrf52840
       qemu_x86
@@ -27,7 +27,7 @@ tests:
       - CONFIG_MBEDTLS_CIPHER_MODE_CBC_ENABLED=n
   sample.golioth.hello.psk.fast.ccm:
     platform_allow: >
-      esp32
+      esp32_devkitc_wroom
       mimxrt1060_evkb
       nrf52840dk_nrf52840
       qemu_x86
@@ -37,7 +37,7 @@ tests:
       - CONFIG_MBEDTLS_CIPHER_MODE_CBC_ENABLED=n
   sample.golioth.hello.psk.fast.cbc:
     platform_allow: >
-      esp32
+      esp32_devkitc_wroom
       mimxrt1060_evkb
       nrf52840dk_nrf52840
       qemu_x86
@@ -47,7 +47,7 @@ tests:
       - CONFIG_MBEDTLS_CIPHER_MODE_CBC_ENABLED=y
   sample.golioth.hello.psk.fast.ccm_8:
     platform_allow: >
-      esp32
+      esp32_devkitc_wroom
       mimxrt1060_evkb
       nrf52840dk_nrf52840
       qemu_x86
