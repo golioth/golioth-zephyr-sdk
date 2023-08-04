@@ -74,4 +74,4 @@ tests:
       - CONFIG_GOLIOTH_AUTH_METHOD_CERT=y
   sample.golioth.hello.psk.runtime.buildonly:
     build_only: true
-    extra_args: OVERLAY_CONFIG="../common/runtime_psk.conf"
+    extra_args: EXTRA_CONF_FILE="../common/runtime_psk.conf"

@@ -54,7 +54,7 @@ file:
 
 .. code-block:: console
 
-   $ west build -- -DOVERLAY_CONFIG=${ZEPHYR_GOLIOTH_MODULE_DIR}/samples/common/runtime_psk.conf
+   $ west build -- -DEXTRA_CONF_FILE=${ZEPHYR_GOLIOTH_MODULE_DIR}/samples/common/runtime_psk.conf
 
 Alternatively, you can add the following options to ``prj.conf``:
 
