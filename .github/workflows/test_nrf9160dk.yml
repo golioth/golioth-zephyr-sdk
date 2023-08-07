@@ -125,6 +125,7 @@ jobs:
         run: |
           cd samples/test
           source $HOME/runner_env.sh
+          nrfjprog --recover -f NRF91 --snr $CI_NRF9160DK_SNR
           nrfjprog --eraseall -f NRF91 --snr $CI_NRF9160DK_SNR
           nrfjprog --program build/zephyr/merged.hex --verify -f NRF91 --snr $CI_NRF9160DK_SNR
           nrfjprog --pinreset -f NRF91 --snr $CI_NRF9160DK_SNR
