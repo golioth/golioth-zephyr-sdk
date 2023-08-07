@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2022-08-04
+## [0.7.0] - 2023-08-07
 ### Added
 - asynchronous API for reporting FW state: `golioth_fw_report_state_cb()`
 - new features in Python library for REST API calls
@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - verified with NCS v2.4.0
 - verified with Zephyr v3.4.0+
 
-## [0.6.0] - 2022-03-17
+## [0.6.0] - 2023-03-17
 ### Added
 - LTE link monitor for nRF91
 
