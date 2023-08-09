@@ -123,6 +123,10 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
 
 	err = zcbor_map_decode(zsd, map_entries, ARRAY_SIZE(map_entries));
 	if (err) {
+		if (payload_len == 1 && payload[0] == 0xa0) {
+			LOG_WRN("No fw release available");
+			return err;
+		}
 		LOG_WRN("Failed to decode desired map");
 		return err;
 	}
