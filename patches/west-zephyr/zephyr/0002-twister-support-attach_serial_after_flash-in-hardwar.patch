@@ -30,7 +30,7 @@ Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
  3 files changed, 26 insertions(+), 8 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index 3c5e53b029..a7b2ea9b65 100755
+index bebbeebd6b..2ef40dbfb3 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
 @@ -617,14 +617,15 @@ class DeviceHandler(Handler):
