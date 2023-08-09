@@ -11,7 +11,7 @@ Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
  1 file changed, 105 insertions(+), 72 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index 9a74cc2cb5..3c5e53b029 100755
+index a89e82b1bb..bebbeebd6b 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
 @@ -333,19 +333,25 @@ class SimulationHandler(BinaryHandler):
