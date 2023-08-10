@@ -123,7 +123,10 @@ int golioth_fw_desired_parse(const uint8_t *payload, uint16_t payload_len,
 
 	err = zcbor_map_decode(zsd, map_entries, ARRAY_SIZE(map_entries));
 	if (err) {
-		LOG_WRN("Failed to decode desired map");
+		if (err != -ENOENT) {
+			LOG_WRN("Failed to decode desired map");
+		}
+
 		return err;
 	}
 
