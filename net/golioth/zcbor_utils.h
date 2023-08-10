@@ -85,6 +85,7 @@ int zcbor_map_tstr_decode(zcbor_state_t *zsd, void *value);
  * @param[in]    num_entries  Number of entries (size of @a entries array)
  *
  * @retval  0       On success
+ * @retval -ENOENT  Map was empty
  * @retval -EBADMSG Failed to parse all map entries
  * @retval <0       Other error returned from @ entries decode callback
  */
