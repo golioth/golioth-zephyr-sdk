@@ -35,6 +35,7 @@
 LOG_MODULE_DECLARE(golioth);
 
 #include "golioth_utils.h"
+#include "zcbor_any_skip_fixed.h"
 
 #define GOLIOTH_RPC_PATH ".rpc"
 #define GOLIOTH_RPC_STATUS_PATH ".rpc/status"

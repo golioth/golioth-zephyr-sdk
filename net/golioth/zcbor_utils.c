@@ -10,6 +10,7 @@ LOG_MODULE_REGISTER(zcbor_utils);
 #include <errno.h>
 
 #include "zcbor_utils.h"
+#include "zcbor_any_skip_fixed.h"
 
 static struct zcbor_map_entry *
 map_entry_get(struct zcbor_map_entry *entries,
