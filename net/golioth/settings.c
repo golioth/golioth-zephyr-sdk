@@ -43,6 +43,7 @@
 LOG_MODULE_DECLARE(golioth);
 
 #include "golioth_utils.h"
+#include "zcbor_any_skip_fixed.h"
 
 #define GOLIOTH_SETTINGS_PATH ".c"
 #define GOLIOTH_SETTINGS_STATUS_PATH ".c/status"
