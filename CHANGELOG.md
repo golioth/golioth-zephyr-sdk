@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2023-08-11
+### Fixed
+- RPC parameter parsing when used with NCS
+- suppressed error logs when no firmware release was rolled out
+
+### Changed
+- verified with NCS v2.4.1
+
 ## [0.7.0] - 2023-08-07
 ### Added
 - asynchronous API for reporting FW state: `golioth_fw_report_state_cb()`
