@@ -53,6 +53,13 @@ int main(void)
 		LOG_ERR("Err: %d", counter);
 		LOG_HEXDUMP_INF(&(uint32_t){sys_cpu_to_le32(counter)}, 4, "Counter hexdump");
 
+		LOG_INF("This is a bunch of filler content.");
+		LOG_INF("Try to stress the logging system and see what happens.");
+		LOG_DBG("Maybe a bunch of debug messages will help replicate the behavior.");
+		LOG_DBG("You never know what is going to trigger the bug you seek.");
+
+		LOG_INF("Sending hello! %d", counter);
+
 		counter++;
 
 		k_sleep(K_SECONDS(5));
