@@ -48,6 +48,58 @@ sample application (i.e. ``samples/certificate_provisioning``) and type:
 
 See `ESP32`_ for details on how to use ESP32 board.
 
+nRF52840 DK + ESP32-WROOM-32
+----------------------------
+
+This subsection documents using nRF52840 DK running Zephyr with offloaded ESP-AT
+WiFi driver and ESP32-WROOM-32 module based board (such as ESP32 DevkitC rev.
+4) running WiFi stack. See `AT Binary Lists`_ for links to ESP-AT binaries and
+details on how to flash ESP-AT image on ESP chip. Flash ESP chip with following
+command:
+
+.. code-block:: console
+
+   esptool.py write_flash --verify 0x0 PATH_TO_ESP_AT/factory/factory_WROOM-32.bin
+
+Connect nRF52840 DK and ESP32-DevKitC V4 (or other ESP32-WROOM-32 based board)
+using wires:
+
+.. table::
+   :widths: auto
+   :align: center
+
+   ===========  ==============  ===============
+   nRF52840 DK  ESP32-WROOM-32  ESP32-WROVER-32
+   ===========  ==============  ===============
+   P1.01 (RX)   IO17 (TX)       IO22 (TX)
+   P1.02 (TX)   IO16 (RX)       IO19 (RX)
+   P1.03 (CTS)  IO14 (RTS)      IO14 (RTS)
+   P1.04 (RTS)  IO15 (CTS)      IO15 (CTS)
+   P1.05        EN              EN
+   GND          GND             GND
+   ===========  ==============  ===============
+
+Configure the following Kconfig options based on your WiFi AP credentials:
+
+- GOLIOTH_SAMPLE_WIFI_SSID - WiFi SSID
+- GOLIOTH_SAMPLE_WIFI_PSK  - WiFi PSK
+
+by adding these lines to configuration file (e.g. ``prj.conf`` or
+``board/nrf52840dk_nrf52840.conf``):
+
+.. code-block:: cfg
+
+   CONFIG_GOLIOTH_SAMPLE_WIFI_SSID="my-wifi"
+   CONFIG_GOLIOTH_SAMPLE_WIFI_PSK="my-psk"
+
+On your host computer open a terminal window, locate the source code of this
+sample application (i.e., ``samples/certificate_provisioning``) and type:
+
+.. code-block:: console
+
+   $ west build -b nrf52840dk_nrf52840 samples/certificate_provisioning
+   $ west flash
+
 nRF9160 DK
 ----------
 
