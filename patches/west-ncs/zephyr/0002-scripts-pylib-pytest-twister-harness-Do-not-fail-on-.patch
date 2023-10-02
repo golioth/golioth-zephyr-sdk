@@ -1,0 +1,34 @@
+From 02d735088023c36afe93f162563d10e7343651d3 Mon Sep 17 00:00:00 2001
+From: Ederson de Souza <ederson.desouza@intel.com>
+Date: Mon, 11 Sep 2023 16:31:17 -0700
+Subject: [PATCH] scripts/pylib/pytest-twister-harness: Do not fail on Unicode
+ garbage
+
+If pylib twister harness reads bytes that can't be decoded to Unicode,
+it would raise an exception at a separate "serial reader" process, that
+would fail without any warning.
+
+This patch uses "errors='replace'" parameter for Python str.decode()
+method, so that this doesn't happen.
+
+Signed-off-by: Ederson de Souza <ederson.desouza@intel.com>
+---
+ .../src/twister_harness/device/device_adapter.py                | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_adapter.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_adapter.py
+index 5fdd7ccc2fa..59be6c52af9 100644
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_adapter.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/device/device_adapter.py
+@@ -203,7 +203,7 @@ class DeviceAdapter(abc.ABC):
+         with open(self.handler_log_path, 'a+') as log_file:
+             while self.is_device_running():
+                 if self.is_device_connected():
+-                    output = self._read_device_output().decode().strip()
++                    output = self._read_device_output().decode(errors='replace').strip()
+                     if output:
+                         self._device_read_queue.put(output)
+                         log_file.write(f'{output}\n')
+-- 
+2.42.0
+

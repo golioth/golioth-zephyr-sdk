@@ -10,7 +10,7 @@ from golioth import Client, Device
 import pytest
 import trio
 
-from twister_harness.device.device_abstract import DeviceAbstract
+from twister_harness.fixtures import DeviceAdapter
 
 
 # This is the same as using the @pytest.mark.anyio on all test functions in the module
@@ -32,7 +32,7 @@ async def counter_set(device: Device, value: int):
     await device.lightdb.set('counter', value)
 
 
-async def test_lightdb_counter_get(initial_timeout, device, dut: DeviceAbstract):
+async def test_lightdb_counter_get(initial_timeout, device, dut: DeviceAdapter):
     magic_value = 8664100
     expected_updates = 5
 

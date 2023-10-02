@@ -38,7 +38,7 @@ def reset(ser):
     wait_for_regex_in_line(ser, 'uart:')
     ser.write('kernel reboot cold\r\n'.encode())
     # Wait for string that prints on next boot
-    wait_for_regex_in_line(ser, 'Booting Zephyr OS')
+    wait_for_regex_in_line(ser, 'Booting (Zephyr|nRF Connect SDK)')
     wait_for_regex_in_line(ser, 'uart:')
 
 def green_print(s):

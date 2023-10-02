@@ -10,16 +10,14 @@ import os
 from pathlib import Path
 import re
 import subprocess
-from typing import Generator, Type
+from typing import Generator
 
 from golioth import Artifact, Client, LogEntry, LogsMonitor, Project, Release
 from imgtool.image import Image, VerifyResult
 import pytest
 import trio
 
-from twister_harness.device.device_abstract import DeviceAbstract
-from twister_harness.device.factory import DeviceFactory
-from twister_harness.twister_harness_config import DeviceConfig, TwisterHarnessConfig
+from twister_harness.fixtures import DeviceAdapter
 
 from build_info import BuildInfo
 
@@ -29,27 +27,15 @@ pytestmark = pytest.mark.anyio
 
 
 @pytest.fixture(scope='session')
-def dut(request: pytest.FixtureRequest) -> Generator[DeviceAbstract, None, None]:
-    """Return device instance."""
-    twister_harness_config: TwisterHarnessConfig = request.config.twister_harness_config  # type: ignore
-    device_config: DeviceConfig = twister_harness_config.devices[0]
-    device_type = device_config.type
-
-    device_class: Type[DeviceAbstract] = DeviceFactory.get_device(device_type)
-
-    device = device_class(device_config)
-
+def dut(request: pytest.FixtureRequest, device_object: DeviceAdapter) -> Generator[DeviceAdapter, None, None]:
+    """Return launched device - with run application."""
+    test_name = request.node.name
+    device_object.initialize_log_files(test_name)
     try:
-        device.generate_command()
-        device.initialize_log_files()
-        device.flash_and_run()
-        device.connect()
-        yield device
-    except KeyboardInterrupt:
-        pass
-    finally:  # to make sure we close all running processes after user broke execution
-        device.disconnect()
-        device.stop()
+        device_object.launch()
+        yield device_object
+    finally:  # to make sure we close all running processes execution
+        device_object.close()
 
 
 @pytest.fixture(scope='session')
@@ -139,8 +125,8 @@ def create_dummy_firmware_ncs(build: BuildInfo, version: str) -> Path:
 
     config_path = build.path / "zephyr" / ".config"
     config_old = config_path.read_text()
-    config_new = re.sub(f'CONFIG_MCUBOOT_IMAGE_VERSION=.*',
-                        f'CONFIG_MCUBOOT_IMAGE_VERSION="{version}"',
+    config_new = re.sub(f'CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=.*',
+                        f'CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION="{version}"',
                         config_old)
     config_path.write_text(config_new)
 
@@ -187,7 +173,7 @@ async def temp_release_with_artifact(project: Project, firmware: Firmware):
             yield release
 
 
-async def test_dfu(build_info: BuildInfo, initial_timeout, project, diagnostics, dut: DeviceAbstract):
+async def test_dfu(build_info: BuildInfo, initial_timeout, project, diagnostics, dut: DeviceAdapter):
     # Wait 2s to be (almost) sure that logs will show updated firmware version
     # TODO: register on logs 2s from the past, so that sleep won't be needed
     await trio.sleep(2)

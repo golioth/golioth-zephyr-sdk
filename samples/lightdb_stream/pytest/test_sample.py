@@ -9,7 +9,7 @@ from golioth import Client, Device
 import pytest
 import trio
 
-from twister_harness.device.device_abstract import DeviceAbstract
+from twister_harness.fixtures import DeviceAdapter
 
 
 # This is the same as using the @pytest.mark.anyio on all test functions in the module
@@ -26,7 +26,7 @@ async def device():
     return await project.device_by_name(os.environ['GOLIOTH_DEVICE_NAME'])
 
 
-async def test_stream_events_received(initial_timeout, device, dut: DeviceAbstract):
+async def test_stream_events_received(initial_timeout, device, dut: DeviceAdapter):
     async with device.stream.monitor() as stream:
         # Allow much more time before first log entry arrives
         timeout = initial_timeout

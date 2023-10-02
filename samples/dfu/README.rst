@@ -113,7 +113,7 @@ from the old firmware:
 
 .. code-block:: console
 
-   $ west build -b nrf9160dk_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
+   $ west build -b nrf9160dk_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"1.2.3\"
 
 Start DFU using goliothctl
 ==========================

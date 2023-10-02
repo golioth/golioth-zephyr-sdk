@@ -4,16 +4,14 @@
 
 import logging
 import os
-from typing import Generator, Type
+from typing import Generator
 
 from golioth import Client, RPCTimeout
 import pytest
 from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_delay, wait_fixed
 from trio import sleep
 
-from twister_harness.device.device_abstract import DeviceAbstract
-from twister_harness.device.factory import DeviceFactory
-from twister_harness.twister_harness_config import DeviceConfig, TwisterHarnessConfig
+from twister_harness.fixtures import DeviceAdapter
 
 
 # This is the same as using the @pytest.mark.anyio on all test functions in the module
@@ -21,32 +19,19 @@ pytestmark = pytest.mark.anyio
 
 
 @pytest.fixture(scope='session')
-def dut(request: pytest.FixtureRequest) -> Generator[DeviceAbstract, None, None]:
-    """Return device instance."""
-    twister_harness_config: TwisterHarnessConfig = request.config.twister_harness_config  # type: ignore
-    device_config: DeviceConfig = twister_harness_config.devices[0]
-    device_type = device_config.type
-
-    device_class: Type[DeviceAbstract] = DeviceFactory.get_device(device_type)
-
-    device = device_class(device_config)
-
+def dut(request: pytest.FixtureRequest, device_object: DeviceAdapter) -> Generator[DeviceAdapter, None, None]:
+    """Return launched device - with run application."""
+    test_name = request.node.name
+    device_object.initialize_log_files(test_name)
     try:
-        device.generate_command()
-        device.initialize_log_files()
-        device.flash_and_run()
-        device.connect()
-        yield device
-    except KeyboardInterrupt:
-        pass
-    finally:  # to make sure we close all running processes after user broke execution
-        device.disconnect()
-        device.stop()
-
+        device_object.launch()
+        yield device_object
+    finally:  # to make sure we close all running processes execution
+        device_object.close()
 
 
 @pytest.fixture(scope='session')
-async def device(initial_timeout, dut: DeviceAbstract):
+async def device(initial_timeout, dut: DeviceAdapter):
     device_name = os.environ["GOLIOTH_DEVICE_NAME"]
 
     client = Client(os.environ.get("GOLIOTHCTL_CONFIG"))
