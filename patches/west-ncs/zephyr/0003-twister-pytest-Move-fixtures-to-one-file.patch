@@ -1,0 +1,200 @@
+From 6c7dbe096bfe2a7707b28d4910c394e89c412eb4 Mon Sep 17 00:00:00 2001
+From: Grzegorz Chwierut <grzegorz.chwierut@nordicsemi.no>
+Date: Fri, 8 Sep 2023 17:50:24 +0200
+Subject: [PATCH] twister: pytest: Move fixtures to one file
+
+Fixtures in pytest-twister-harness plugin are moved to one
+file to simplify adding new fixtures in the future - no
+need to add pytest_plugins entry and register asserts.
+Moved also shell fixture from sample dir, because that
+fixture can be reused in new tests.
+
+Signed-off-by: Grzegorz Chwierut <grzegorz.chwierut@nordicsemi.no>
+---
+ .../pytest/shell/pytest/test_shell.py         | 12 +---------
+ .../src/twister_harness/__init__.py           |  2 +-
+ .../{fixtures/dut.py => fixtures.py}          | 22 +++++++++++++++++++
+ .../src/twister_harness/fixtures/__init__.py  |  8 -------
+ .../{fixtures => helpers}/mcumgr.py           | 16 --------------
+ .../src/twister_harness/plugin.py             |  3 +--
+ .../tests/fixtures/mcumgr_fixture_test.py     |  4 ++--
+ 7 files changed, 27 insertions(+), 40 deletions(-)
+ rename scripts/pylib/pytest-twister-harness/src/twister_harness/{fixtures/dut.py => fixtures.py} (72%)
+ delete mode 100644 scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/__init__.py
+ rename scripts/pylib/pytest-twister-harness/src/twister_harness/{fixtures => helpers}/mcumgr.py (88%)
+
+diff --git a/samples/subsys/testsuite/pytest/shell/pytest/test_shell.py b/samples/subsys/testsuite/pytest/shell/pytest/test_shell.py
+index 37efa74795b..84d16ec1e5a 100755
+--- a/samples/subsys/testsuite/pytest/shell/pytest/test_shell.py
++++ b/samples/subsys/testsuite/pytest/shell/pytest/test_shell.py
+@@ -4,21 +4,11 @@
+ 
+ import logging
+ 
+-import pytest
+-from twister_harness import DeviceAdapter, Shell
++from twister_harness import Shell
+ 
+ logger = logging.getLogger(__name__)
+ 
+ 
+-@pytest.fixture(scope='function')
+-def shell(dut: DeviceAdapter) -> Shell:
+-    """Return ready to use shell interface"""
+-    shell = Shell(dut, timeout=20.0)
+-    logger.info('wait for prompt')
+-    assert shell.wait_for_prompt()
+-    return shell
+-
+-
+ def test_shell_print_help(shell: Shell):
+     logger.info('send "help" command')
+     lines = shell.exec_command('help')
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/__init__.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/__init__.py
+index 251c5deb672..4897e2cf391 100644
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/__init__.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/__init__.py
+@@ -5,7 +5,7 @@
+ # flake8: noqa
+ 
+ from twister_harness.device.device_adapter import DeviceAdapter
+-from twister_harness.fixtures.mcumgr import MCUmgr
++from twister_harness.helpers.mcumgr import MCUmgr
+ from twister_harness.helpers.shell import Shell
+ 
+ __all__ = ['DeviceAdapter', 'MCUmgr', 'Shell']
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/dut.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures.py
+similarity index 72%
+rename from scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/dut.py
+rename to scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures.py
+index 0f34c05b252..e2e82674ada 100644
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/dut.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures.py
+@@ -10,6 +10,8 @@ import pytest
+ from twister_harness.device.device_adapter import DeviceAdapter
+ from twister_harness.device.factory import DeviceFactory
+ from twister_harness.twister_harness_config import DeviceConfig, TwisterHarnessConfig
++from twister_harness.helpers.shell import Shell
++from twister_harness.helpers.mcumgr import MCUmgr
+ 
+ logger = logging.getLogger(__name__)
+ 
+@@ -44,3 +46,23 @@ def dut(request: pytest.FixtureRequest, device_object: DeviceAdapter) -> Generat
+         yield device_object
+     finally:  # to make sure we close all running processes execution
+         device_object.close()
++
++
++@pytest.fixture(scope='function')
++def shell(dut: DeviceAdapter) -> Shell:
++    """Return ready to use shell interface"""
++    shell = Shell(dut, timeout=20.0)
++    logger.info('Wait for prompt')
++    assert shell.wait_for_prompt()
++    return shell
++
++
++@pytest.fixture(scope='session')
++def is_mcumgr_available() -> None:
++    if not MCUmgr.is_available():
++        pytest.skip('mcumgr not available')
++
++
++@pytest.fixture()
++def mcumgr(is_mcumgr_available: None, dut: DeviceAdapter) -> Generator[MCUmgr, None, None]:
++    yield MCUmgr.create_for_serial(dut.device_config.serial)
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/__init__.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/__init__.py
+deleted file mode 100644
+index ed61bf17b1c..00000000000
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/__init__.py
++++ /dev/null
+@@ -1,8 +0,0 @@
+-# Copyright (c) 2023 Nordic Semiconductor ASA
+-#
+-# SPDX-License-Identifier: Apache-2.0
+-
+-import pytest
+-
+-pytest.register_assert_rewrite('twister_harness.fixtures.dut')
+-pytest.register_assert_rewrite('twister_harness.fixtures.mcumgr')
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/mcumgr.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/helpers/mcumgr.py
+similarity index 88%
+rename from scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/mcumgr.py
+rename to scripts/pylib/pytest-twister-harness/src/twister_harness/helpers/mcumgr.py
+index e0d85893792..b6cab6475c1 100755
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/fixtures/mcumgr.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/helpers/mcumgr.py
+@@ -3,19 +3,14 @@
+ # SPDX-License-Identifier: Apache-2.0
+ from __future__ import annotations
+ 
+-import pytest
+ import logging
+ import re
+ import shlex
+ 
+-from typing import Generator
+ from subprocess import check_output, getstatusoutput
+ from pathlib import Path
+ from dataclasses import dataclass
+ 
+-from twister_harness.device.device_adapter import DeviceAdapter
+-
+-
+ logger = logging.getLogger(__name__)
+ 
+ 
+@@ -108,14 +103,3 @@ class MCUmgr:
+             image_list = self.get_image_list()
+             hash = image_list[0].hash
+         self.run_command(f'image confirm {hash}')
+-
+-
+-@pytest.fixture(scope='session')
+-def is_mcumgr_available() -> None:
+-    if not MCUmgr.is_available():
+-        pytest.skip('mcumgr not available')
+-
+-
+-@pytest.fixture()
+-def mcumgr(is_mcumgr_available: None, dut: DeviceAdapter) -> Generator[MCUmgr, None, None]:
+-    yield MCUmgr.create_for_serial(dut.device_config.serial)
+diff --git a/scripts/pylib/pytest-twister-harness/src/twister_harness/plugin.py b/scripts/pylib/pytest-twister-harness/src/twister_harness/plugin.py
+index 59bec12955d..076d36d4cc9 100644
+--- a/scripts/pylib/pytest-twister-harness/src/twister_harness/plugin.py
++++ b/scripts/pylib/pytest-twister-harness/src/twister_harness/plugin.py
+@@ -14,8 +14,7 @@ from twister_harness.twister_harness_config import TwisterHarnessConfig
+ logger = logging.getLogger(__name__)
+ 
+ pytest_plugins = (
+-    'twister_harness.fixtures.dut',
+-    'twister_harness.fixtures.mcumgr'
++    'twister_harness.fixtures'
+ )
+ 
+ 
+diff --git a/scripts/pylib/pytest-twister-harness/tests/fixtures/mcumgr_fixture_test.py b/scripts/pylib/pytest-twister-harness/tests/fixtures/mcumgr_fixture_test.py
+index f294adba30a..f336311143a 100644
+--- a/scripts/pylib/pytest-twister-harness/tests/fixtures/mcumgr_fixture_test.py
++++ b/scripts/pylib/pytest-twister-harness/tests/fixtures/mcumgr_fixture_test.py
+@@ -6,7 +6,7 @@ import pytest
+ import textwrap
+ 
+ from unittest import mock
+-from twister_harness.fixtures.mcumgr import MCUmgr, MCUmgrException
++from twister_harness.helpers.mcumgr import MCUmgr, MCUmgrException
+ 
+ 
+ @pytest.fixture(name='mcumgr')
+@@ -14,7 +14,7 @@ def fixture_mcumgr() -> MCUmgr:
+     return MCUmgr.create_for_serial('SERIAL_PORT')
+ 
+ 
+-@mock.patch('twister_harness.fixtures.mcumgr.MCUmgr.run_command', return_value='')
++@mock.patch('twister_harness.helpers.mcumgr.MCUmgr.run_command', return_value='')
+ def test_if_mcumgr_fixture_generate_proper_command(
+     patched_run_command: mock.Mock, mcumgr: MCUmgr
+ ) -> None:
+-- 
+2.42.0
+

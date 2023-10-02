@@ -11,7 +11,7 @@ from golioth import Client, Device
 import pytest
 import trio
 
-from twister_harness.device.device_abstract import DeviceAbstract
+from twister_harness.fixtures import DeviceAdapter
 
 
 # This is the same as using the @pytest.mark.anyio on all test functions in the module
@@ -33,7 +33,7 @@ async def leds_set(device: Device, leds: Iterable[bool]):
     await device.lightdb.set('led', {i: led for i, led in enumerate(leds)})
 
 
-async def test_lightdb_led(initial_timeout, device, dut: DeviceAbstract):
+async def test_lightdb_led(initial_timeout, device, dut: DeviceAdapter):
     num_leds = 4
     num_leds_on = 0
     msg_pattern = re.compile(r"LED (?P<id>\d+) -> (?P<state>O[NF]+)")
