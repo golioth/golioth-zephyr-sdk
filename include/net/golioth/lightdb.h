@@ -10,6 +10,11 @@
 #include <stdint.h>
 #include <zephyr/net/coap.h>
 #include <net/golioth/req.h>
+#include <net/golioth/golioth_type_def.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @defgroup golioth_lightdb Golioth LightDB
@@ -17,9 +22,6 @@
  * Functions for interacting with the Golioth LightDB service
  * @{
  */
-
-struct golioth_client;
-enum golioth_content_format;
 
 /**
  * @brief Get value from Golioth's LightDB (callback based)
@@ -40,6 +42,7 @@ enum golioth_content_format;
  */
 int golioth_lightdb_get_cb(struct golioth_client *client, const uint8_t *path,
 			   enum golioth_content_format format,
+			//    golioth_content_format format,
 			   golioth_req_cb_t cb, void *user_data);
 
 /**
@@ -58,6 +61,7 @@ int golioth_lightdb_get_cb(struct golioth_client *client, const uint8_t *path,
  */
 int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
 			enum golioth_content_format format,
+			// golioth_content_format format,
 			uint8_t *data, size_t *len);
 
 /**
@@ -81,6 +85,7 @@ int golioth_lightdb_get(struct golioth_client *client, const uint8_t *path,
  */
 int golioth_lightdb_set_cb(struct golioth_client *client, const uint8_t *path,
 			   enum golioth_content_format format,
+			//    golioth_content_format format,
 			   const uint8_t *data, size_t data_len,
 			   golioth_req_cb_t cb, void *user_data);
 
@@ -100,6 +105,7 @@ int golioth_lightdb_set_cb(struct golioth_client *client, const uint8_t *path,
  */
 int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
 			enum golioth_content_format format,
+			// golioth_content_format format,
 			const uint8_t *data, size_t data_len);
 
 /**
@@ -121,6 +127,7 @@ int golioth_lightdb_set(struct golioth_client *client, const uint8_t *path,
  */
 int golioth_lightdb_observe_cb(struct golioth_client *client, const uint8_t *path,
 			       enum golioth_content_format format,
+				//    golioth_content_format format,
 			       golioth_req_cb_t cb, void *user_data);
 
 /**
@@ -156,5 +163,9 @@ int golioth_lightdb_delete_cb(struct golioth_client *client, const uint8_t *path
 int golioth_lightdb_delete(struct golioth_client *client, const uint8_t *path);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_LIGHTDB_H_ */

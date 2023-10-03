@@ -7,7 +7,11 @@
 #ifndef GOLIOTH_INCLUDE_LOGGING_GOLIOTH_H_
 #define GOLIOTH_INCLUDE_LOGGING_GOLIOTH_H_
 
-struct golioth_client;
+#include <net/golioth/golioth_type_def.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @defgroup logging Golioth Logging
@@ -18,5 +22,9 @@ struct golioth_client;
 int log_backend_golioth_init(struct golioth_client *client);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_LOGGING_GOLIOTH_H_ */

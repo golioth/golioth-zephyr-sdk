@@ -11,6 +11,10 @@
 
 extern struct golioth_client _golioth_system_client;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @defgroup system_client Golioth System Client
  * @ingroup net
@@ -38,5 +42,9 @@ void golioth_system_client_request_reconnect(void);
 #define GOLIOTH_SYSTEM_CLIENT_GET()	(&_golioth_system_client)
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_SYSTEM_CLIENT_H_ */

@@ -10,6 +10,11 @@
 #include <stdint.h>
 #include <zephyr/net/coap.h>
 #include <net/golioth/req.h>
+#include <net/golioth/golioth_type_def.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @defgroup golioth_stream Golioth LightDB Stream
@@ -61,5 +66,9 @@ int golioth_stream_push(struct golioth_client *client, const uint8_t *path,
 			const uint8_t *data, size_t data_len);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_STREAM_H_ */

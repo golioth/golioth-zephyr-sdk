@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <zephyr/net/coap.h>
 #include <zephyr/kernel.h>
+#include <net/golioth/golioth_type_def.h>
 
 #ifdef CONFIG_ZCBOR
 #include <zcbor_decode.h>
@@ -25,7 +26,7 @@ typedef struct {} zcbor_state_t;
  * @{
  */
 
-struct golioth_client;
+// struct golioth_client;
 
 /**
  * @brief Enumeration of RPC status codes, sent in the RPC response.
@@ -112,16 +113,9 @@ struct golioth_rpc_method {
 	void *callback_arg;
 };
 
-/**
- * @brief Global/shared RPC state data, placed in struct golioth_client
- */
-struct golioth_rpc {
-#if defined(CONFIG_GOLIOTH_RPC)
-	struct golioth_rpc_method methods[CONFIG_GOLIOTH_RPC_MAX_NUM_METHODS];
-	int num_methods;
-	struct k_mutex mutex;
+#ifdef __cplusplus
+extern "C" {
 #endif
-};
 
 /**
  * @brief Initialize RPC
@@ -169,5 +163,9 @@ int golioth_rpc_register(struct golioth_client *client,
 int golioth_rpc_observe(struct golioth_client *client);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_RPC_H_ */

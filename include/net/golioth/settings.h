@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <zephyr/net/coap.h>
+#include <net/golioth/golioth_type_def.h>
 
 /**
  * @defgroup golioth_settings Golioth Settings
@@ -37,7 +38,7 @@
  * @{
  */
 
-struct golioth_client;
+// struct golioth_client;
 
 /**
  * @brief Enumeration of Settings status codes
@@ -104,15 +105,9 @@ typedef enum golioth_settings_status (*golioth_settings_cb)(
 		const char *key,
 		const struct golioth_settings_value *value);
 
-/**
- * @brief Settings state data, placed in struct golioth_client
- */
-struct golioth_settings {
-#if defined(CONFIG_GOLIOTH_SETTINGS)
-	bool initialized;
-	golioth_settings_cb callback;
+#ifdef __cplusplus
+extern "C" {
 #endif
-};
 
 /**
  * @brief Register callback for handling settings.
@@ -146,5 +141,9 @@ int golioth_settings_register_callback(struct golioth_client *client,
 int golioth_settings_observe(struct golioth_client *client);
 
 /** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_SETTINGS_H_ */

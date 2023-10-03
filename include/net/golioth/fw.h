@@ -10,8 +10,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <net/golioth/req.h>
+#include <net/golioth/golioth_type_def.h>
 
-struct golioth_client;
+// struct golioth_client;
 
 /**
  * @brief State of downloading or updating the firmware.
@@ -38,6 +39,10 @@ enum golioth_dfu_result {
 	GOLIOTH_DFU_RESULT_FIRMWARE_UPDATE_FAILED,
 	GOLIOTH_DFU_RESULT_UNSUPPORTED_PROTOCOL,
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief Parse desired firmware description
@@ -135,5 +140,9 @@ int golioth_fw_report_state(struct golioth_client *client,
 			    const char *target_version,
 			    enum golioth_fw_state state,
 			    enum golioth_dfu_result result);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* GOLIOTH_INCLUDE_NET_GOLIOTH_FW_H_ */
