@@ -108,12 +108,9 @@ Build Zephyr sample application for nRF9160 DK:
    $ west build -b nrf9160dk_nrf9160_ns samples/dfu
    $ west flash
 
-Now rebuild the application with the new version number 1.2.3 to distinguish it
-from the old firmware:
-
-.. code-block:: console
-
-   $ west build -b nrf9160dk_nrf9160_ns samples/dfu -- -DCONFIG_MCUBOOT_IMAGE_VERSION=\"1.2.3\"
+The default firmware version is 1.2.3. Edit the prj.conf file and update
+CONFIG_GOLIOTH_SAMPLE_FW_VERSION to 1.2.4 to distinguish it from the old firmware. Rebuild the
+firmware but do not flash it to the device.
 
 Start DFU using goliothctl
 ==========================
@@ -122,14 +119,14 @@ Run following command on host PC to upload new firmware as artifact to Golioth:
 
 .. code-block:: console
 
-   $ goliothctl dfu artifact create build/zephyr/app_update.bin --version 1.2.3
+   $ goliothctl dfu artifact create build/zephyr/app_update.bin --version 1.2.4
 
 Then create new release consisting of this single firmware and roll it out to
 all devices in a project:
 
 .. code-block:: console
 
-   $ goliothctl dfu release create --release-tags 1.2.3 --components main@1.2.3 --rollout true
+   $ goliothctl dfu release create --release-tags 1.2.4 --components main@1.2.4 --rollout true
 
 Jump down to the `Observe DFU process in target console output`_ section lower
 on this page to see the expected behavior of the target device during DFU.
@@ -197,7 +194,7 @@ slot (primary area):
    confirmed: 1
 
    primary area (1):
-     version: 0.0.0+0
+     version: 1.2.3+0
      image size: 221104
      image hash: f48973eed40a9d30795df7121183e7a828e9b89aa5ee84f2db1318f7cf51be0b
      magic: good
@@ -210,29 +207,29 @@ slot (primary area):
 Configure credentials
 =====================
 
-(``nRF52840 DK + ESP32-WROOM-32`` and ``ESP32`` only) Configure WiFi SSID and PSK using the device
-shell:
+(``nRF52840 DK + ESP32-WROOM-32`` and ``ESP32`` only) Configure the following Kconfig options based
+on your WiFi AP credentials:
 
-.. code-block:: console
+- ``CONFIG_GOLIOTH_SAMPLE_WIFI_SSID``  - WiFi SSID
+- ``CONFIG_GOLIOTH_SAMPLE_WIFI_PSK``   - WiFi PSK
 
-   uart:~$ settings set wifi/ssid <my-ssid>
-   uart:~$ settings set wifi/psk <my-psk>
+by adding these lines to a configuration file (e.g. `prj.conf` or
+`board/esp32_devkitc_wrover.conf`):
+
+.. code-block:: cfg
+   CONFIG_GOLIOTH_SAMPLE_WIFI_SSID="my-wifi"
+   CONFIG_GOLIOTH_SAMPLE_WIFI_PSK="my-psk"
 
 Prepare new firmware
 ====================
 
-For testing purposes of DFU mechanism the same firmware will be used. To
-distinguish between old firmware and new firmware, a firmware version will be
-assigned during image signing process. Execute following command to generate new
-signed application image:
+The default firmware version is 1.2.3. Edit the prj.conf file and update
+CONFIG_GOLIOTH_SAMPLE_FW_VERSION to 1.2.4 to distinguish it from the old firmware. Rebuild the
+firmware but do not flash it to the device.
 
 .. code-block:: console
 
-   $ west build -b <board> --sysbuild samples/dfu -- -DCONFIG_MCUBOOT_EXTRA_IMGTOOL_ARGS='"--version 1.2.3"'
-
-Please note that ``--version 1.2.3`` was specified to distinguish between old
-firmware (default version is ``0.0.0`` if not explicitly specified) and new
-firmware.
+   $ west build -b <board> --sysbuild samples/dfu --
 
 Start DFU using goliothctl
 ==========================
@@ -241,14 +238,14 @@ Run following command on host PC to upload new firmware as artifact to Golioth:
 
 .. code-block:: console
 
-   $ goliothctl dfu artifact create build/zephyr/zephyr.signed.bin --version 1.2.3
+   $ goliothctl dfu artifact create build/dfu/zephyr/zephyr.signed.bin --version 1.2.4
 
 Then create new release consisting of this single firmware and roll it out to
 all devices in a project:
 
 .. code-block:: console
 
-   $ goliothctl dfu release create --release-tags 1.2.3 --components main@1.2.3 --rollout true
+   $ goliothctl dfu release create --release-tags 1.2.4 --components main@1.2.4 --rollout true
 
 Observe DFU process in target console output
 ============================================
@@ -270,7 +267,7 @@ serial console:
                                          35 31 33 32 39 30 31 31  35 36 63 32 37 31 63 62 |51329011 56c271cb
                                          31 34 65 37 39 66 63 61  38 30 33 64 66 04 1a 00 |14e79fca 803df...
                                          09 b0 a0 05 70 2f 2e 75  2f 63 2f 6d 61 69 6e 40 |....p/.u /c/main@
-                                         31 2e 32 2e 33 06 67 6d  63 75 62 6f 6f 74       |1.2.3.gm cuboot
+                                         31 2e 32 2e 34 06 67 6d  63 75 62 6f 6f 74       |1.2.4.gm cuboot
    [00:00:06.484,130] <inf> golioth: Manifest sequence-number: 1635434112
    [00:00:06.637,725] <dbg> golioth_dfu.data_received: Received 1024 bytes at offset 0
    [00:00:06.637,847] <inf> mcuboot_util: Swap type: none
@@ -309,7 +306,7 @@ running from primary area (first application slot):
    confirmed: 1
 
    primary area (1):
-     version: 1.2.3+0
+     version: 1.2.4+0
      image size: 221104
      image hash: 40710f0bd8171d7614b13da4821da57066f4431e4f3ebb473de9e95f6467ae65
      magic: good
@@ -318,7 +315,7 @@ running from primary area (first application slot):
      image ok: set
 
    secondary area (2):
-     version: 0.0.0+0
+     version: 1.2.3+0
      image size: 221104
      image hash: f48973eed40a9d30795df7121183e7a828e9b89aa5ee84f2db1318f7cf51be0b
      magic: unset

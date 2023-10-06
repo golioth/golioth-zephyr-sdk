@@ -163,6 +163,7 @@ int main(void)
 	int err;
 
 	LOG_DBG("Start DFU sample");
+	LOG_DBG("Current firmware version: %s", CONFIG_GOLIOTH_SAMPLE_FW_VERSION);
 
 	if (!boot_is_img_confirmed()) {
 		/*
