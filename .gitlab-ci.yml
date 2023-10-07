@@ -1,12 +1,13 @@
 image: zephyrprojectrtos/ci:v0.26.5
 
 variables:
+  MODULE_PATH: modules/lib/golioth
   WEST_MANIFEST: .ci-west-zephyr.yml
 
 .west-init: &west-init
-  - rm -rf .west modules/lib/golioth
+  - rm -rf .west $MODULE_PATH
   - west init -m $CI_REPOSITORY_URL --mf ${WEST_MANIFEST} --mr $CI_COMMIT_REF_NAME
-  - (cd modules/lib/golioth; git checkout $CI_COMMIT_SHA)
+  - (cd $MODULE_PATH; git checkout $CI_COMMIT_SHA)
 
 .cache-deps: &cache-deps
   key: west-modules
@@ -26,9 +27,9 @@ stages:
   stage: check
   needs: []
   allow_failure: true
-  except:
-    - main
-    - tags
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
 
 .west-prepare:
   variables:
@@ -55,24 +56,23 @@ cache-deps:
     <<: *cache-deps
     policy: pull-push
   script:
-    - rm -rf modules/lib/golioth
-  only:
-    refs:
-      - main
+    - rm -rf $MODULE_PATH
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 checkpatch:
   extends: [.check, .west-prepare]
   before_script:
     - *west-init
-    - west update modules/lib/golioth
+    - west update $MODULE_PATH
     - >
       west update zephyr -o=--depth=1 -n
   script:
-    - cd modules/lib/golioth
+    - cd $MODULE_PATH
     - git fetch
     - CHECKPATCH="../../../zephyr/scripts/checkpatch.pl --color=always --quiet"
     - EXITCODE=0
-    - $CHECKPATCH --git origin/main.. || EXITCODE=$?
+    - $CHECKPATCH --git origin/$CI_DEFAULT_BRANCH.. || EXITCODE=$?
     - exit $EXITCODE
 
 gitlint:
@@ -80,7 +80,7 @@ gitlint:
   variables:
     GIT_DEPTH: 0
   script:
-    - gitlint --commits origin/main..
+    - gitlint --commits origin/$CI_DEFAULT_BRANCH..
 
 pre-commit:
   extends: .check
@@ -90,7 +90,7 @@ pre-commit:
     - pip3 install pre-commit
     - |
       CODE=0 # run pre-commit
-      for CID in `git rev-list --reverse origin/main..`; do
+      for CID in `git rev-list --reverse origin/$CI_DEFAULT_BRANCH..`; do
           git show $CID -s --format='    pre-commit %h ("%s")'
           git checkout -f -q $CID
           pre-commit run --color always --show-diff-on-failure --from-ref $CID^ --to-ref $CID || CODE=$?
@@ -161,7 +161,7 @@ twister-qemu-goliothd:
       -j 1
       -p qemu_x86
       -o reports
-      -T modules/lib/golioth
+      -T $MODULE_PATH
   artifacts:
     reports:
       junit: reports/**/twister_report.xml
@@ -181,7 +181,7 @@ twister:
       -p nrf52840dk_nrf52840
       -p qemu_x86
       -o reports/non_goliothd
-      -T modules/lib/golioth
+      -T $MODULE_PATH
     # Build-only all goliothd samples/tests
     - >
       zephyr/scripts/twister
@@ -192,7 +192,7 @@ twister:
       -p nrf52840dk_nrf52840
       -p qemu_x86
       -o reports/goliothd
-      -T modules/lib/golioth
+      -T $MODULE_PATH
 
 twister-ncs:
   extends: .twister
@@ -204,4 +204,4 @@ twister-ncs:
       --force-color
       -p nrf9160dk_nrf9160_ns
       -o reports
-      -T modules/lib/golioth
+      -T $MODULE_PATH
