@@ -80,7 +80,6 @@ gitlint:
   variables:
     GIT_DEPTH: 0
   script:
-    - pip3 install gitlint
     - gitlint --commits origin/main..
 
 pre-commit:
