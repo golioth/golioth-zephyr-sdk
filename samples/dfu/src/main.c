@@ -179,9 +179,7 @@ int main(void)
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
-		net_connect();
-	}
+	net_connect();
 
 	client->on_connect = golioth_on_connect;
 	golioth_system_client_start();

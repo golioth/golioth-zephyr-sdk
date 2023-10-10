@@ -57,9 +57,7 @@ int main(void)
 
 	LOG_DBG("Start Hello sample");
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
-		net_connect();
-	}
+	net_connect();
 
 	if (IS_ENABLED(CONFIG_GOLIOTH_SETTINGS)) {
 		err = golioth_settings_register_callback(client, on_setting);
