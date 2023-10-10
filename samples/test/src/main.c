@@ -22,9 +22,7 @@ K_SEM_DEFINE(_connected_sem, 0, 1);
 
 static void *test_golioth_suite_setup(void)
 {
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
-		net_connect();
-	}
+	net_connect();
 
 	return &_fixture;
 }

@@ -172,9 +172,7 @@ int main(void)
 {
 	LOG_DBG("Start LightDB LED sample");
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
-		net_connect();
-	}
+	net_connect();
 
 	golioth_led_initialize();
 

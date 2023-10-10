@@ -123,9 +123,7 @@ int main(void)
 	load_credential_from_fs(CLIENT_CERTIFICATE_PATH, TLS_CREDENTIAL_SERVER_CERTIFICATE);
 	load_credential_from_fs(PRIVATE_KEY_PATH, TLS_CREDENTIAL_PRIVATE_KEY);
 
-	if (IS_ENABLED(CONFIG_GOLIOTH_SAMPLES_COMMON)) {
-		net_connect();
-	}
+	net_connect();
 
 	client->on_connect = golioth_on_connect;
 	golioth_system_client_start();
