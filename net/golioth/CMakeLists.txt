@@ -56,3 +56,7 @@ if(CONFIG_ZCBOR)
     zephyr_library_sources(zcbor_any_skip_fixed.c)
   endif()
 endif()
+
+if(NOT EXISTS ${ZEPHYR_BASE}/include/zephyr/random/random.h)
+  zephyr_library_include_directories(include_random)
+endif()

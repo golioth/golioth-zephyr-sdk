@@ -26,13 +26,12 @@ Signed-off-by: Marcin Niestroj <m.niestroj@emb.dev>
 ---
  scripts/pylib/twister/twisterlib/handlers.py  | 61 ++++++++++++-------
  .../pylib/twister/twisterlib/hardwaremap.py   |  4 ++
- scripts/pylib/twister/twisterlib/runner.py    |  2 +-
  scripts/schemas/twister/hwmap-schema.yaml     |  3 +
  subsys/net/conn_mgr/events_handler.c          |  4 +-
- 5 files changed, 48 insertions(+), 26 deletions(-)
+ 4 files changed, 47 insertions(+), 25 deletions(-)
 
 diff --git a/scripts/pylib/twister/twisterlib/handlers.py b/scripts/pylib/twister/twisterlib/handlers.py
-index 780b51cb7d..fd991aa802 100755
+index e4a0d9f5a1..76058bf0e2 100755
 --- a/scripts/pylib/twister/twisterlib/handlers.py
 +++ b/scripts/pylib/twister/twisterlib/handlers.py
 @@ -630,23 +630,33 @@ class DeviceHandler(Handler):
@@ -175,19 +174,6 @@ index 5e90b7c84c..e8167035a8 100644
                            connected=connected,
                            pre_script=pre_script,
                            post_script=post_script,
-diff --git a/scripts/pylib/twister/twisterlib/runner.py b/scripts/pylib/twister/twisterlib/runner.py
-index ef41084cdd..fbffa817bb 100644
---- a/scripts/pylib/twister/twisterlib/runner.py
-+++ b/scripts/pylib/twister/twisterlib/runner.py
-@@ -1052,7 +1052,7 @@ class ProjectBuilder(FilterBuilder):
-             harness = HarnessImporter.get_harness(instance.testsuite.harness.capitalize())
-             harness.configure(instance)
-             if isinstance(harness, Pytest):
--                harness.pytest_run(instance.handler.timeout)
-+                harness.pytest_run(instance.handler.get_test_timeout())
-             else:
-                 instance.handler.handle(harness)
- 
 diff --git a/scripts/schemas/twister/hwmap-schema.yaml b/scripts/schemas/twister/hwmap-schema.yaml
 index 3ecb064ddf..6e79b5da97 100644
 --- a/scripts/schemas/twister/hwmap-schema.yaml
