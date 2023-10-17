@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <zephyr/net/socket.h>
-#include <zephyr/random/rand32.h>
+#include <zephyr/random/random.h>
 
 #include <golioth_ciphersuites.h>
 
