@@ -26,7 +26,7 @@ jobs:
           - qemu_x86
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: modules/lib/golioth
 
@@ -67,7 +67,7 @@ jobs:
           -T modules/lib/golioth
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ always() }}
         with:
           name: twister-artifacts
