@@ -140,7 +140,7 @@ twister-qemu-goliothd:
       EOF
     # Install samples/tests requirements
     - pip3 install -r modules/lib/golioth/scripts/requirements-tests.txt
-    - pip3 install modules/lib/golioth/scripts/python/golioth
+    - pip3 install git+https://github.com/golioth/python-golioth-tools@v0.1.0
     # Start QEMU networking utilities
     - make -C tools/net-tools tunslip6
     - tools/net-tools/loop-socat.sh &
