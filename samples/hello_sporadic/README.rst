@@ -138,7 +138,7 @@ sample application (i.e., ``samples/hello_sporadic``) and type:
    $ west build -b esp32_devkitc_wroom samples/hello_sporadic
    $ west flash
 
-See `ESP32`_ for details on how to use ESP32 board.
+See `ESP32-DEVKITC-WROOM`_ for details on how to use ESP32 board.
 
 nRF52840 DK + ESP32-WROOM-32
 ----------------------------
@@ -235,6 +235,6 @@ This is the output from the serial console:
 
 .. _authentication methods: https://docs.golioth.io/firmware/zephyr-device-sdk/authentication/
 .. _Zephyr Settings subsystem: https://docs.zephyrproject.org/latest/services/settings/index.html
-.. _Networking with QEMU: https://docs.zephyrproject.org/3.4.0/connectivity/networking/qemu_setup.html
-.. _ESP32: https://docs.zephyrproject.org/3.4.0/boards/xtensa/esp32/doc/index.html
+.. _Networking with QEMU: https://docs.zephyrproject.org/3.5.0/connectivity/networking/qemu_setup.html
+.. _ESP32-DEVKITC-WROOM: https://docs.zephyrproject.org/3.5.0/boards/xtensa/esp32_devkitc_wroom/doc/index.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html

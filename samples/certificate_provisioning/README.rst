@@ -46,7 +46,7 @@ sample application (i.e. ``samples/certificate_provisioning``) and type:
    $ west build -b esp32_devkitc_wroom samples/certificate_provisioning
    $ west flash
 
-See `ESP32`_ for details on how to use ESP32 board.
+See `ESP32-DEVKITC-WROOM`_ for details on how to use ESP32 board.
 
 nRF52840 DK + ESP32-WROOM-32
 ----------------------------
@@ -214,7 +214,7 @@ This is the output from the serial console:
     [00:00:15.833,404] <inf> golioth_hello: Sending hello! 1
     [00:00:20.833,496] <inf> golioth_hello: Sending hello! 2
 
-.. _Networking with QEMU: https://docs.zephyrproject.org/3.4.0/connectivity/networking/qemu_setup.html
-.. _ESP32: https://docs.zephyrproject.org/3.4.0/boards/xtensa/esp32/doc/index.html
+.. _Networking with QEMU: https://docs.zephyrproject.org/3.5.0/connectivity/networking/qemu_setup.html
+.. _ESP32-DEVKITC-WROOM: https://docs.zephyrproject.org/3.5.0/boards/xtensa/esp32_devkitc_wroom/doc/index.html
 .. _mcumgr: https://docs.zephyrproject.org/latest/services/device_mgmt/mcumgr.html
 .. _golioth cert auth: https://docs.golioth.io/firmware/zephyr-device-sdk/authentication/certificate-auth
