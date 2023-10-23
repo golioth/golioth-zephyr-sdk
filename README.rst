@@ -156,8 +156,8 @@ During release testing, all boards and services are verified using sample applic
 +------------------+--------------+-------------+----------+
 
 .. _Zephyr RTOS: https://www.zephyrproject.org/
-.. _west: https://docs.zephyrproject.org/3.4.0/develop/west/index.html
-.. _Zephyr Getting Started: https://docs.zephyrproject.org/3.4.0/develop/getting_started/index.html
+.. _west: https://docs.zephyrproject.org/3.5.0/develop/west/index.html
+.. _Zephyr Getting Started: https://docs.zephyrproject.org/3.5.0/develop/getting_started/index.html
 .. _nRF Connect SDK: https://www.nordicsemi.com/Software-and-tools/Software/nRF-Connect-SDK
 .. _nRF Connect SDK Getting Started: https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/gs_installing.html
 .. _nRF9160 DK: https://www.nordicsemi.com/Products/Development-hardware/nrf9160-dk

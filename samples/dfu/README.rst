@@ -335,7 +335,7 @@ Related documentation:
 
 .. _authentication methods: https://docs.golioth.io/firmware/zephyr-device-sdk/authentication/
 .. _Zephyr Settings subsystem: https://docs.zephyrproject.org/latest/services/settings/index.html
-.. _MCUboot: https://docs.zephyrproject.org/3.4.0/services/device_mgmt/dfu.html#mcuboot
-.. _Signing Binaries: https://docs.zephyrproject.org/3.4.0/develop/west/sign.html#west-sign
-.. _Flash map: https://docs.zephyrproject.org/3.4.0/services/storage/flash_map/flash_map.html
+.. _MCUboot: https://docs.zephyrproject.org/3.5.0/services/device_mgmt/dfu.html#mcuboot
+.. _Signing Binaries: https://docs.zephyrproject.org/3.5.0/develop/west/sign.html#west-sign
+.. _Flash map: https://docs.zephyrproject.org/3.5.0/services/storage/flash_map/flash_map.html
 .. _AT Binary Lists: https://docs.espressif.com/projects/esp-at/en/latest/AT_Binary_Lists/index.html
