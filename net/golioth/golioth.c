@@ -90,6 +90,18 @@ static int golioth_setsockopt_dtls(struct golioth_client *client, int sock,
 		}
 	}
 
+	/* If Connection IDs are enabled, set socket option to send CIDs, but not require that the
+	 * server sends one in return.
+	 */
+#ifdef CONFIG_GOLIOTH_USE_CONNECTION_ID
+	int enabled = 1;
+
+	ret = zsock_setsockopt(sock, SOL_TLS, TLS_DTLS_CID, &enabled, sizeof(enabled));
+	if (ret < 0) {
+		return -errno;
+	}
+#endif /* CONFIG_GOLIOTH_USE_CONNECTION_ID */
+
 	return 0;
 }
 
