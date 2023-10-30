@@ -27,6 +27,15 @@ module = GOLIOTH
 module-str = golioth
 source "subsys/logging/Kconfig.template.log_config"
 
+config GOLIOTH_USE_CONNECTION_ID
+	bool "Use DTLS 1.2 Connection IDs"
+	select MBEDTLS_SSL_DTLS_CONNECTION_ID
+	help
+	  Use DTLS 1.2 Connection IDs. Connection IDs replace IP
+	  addresses as the session identifier, and can be used to
+	  reduce the number of handshakes a device has to make in
+	  certain scenarios.
+
 choice GOLIOTH_AUTH_METHOD
 	prompt "Authentication method support"
 

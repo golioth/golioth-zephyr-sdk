@@ -56,6 +56,19 @@ tests:
       - CONFIG_MBEDTLS_CIPHER_CCM_ENABLED=y
       - CONFIG_MBEDTLS_CIPHER_MODE_CBC_ENABLED=n
       - CONFIG_GOLIOTH_CIPHERSUITES="TLS_PSK_WITH_AES_128_CCM_8"
+  sample.golioth.hello.psk.fast.cid:
+    platform_allow: >
+      esp32_devkitc_wroom
+      mimxrt1060_evkb
+      nrf52840dk_nrf52840
+      qemu_x86
+    extra_configs:
+      - CONFIG_GOLIOTH_USE_CONNECTION_ID=y
+  sample.golioth.hello.psk.long_start.cid:
+    platform_allow: nrf9160dk_nrf9160_ns
+    timeout: 120
+    extra_configs:
+      - CONFIG_GOLIOTH_USE_CONNECTION_ID=y
   sample.golioth.hello.psk.long_start:
     platform_allow: nrf9160dk_nrf9160_ns
     timeout: 120
