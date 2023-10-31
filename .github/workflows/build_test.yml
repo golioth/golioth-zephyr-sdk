@@ -51,6 +51,7 @@ jobs:
       - name: Run twister (non goliothd)
         run: >
           zephyr/scripts/twister
+          --overflow-as-errors
           --no-clean
           -e goliothd
           -p ${{ matrix.board }}
@@ -60,6 +61,7 @@ jobs:
       - name: Run twister (goliothd)
         run: >
           zephyr/scripts/twister
+          --overflow-as-errors
           --no-clean
           -t goliothd -b
           -p ${{ matrix.board }}
