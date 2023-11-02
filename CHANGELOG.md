@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2023-11-06
+### Added
+- pinout for ESP32 WROVER in samples' README files
+- support for nRF52840DK + ESP-AT platform in `samples/cert-provisioning/`
+- documentation (README file) for `samples/rpc/`
+- `CONFIG_GOLIOTH_USE_CONNECTION_ID` Kconfig option enables [DTLS
+  CID](https://datatracker.ietf.org/doc/html/rfc9147) use
+
+### Changed
+- WiFi state machine (with implemented reconnects) has replaced previous implementation of simple
+  one-shot connection attempt to WiFi Access Point
+- moved Python Golioth package to separate repository at
+  https://github.com/golioth/python-golioth-tools
+- replaced `samples/common/runtime_psk.conf` with `samples/common/runtime_settings.conf` that
+  additionally enables WiFi credentials storage in Zephyr settings subsystem
+- verified with NCS v2.5.0
+- verified with Zephyr v3.5.0
+
 ## [0.7.1] - 2023-08-11
 ### Fixed
 - RPC parameter parsing when used with NCS
