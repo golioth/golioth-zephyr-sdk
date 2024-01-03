@@ -17,7 +17,11 @@ LOG_MODULE_REGISTER(golioth_system, CONFIG_GOLIOTH_SYSTEM_CLIENT_LOG_LEVEL);
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/util.h>
 
+#include "ot_dns.h"
+
 #define RX_BUFFER_SIZE		CONFIG_GOLIOTH_SYSTEM_CLIENT_RX_BUF_SIZE
+
+static char golioth_system_server_host[40] = CONFIG_GOLIOTH_SYSTEM_SERVER_HOST;
 
 static const uint8_t tls_ca_crt[] = {
 #if defined(CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH)
@@ -244,11 +248,22 @@ SYS_INIT(golioth_system_init, APPLICATION,
 
 static int client_connect(struct golioth_client *client)
 {
-	int err;
+	int err = 0;
+
+#if defined(CONFIG_NET_L2_OPENTHREAD)
+
+	err = synthesize_ip6_address(golioth_system_server_host, golioth_system_server_host);
+	if (err) {
+		LOG_ERR("Failed to synthesize Golioth Server IPv6 address: %d", err);
+		return err;
+	}
+
+#endif
 
 	err = golioth_connect(client,
-			      CONFIG_GOLIOTH_SYSTEM_SERVER_HOST,
+			      golioth_system_server_host,
 			      CONFIG_GOLIOTH_SYSTEM_SERVER_PORT);
+
 	if (err) {
 		LOG_ERR("Failed to connect: %d", err);
 		return err;
