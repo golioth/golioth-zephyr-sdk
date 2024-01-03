@@ -11,6 +11,7 @@ zephyr_library_sources_ifdef(CONFIG_GOLIOTH_RPC rpc.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_SETTINGS settings.c)
 zephyr_library_sources_ifdef(CONFIG_GOLIOTH_SYSTEM_CLIENT system_client.c)
 zephyr_library_sources_ifdef(CONFIG_ZCBOR zcbor_utils.c)
+zephyr_library_sources_ifdef(CONFIG_NET_L2_OPENTHREAD ot_dns.c)
 
 if(CONFIG_GOLIOTH_AUTH_METHOD_CERT)
   set(path ${CONFIG_GOLIOTH_SYSTEM_CLIENT_CA_PATH})
