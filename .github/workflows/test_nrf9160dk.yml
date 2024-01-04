@@ -97,7 +97,7 @@ jobs:
   #   export CI_NRF9160DK_SNR=723769314
   hw_flash_and_test:
     needs: build_for_hw_test
-    runs-on: [self-hosted, has_nrf9160dk]
+    runs-on: [is_active, has_nrf9160dk]
 
     defaults:
       run:

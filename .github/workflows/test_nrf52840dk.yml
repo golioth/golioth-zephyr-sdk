@@ -92,7 +92,7 @@ jobs:
   #   export CI_NRF52840DK_SNR=723769314
   hw_flash_and_test:
     needs: build_for_hw_test
-    runs-on: [self-hosted, has_nrf52840dk]
+    runs-on: [is_active, has_nrf52840dk]
 
     defaults:
       run:
