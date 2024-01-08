@@ -130,6 +130,9 @@ static int golioth_desired_update(struct golioth_req_rsp *rsp)
 		LOG_INF("Desired version (%s) matches current firmware version!",
 			current_version_str);
 		return -EALREADY;
+	} else {
+		LOG_INF("Server advertises %s as latest version. Beginning download.",
+			dfu->version);
 	}
 
 	uri_p = uri_strip_leading_slash(uri, &uri_len);
