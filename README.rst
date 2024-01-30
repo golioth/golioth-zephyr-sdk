@@ -1,3 +1,12 @@
+DEPRECATED
+**********
+
+This repository has been deprecated. Please use the `Golioth Firmware SDK`_.
+There will be no further support or updates to this repository after July 31,
+2024.
+
+----
+
 API documentation: https://zephyr-sdk-docs.golioth.io/
 
 Getting Started
@@ -155,6 +164,7 @@ During release testing, all boards and services are verified using sample applic
 |                  |LightDB Stream|v0.8.0       |          |
 +------------------+--------------+-------------+----------+
 
+.. _Golioth Firmware SDK: https://github.com/golioth/golioth-firmware-sdk
 .. _Zephyr RTOS: https://www.zephyrproject.org/
 .. _west: https://docs.zephyrproject.org/3.5.0/develop/west/index.html
 .. _Zephyr Getting Started: https://docs.zephyrproject.org/3.5.0/develop/getting_started/index.html
