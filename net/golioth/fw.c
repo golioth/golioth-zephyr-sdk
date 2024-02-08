@@ -164,7 +164,12 @@ int golioth_fw_download(struct golioth_client *client,
 		goto free_req;
 	}
 
-	return golioth_coap_req_schedule(req);
+	err = golioth_coap_req_schedule(req);
+	if (err) {
+		goto free_req;
+	}
+
+	return 0;
 
 free_req:
 	golioth_coap_req_free(req);
