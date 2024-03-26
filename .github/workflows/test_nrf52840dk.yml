@@ -98,11 +98,23 @@ jobs:
       run:
         working-directory: connection_tests
 
+    container:
+      image: golioth/golioth-twister-base:8307b9c
+      env:
+        ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/zephyr-sdk-0.16.3
+      volumes:
+        - /dev:/dev
+        - /home/golioth/credentials:/opt/credentials
+      options: --privileged
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           path: connection_tests
+
+      - name: Power On USB Hub
+        run: python3 /opt/golioth-scripts/usb_hub_power.py on
 
       - name: Download build tarball
         uses: actions/download-artifact@v3
@@ -117,15 +129,27 @@ jobs:
 
       - name: Copy credentials to samples/test
         run: |
-          cp $HOME/credentials_nrf52840dk.yml samples/test/credentials.yml
+          cp /opt/credentials/credentials_nrf52840dk.yml samples/test/credentials.yml
 
       - name: Flash and Verify Test Results
+        shell: bash
         run: |
           cd samples/test
-          source $HOME/runner_env.sh
+          source /opt/credentials/runner_env.sh
           nrfjprog --recover -f NRF52 --snr $CI_NRF52840DK_SNR
           nrfjprog --program build/zephyr/zephyr.hex --sectoranduicrerase --verify -f NRF52 --snr $CI_NRF52840DK_SNR
           nrfjprog --pinresetenable -f NRF52 --snr $CI_NRF52840DK_SNR
           nrfjprog --pinreset -f NRF52 --snr $CI_NRF52840DK_SNR
           sleep 3
-          python verify.py $CI_NRF52840DK_PORT
+          python3 verify.py $CI_NRF52840DK_PORT
+
+      - name: Erase flash
+        if: always()
+        shell: bash
+        run: |
+          source /opt/credentials/runner_env.sh
+          nrfjprog --recover --snr ${CI_NRF52840DK_SNR}
+
+      - name: Power Off USB Hub
+        if: always()
+        run: python3 /opt/golioth-scripts/usb_hub_power.py off
