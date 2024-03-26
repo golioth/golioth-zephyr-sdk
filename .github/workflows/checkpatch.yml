@@ -13,7 +13,7 @@ jobs:
       image: zephyrprojectrtos/ci:v0.26.5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: modules/lib/golioth
           fetch-depth: 0
