@@ -19,7 +19,7 @@ def wait_for_regex_in_line(ser, regex, timeout_s=20, log=True):
             return regex_search
 
 def set_setting(ser, key, value):
-    ser.write('\r\n'.encode())
+    ser.write('\r\n\r\n'.encode())
     wait_for_regex_in_line(ser, 'uart:', log=False)
     ser.write('settings set {} {}\r\n'.format(key, value).encode())
     wait_for_regex_in_line(ser, 'saved', log=False)
@@ -34,7 +34,7 @@ def set_credentials(ser):
         set_setting(ser, key, value)
 
 def reset(ser):
-    ser.write('\r\n'.encode())
+    ser.write('\r\n\r\n'.encode())
     wait_for_regex_in_line(ser, 'uart:')
     ser.write('kernel reboot cold\r\n'.encode())
     # Wait for string that prints on next boot
