@@ -362,6 +362,7 @@ static void golioth_system_client_main(void *arg1, void *arg2, void *arg3)
 			(void)eventfd_read(fds[POLLFD_EVENT].fd,
 					   &eventfd_value);
 			LOG_DBG("Event in eventfd");
+			recv_expiry = k_uptime_get() + RECV_TIMEOUT;
 			event_occurred = true;
 		}
 
